@@ -85,9 +85,13 @@ function Update-IncidentTable {
 
     
 
-    $table = Format-SpectreTable -Data $data -AllowMarkup:$false -Color Orange1
-    $table | Out-SpectreHost
-    
+    try {
+        $table = Format-SpectreTable -Data $data -AllowMarkup:$false -Color Orange1
+        $table | Out-SpectreHost
+    } catch {
+        Write-SpectreHost "There are not open incidents, all in the [green]green[/]."
+    }
+
     $script:metaIncidents = $data | Select-Object `
         @{
             Name="DisplayName"
