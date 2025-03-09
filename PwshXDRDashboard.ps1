@@ -2,7 +2,7 @@
 
 [CmdletBinding()]
 param (
-    [system.string[]]$tenantId
+    [system.string[]]$tenantId,
     [system.string]$clientID,
     [int]$limit
 )
