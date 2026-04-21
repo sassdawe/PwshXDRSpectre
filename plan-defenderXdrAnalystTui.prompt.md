@@ -283,3 +283,176 @@ Tests/
 - Tenant model is single active tenant for v1.
 - Memory store persists checkpoints, entity context, action history, and query-run metadata.
 - We don't need backwards compatibility with the old script structure since this is an internal tool in active development. We can break and refactor as needed to build a stable foundation for later phases.
+
+## Phase 2 Detailed Implementation and Test Plan
+
+This section locks Phase 2 planning based on confirmed answers. It does not start implementation.
+
+### Phase 2 scope lock
+
+1. Incident triage operations:
+1. Status updates supported:
+1. Active
+2. In progress
+3. Resolved
+2. Graph value mapping should normalize to platform values:
+1. active
+2. inProgress
+3. resolved
+3. Classification and determination options exposed initially:
+1. Unclassified
+2. True positive / Malware
+3. False positive / Not malicious
+4. Keep classification and determination extendable via configuration file.
+5. If incident is resolved without analyst input comment, auto-fill:
+1. Resolved using PwshXDRSpectre
+6. Assign to me identity fallback order:
+1. mail
+2. userPrincipalName
+
+2. Alert triage operations:
+1. Status updates supported:
+1. New
+2. In progress
+3. Resolved
+2. Graph value mapping should normalize to platform values:
+1. new
+2. inProgress
+3. resolved
+
+3. UX and safety behavior:
+1. Disabled and unsupported action reasons must always be visible in a dedicated panel.
+2. Potentially disruptive actions must be confirmation-gated via policy table.
+3. Confirmation policy must be extendable in configuration and validated by tests.
+
+### Proposed Phase 2 module additions
+
+Public services:
+1. Set-XdrIncidentTriage
+2. Set-XdrAlertStatus
+3. Get-XdrTriageOptions
+
+Private helpers:
+1. Get-XdrTriagePolicy
+2. Test-XdrTriageValue
+3. Resolve-XdrGraphEnumValue
+4. Get-XdrAssignTargetIdentity
+5. Get-XdrActionSafetyPolicy
+6. Test-XdrActionSafetyPolicy
+7. Get-XdrActionDisableReasons
+
+### Configuration design for extendability
+
+Use a repository-stored policy file for triage and safety mappings so edits do not require code changes.
+
+Recommended file path:
+1. config/triage-policy.json
+
+Minimum sections:
+1. incidentStatusMap
+2. alertStatusMap
+3. classifications
+4. determinations
+5. defaultResolvingComment
+6. safetyPolicy
+
+Validation requirements:
+1. Required keys must exist.
+2. No duplicate display labels.
+3. No duplicate Graph values.
+4. All safety policy levels must be valid.
+5. Unknown actions in safety policy should fail validation.
+6. Status and classification entries must match allowed schema.
+
+### Recommended disruptive operations policy table
+
+This is the default recommendation table. Keep editable in policy config.
+
+| Action | Category | Recommended confirmation | Recommended wording |
+|---|---|---|---|
+| Assign incident to me | Incident triage | No | None |
+| Clear incident assignment | Incident triage | Yes | Clear assignment from this incident? |
+| Set incident status to Active | Incident triage | No | None |
+| Set incident status to In progress | Incident triage | No | None |
+| Set incident status to Resolved | Incident triage | Yes | Resolve this incident now? |
+| Set incident classification | Incident triage | No | None |
+| Set incident determination | Incident triage | No | None |
+| Auto-fill resolving comment | Incident triage | No | None |
+| Set alert status to New | Alert triage | Yes | Reopen this alert as New? |
+| Set alert status to In progress | Alert triage | No | None |
+| Set alert status to Resolved | Alert triage | Yes | Resolve this alert now? |
+
+Notes:
+1. Operations that can reopen or finalize triage are marked confirm by default.
+2. This table should be loaded from configuration, not hardcoded in UI.
+
+### Dedicated panel for disabled reasons
+
+Phase 2 UI requirement:
+1. Add a dedicated panel to show action availability and reason text.
+2. Reason sources:
+1. Missing capability
+2. Missing selection context
+3. Invalid transition for current status
+4. Policy disabled
+
+Panel behavior:
+1. Always visible.
+2. Updates whenever selected incident, alert, or action changes.
+3. Should distinguish blocked versus warning states.
+
+### Phase 2 implementation sequence
+
+1. Implement policy file schema and loader.
+2. Implement policy validator and tests.
+3. Implement status/classification mapping helpers.
+4. Implement incident triage service with resolving comment fallback.
+5. Implement alert triage service for all three statuses.
+6. Implement assign target resolver with mail then UPN fallback.
+7. Wire menu dashboard to new services.
+8. Wire live dashboard to new services.
+9. Add dedicated disabled-reasons panel.
+10. Add confirmation policy enforcement.
+
+### Phase 2 test plan
+
+Unit tests:
+1. Policy loader parses valid config.
+2. Policy validator rejects typos and unknown values.
+3. Incident status display-to-Graph mapping works for all three statuses.
+4. Alert status display-to-Graph mapping works for all three statuses.
+5. Classification and determination mapping resolves initial options.
+6. Missing resolving comment on resolved incident auto-fills default text.
+7. Assign target resolver uses mail first and UPN as fallback.
+8. Safety policy correctly flags confirm-required actions.
+9. Disabled reason generator returns deterministic reasons.
+
+Mocked service tests:
+1. Incident triage service builds proper payload for each status.
+2. Incident resolve flow includes default comment when needed.
+3. Alert triage service builds proper payload for each status.
+4. Capability failure returns structured non-terminating error.
+5. Invalid policy values fail closed before any Graph call.
+
+UI wiring tests:
+1. Menu dashboard triage actions call services only.
+2. Live dashboard triage actions call services only.
+3. Dedicated panel updates reason text when context changes.
+
+Manual validation checklist:
+1. Change incident status Active to In progress.
+2. Resolve incident without entering comment and verify default comment is applied.
+3. Update classification and determination using allowed options.
+4. Update alert to New, In progress, and Resolved.
+5. Validate assign-to-me uses mail first and UPN fallback when mail is empty.
+6. Trigger capability restriction and confirm disabled reason appears in dedicated panel.
+7. Validate confirmation prompt appears for actions flagged as disruptive.
+
+### Phase 2 completion criteria
+
+1. Incident triage statuses, classifications, determinations, and resolving comment fallback work in both dashboards.
+2. Alert status triage for New, In progress, and Resolved works in both dashboards.
+3. Confirmation behavior is policy-driven and validated.
+4. Disabled-reasons panel is always visible and context-aware.
+5. Policy edits are protected by unit tests that catch typos and invalid entries.
+6. UI layer performs no direct Graph mutation calls.
