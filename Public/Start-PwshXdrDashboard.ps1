@@ -64,9 +64,7 @@ function Start-PwshXdrDashboard {
             switch ($action) {
                 'Assign to me' {
                     $mail = $context.Session.Analyst.Mail
-                    $assignResult = Invoke-XdrOperation -Operation 'AssignIncidentToMe' -Context $context -TargetObject $context.Selection.Incident.IncidentId -ScriptBlock {
-                        Update-MgSecurityIncident -IncidentId $context.Selection.Incident.IncidentId -BodyParameter @{ assignedTo = $mail }
-                    } -SuccessMessage 'Assigned incident successfully.' -FailureMessage 'Failed to assign incident.'
+                    $assignResult = Set-XdrIncidentAssignment -Context $context -IncidentId $context.Selection.Incident.IncidentId -AssignedTo $mail
 
                     Write-SpectreHost $(if ($assignResult.Success) { "[green]$($assignResult.Message)[/]" } else { "[red]$($assignResult.Message)[/]" })
                 }
@@ -86,9 +84,7 @@ function Start-PwshXdrDashboard {
                     }
                 }
                 'Clear assignment' {
-                    $clearResult = Invoke-XdrOperation -Operation 'ClearIncidentAssignment' -Context $context -TargetObject $context.Selection.Incident.IncidentId -ScriptBlock {
-                        Update-MgSecurityIncident -IncidentId $context.Selection.Incident.IncidentId -BodyParameter @{ assignedTo = '' }
-                    } -SuccessMessage 'Cleared incident assignment.' -FailureMessage 'Failed to clear incident assignment.'
+                    $clearResult = Set-XdrIncidentAssignment -Context $context -IncidentId $context.Selection.Incident.IncidentId
 
                     Write-SpectreHost $(if ($clearResult.Success) { "[green]$($clearResult.Message)[/]" } else { "[red]$($clearResult.Message)[/]" })
                 }

@@ -11,13 +11,24 @@ function Test-XdrCapability {
         [switch]$ThrowOnUnknown
     )
 
-    $available = @(
-        $Context.Capabilities.IncidentActions +
-        $Context.Capabilities.AlertActions +
-        $Context.Capabilities.UserActions +
-        $Context.Capabilities.DeviceActions +
-        $Context.Capabilities.FileActions
-    )
+    if (-not $Context -or -not $Context.Capabilities) {
+        if ($ThrowOnUnknown.IsPresent) {
+            throw "Capability context is missing: $CapabilityName"
+        }
+
+        return $false
+    }
+
+    $available = @()
+    foreach ($setName in @('IncidentActions', 'AlertActions', 'UserActions', 'DeviceActions', 'FileActions')) {
+        $setValue = $Context.Capabilities.$setName
+        if ($setValue -is [array]) {
+            $available += $setValue
+        }
+        elseif ($setValue) {
+            $available += @($setValue)
+        }
+    }
 
     $isAllowed = $available -contains $CapabilityName
     if ($isAllowed) {

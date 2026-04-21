@@ -35,6 +35,7 @@ function Start-PwshXdrLiveDashboard {
     Invoke-SpectreLive -Data $layout -ScriptBlock {
         param([Spectre.Console.LiveDisplayContext]$LiveContext)
 
+        $headerPanel = Write-SpectreFigletText -Text 'Hello XDR Spectre' -Alignment 'Center' -Color $context.Ui.ThemeColor -FigletFontPath "$PSScriptRoot/../ANSI Shadow.flf" -PassThru | Format-SpectrePanel -Expand
         $authAttempted = $false
         $authSucceeded = $false
         $dataLoaded = $false
@@ -46,8 +47,7 @@ function Start-PwshXdrLiveDashboard {
 
         while ($true) {
             if (-not $authAttempted) {
-                $header = Write-SpectreFigletText -Text 'Hello XDR Spectre' -Alignment 'Center' -Color $context.Ui.ThemeColor -FigletFontPath "$PSScriptRoot/../ANSI Shadow.flf" -PassThru | Format-SpectrePanel -Expand
-                $layout['header'].Update($header) | Out-Null
+                $layout['header'].Update($headerPanel) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header '[white]Incident List[/]' -Data 'Preparing authentication...' -Expand)) | Out-Null
                 $layout['incident_details'].Update((Format-SpectrePanel -Header '[white]Incident Details[/]' -Data 'Preparing authentication...' -Expand)) | Out-Null
                 $layout['alerts'].Update((Format-SpectrePanel -Header '[white]Alert List[/]' -Data 'Preparing authentication...' -Expand)) | Out-Null
@@ -71,9 +71,9 @@ function Start-PwshXdrLiveDashboard {
             }
 
             if (-not $authSucceeded) {
-                $layout['header'].Update("[red]Authentication failed: $fatalErrorMessage[/]") | Out-Null
+                $layout['header'].Update($headerPanel) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header '[white]Incident List[/]' -Data 'Press Escape to exit.' -Expand)) | Out-Null
-                $layout['incident_details'].Update((Format-SpectrePanel -Header '[white]Incident Details[/]' -Data 'No data available.' -Expand)) | Out-Null
+                $layout['incident_details'].Update((Format-SpectrePanel -Header '[red]Authentication Failed[/]' -Data $fatalErrorMessage -Expand)) | Out-Null
                 $layout['alerts'].Update((Format-SpectrePanel -Header '[white]Alert List[/]' -Data 'No data available.' -Expand)) | Out-Null
                 $layout['alert_details'].Update((Format-SpectrePanel -Header '[white]Alert Details[/]' -Data 'No data available.' -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -88,7 +88,7 @@ function Start-PwshXdrLiveDashboard {
             }
 
             if (-not $dataLoaded) {
-                $layout['header'].Update('[yellow]Connected. Loading incidents...[/]') | Out-Null
+                $layout['header'].Update($headerPanel) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header '[white]Incident List[/]' -Data 'Loading incidents...' -Expand)) | Out-Null
                 $layout['incident_details'].Update((Format-SpectrePanel -Header '[white]Incident Details[/]' -Data 'Loading incidents...' -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -142,10 +142,8 @@ function Start-PwshXdrLiveDashboard {
                 }
             }
 
-            $header = Write-SpectreFigletText -Text 'Hello XDR Spectre' -Alignment 'Center' -Color $context.Ui.ThemeColor -FigletFontPath "$PSScriptRoot/../ANSI Shadow.flf" -PassThru | Format-SpectrePanel -Expand
-
             if (-not $context.Data.Incidents) {
-                $layout['header'].Update($header) | Out-Null
+                $layout['header'].Update($headerPanel) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header '[white]Incident List[/]' -Data 'No incidents found. Press Escape to exit.' -Expand)) | Out-Null
                 $layout['incident_details'].Update((Format-SpectrePanel -Header '[white]Incident Details[/]' -Data 'No incident selected.' -Expand)) | Out-Null
                 $layout['alerts'].Update((Format-SpectrePanel -Header '[white]Alert List[/]' -Data 'No incident selected.' -Expand)) | Out-Null
@@ -207,7 +205,7 @@ function Start-PwshXdrLiveDashboard {
                 Format-SpectrePanel -Header '[white]Alert Details[/]' -Data 'No alert selected.' -Expand
             }
 
-            $layout['header'].Update($header) | Out-Null
+            $layout['header'].Update($headerPanel) | Out-Null
             $layout['incidents'].Update($incidentPanel) | Out-Null
             $layout['incident_details'].Update($incidentDetails) | Out-Null
             $layout['alerts'].Update($alertsPanel) | Out-Null
