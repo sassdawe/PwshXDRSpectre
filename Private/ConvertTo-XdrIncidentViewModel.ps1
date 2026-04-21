@@ -8,6 +8,13 @@ function ConvertTo-XdrIncidentViewModel {
         [string]$TenantId
     )
 
+    $incidentId = [string]$Incident.Id
+    $tenantIdValue = [string]$TenantId
+    $incidentWebUrl = $null
+    if (-not [string]::IsNullOrWhiteSpace($incidentId) -and -not [string]::IsNullOrWhiteSpace($tenantIdValue)) {
+        $incidentWebUrl = "https://security.microsoft.com/incident2/$incidentId/overview?tid=$tenantIdValue"
+    }
+
     [pscustomobject]@{
         IncidentId      = $Incident.Id
         DisplayName     = $Incident.DisplayName
@@ -18,6 +25,7 @@ function ConvertTo-XdrIncidentViewModel {
         CreatedDateTime = $Incident.CreatedDateTime
         AlertCount      = @($Incident.Alerts).Count
         AlertRefs       = @($Incident.Alerts)
+        IncidentWebUrl  = $incidentWebUrl
         TenantId        = $TenantId
         RawObject       = $Incident
     }

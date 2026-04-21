@@ -1,0 +1,116 @@
+{
+  "incidentStatusMap": [
+    {
+      "label": "Active",
+      "graphValue": "active"
+    },
+    {
+      "label": "In progress",
+      "graphValue": "inProgress"
+    },
+    {
+      "label": "Resolved",
+      "graphValue": "resolved"
+    }
+  ],
+  "alertStatusMap": [
+    {
+      "label": "New",
+      "graphValue": "new"
+    },
+    {
+      "label": "In progress",
+      "graphValue": "inProgress"
+    },
+    {
+      "label": "Resolved",
+      "graphValue": "resolved"
+    }
+  ],
+  "classifications": [
+    {
+      "label": "Unclassified",
+      "graphValue": "unknown"
+    },
+    {
+      "label": "True positive / Malware",
+      "graphValue": "truePositive"
+    },
+    {
+      "label": "False positive / Not malicious",
+      "graphValue": "falsePositive"
+    }
+  ],
+  "determinations": [
+    {
+      "label": "Unknown",
+      "graphValue": "unknown"
+    },
+    {
+      "label": "Malware",
+      "graphValue": "malware"
+    },
+    {
+      "label": "Not malicious",
+      "graphValue": "notMalicious"
+    }
+  ],
+  "defaultResolvingComment": "Incident resolved by current user using PwshXDRSpectre.",
+  "safetyPolicy": [
+    {
+      "action": "Assign incident to me",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Clear incident assignment",
+      "level": "confirm",
+      "prompt": "Clear assignment from this incident?"
+    },
+    {
+      "action": "Set incident status to Active",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Set incident status to In progress",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Set incident status to Resolved",
+      "level": "confirm",
+      "prompt": "Resolve this incident now?"
+    },
+    {
+      "action": "Set incident classification",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Set incident determination",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Auto-fill resolving comment",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Set alert status to New",
+      "level": "confirm",
+      "prompt": "Reopen this alert as New?"
+    },
+    {
+      "action": "Set alert status to In progress",
+      "level": "none",
+      "prompt": null
+    },
+    {
+      "action": "Set alert status to Resolved",
+      "level": "confirm",
+      "prompt": "Resolve this alert now?"
+    }
+  ]
+}

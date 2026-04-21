@@ -56,6 +56,33 @@ function Get-UserProfile {
     }
 }
 ```
+## Function Design
+
+- **CmdletBinding Attribute:**
+  - Use `[CmdletBinding()]` for advanced functions
+  - Enable `SupportsShouldProcess` for actions that change system state
+  - Set appropriate `ConfirmImpact` level
+  - Use `Begin`, `Process`, and `End` blocks for pipeline support
+
+- **Script file structure:**
+  - One function per file
+  - File name matches function name (e.g., `Get-UserProfile.ps1`)
+  - Use a module file (`.psm1`) to dot-source functions
+  - Keep entry scripts thin and delegate to module functions
+  - No nested functions unless necessary for encapsulation, but prefer separate files for testability
+
+## Module Design
+
+- **Module Manifest:**
+  - Create a `.psd1` manifest file
+  - Define module metadata (name, version, author, etc.)
+  - Specify exported functions and cmdlets
+  - Include required modules and dependencies
+- **Module Structure:**
+  - Organize functions into logical folders (e.g., `Public/`, `Private/`)
+  - Use a main module file (`.psm1`) to import all functions
+  - Keep public API functions separate from private helper functions
+  - Document the module and its public functions in the manifest and with comment-based help
 
 ## Parameter Design
 

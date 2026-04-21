@@ -15,4 +15,4 @@ if (-not $tenant) {
     throw 'Parameter tenantId is required.'
 }
 
-Start-PwshXdrDashboard -TenantId $tenant -ClientId $clientID -Limit $limit -UseDeviceCode:$UseDeviceCode.IsPresent
+Start-PwshXdrLiveDashboard -TenantId $tenant -ClientId $clientID -Limit $limit -UseDeviceCode:$UseDeviceCode.IsPresent

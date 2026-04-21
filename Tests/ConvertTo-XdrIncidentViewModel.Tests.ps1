@@ -21,6 +21,7 @@ Describe 'ConvertTo-XdrIncidentViewModel' {
             $vm.IncidentId | Should -Be 'inc-42'
             $vm.DisplayName | Should -Be 'Test incident'
             $vm.AlertCount | Should -Be 1
+            $vm.IncidentWebUrl | Should -Be 'https://security.microsoft.com/incident2/inc-42/overview?tid=tenant-1'
             $vm.TenantId | Should -Be 'tenant-1'
             $vm.RawObject.Id | Should -Be 'inc-42'
         }

@@ -13,10 +13,10 @@ The project now uses a module-first structure and shared runtime context:
 
 Current dashboard wrappers:
 
-- `PwshXDRDashboard.ps1` -> `Start-PwshXdrDashboard`
 - `Invoke-PwshXDRDashboard.ps1` -> `Start-PwshXdrLiveDashboard`
+- `PwshXDRDashboard.ps1` -> `Start-PwshXdrLiveDashboard` (legacy alias)
 
-Both dashboard modes now share:
+Live dashboard mode uses:
 
 1. Session connection flow.
 2. Incident and alert retrieval services.
@@ -41,16 +41,16 @@ Any action performed with delegated permissions will be associated with your use
 
 ## Usage
 
-### Menu dashboard
-
-```powershell
-./PwshXDRDashboard.ps1 -tenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -clientID '7580ada2-de37-4ed3-8222-d4743cba052e' -limit 25
-```
-
 ### Live dashboard
 
 ```powershell
 ./Invoke-PwshXDRDashboard.ps1 -tenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -clientID '7580ada2-de37-4ed3-8222-d4743cba052e' -limit 25
+```
+
+Legacy alias (same live dashboard behavior):
+
+```powershell
+./PwshXDRDashboard.ps1 -tenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -clientID '7580ada2-de37-4ed3-8222-d4743cba052e' -limit 25
 ```
 
 Optional authentication mode:

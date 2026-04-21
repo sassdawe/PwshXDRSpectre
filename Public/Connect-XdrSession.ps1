@@ -34,8 +34,14 @@ function Connect-XdrSession {
             return $whoAmI
         }
         $Context.Session.IsConnected = $true
-        $Context.Capabilities.IncidentActions = @('AssignIncident', 'ClearIncidentAssignment', 'UpdateIncidentStatus')
-        $Context.Capabilities.AlertActions = @('GetAlerts')
+        $Context.Capabilities.IncidentActions = @(
+            'AssignIncident',
+            'ClearIncidentAssignment',
+            'UpdateIncidentStatus',
+            'UpdateIncidentClassification',
+            'UpdateIncidentDetermination'
+        )
+        $Context.Capabilities.AlertActions = @('GetAlerts', 'UpdateAlertStatus')
 
     }
     else {
@@ -55,6 +61,15 @@ function Connect-XdrSession {
         if (-not $whoAmI.Success) {
             return $whoAmI
         }
+
+        $Context.Capabilities.IncidentActions = @(
+            'AssignIncident',
+            'ClearIncidentAssignment',
+            'UpdateIncidentStatus',
+            'UpdateIncidentClassification',
+            'UpdateIncidentDetermination'
+        )
+        $Context.Capabilities.AlertActions = @('GetAlerts', 'UpdateAlertStatus')
     }
     
     return $connectResult
