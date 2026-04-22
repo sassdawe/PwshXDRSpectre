@@ -38,6 +38,8 @@ function Set-XdrIncidentTriage {
     $body = @{}
     $actionNames = @()
     $autoResolvedComment = $false
+    $normalComment = $null
+    $shouldPostIncidentComment = $false
 
     if ($AssignToMe.IsPresent) {
         $assignedIdentity = Get-XdrAssignTargetIdentity -Context $Context
@@ -210,13 +212,19 @@ function Set-XdrIncidentTriage {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($Comment)) {
-        $body.comments = @(@{ comment = $Comment })
-        if ($autoResolvedComment -or $Comment -eq $Policy.defaultResolvingComment) {
-            $actionNames += 'Auto-fill resolving comment'
+        if ($body.status -eq 'resolved') {
+            $body.resolvingComment = $Comment
+            if ($autoResolvedComment -or $Comment -eq $Policy.defaultResolvingComment) {
+                $actionNames += 'Auto-fill resolving comment'
+            }
+        }
+        else {
+            $normalComment = $Comment
+            $shouldPostIncidentComment = $true
         }
     }
 
-    if ($body.Count -eq 0) {
+    if ($body.Count -eq 0 -and -not $shouldPostIncidentComment) {
         return [pscustomobject]@{
             Success   = $false
             Operation = 'Set-XdrIncidentTriage'
@@ -257,9 +265,58 @@ function Set-XdrIncidentTriage {
         }
     }
 
-    $operationResult = Invoke-XdrOperation -Operation 'Set-XdrIncidentTriage' -Context $Context -TargetObject $IncidentId -ScriptBlock {
-        Update-MgSecurityIncident -IncidentId $IncidentId -BodyParameter $body
-    } -SuccessMessage 'Updated incident triage successfully.' -FailureMessage 'Failed to update incident triage.'
+    $operationResult = $null
+
+    if ($body.Count -gt 0) {
+        $operationResult = Invoke-XdrOperation -Operation 'Set-XdrIncidentTriage' -Context $Context -TargetObject $IncidentId -ScriptBlock {
+            Update-MgSecurityIncident -IncidentId $IncidentId -BodyParameter $body
+        } -SuccessMessage 'Updated incident triage successfully.' -FailureMessage 'Failed to update incident triage.'
+
+        if (-not $operationResult.Success) {
+            return $operationResult
+        }
+    }
+
+    if ($shouldPostIncidentComment) {
+        $commentPayload = @{
+            '@odata.type' = 'microsoft.graph.security.alertComment'
+            comment       = $normalComment
+        }
+
+        $encodedIncidentId = [uri]::EscapeDataString([string]$IncidentId)
+        $commentUri = "/v1.0/security/incidents/$encodedIncidentId/comments"
+
+        $commentResult = Invoke-XdrOperation -Operation 'Set-XdrIncidentTriage' -Context $Context -TargetObject $IncidentId -ScriptBlock {
+            Invoke-MgGraphRequest -Method POST -Uri $commentUri -ContentType 'application/json' -Body ($commentPayload | ConvertTo-Json -Depth 5 -Compress)
+        } -SuccessMessage 'Added incident comment successfully.' -FailureMessage 'Failed to add incident comment.'
+
+        if (-not $commentResult.Success) {
+            return $commentResult
+        }
+
+        if ($null -eq $operationResult) {
+            $operationResult = $commentResult
+        }
+    }
+
+    if ($null -eq $operationResult) {
+        return [pscustomobject]@{
+            Success   = $false
+            Operation = 'Set-XdrIncidentTriage'
+            Message   = 'No triage changes were requested.'
+            Data      = $null
+            Error     = [pscustomobject]@{
+                Operation   = 'Set-XdrIncidentTriage'
+                SafeMessage = 'No triage changes were requested.'
+                Timestamp   = Get-Date
+            }
+            Metadata  = [ordered]@{
+                TenantId   = $Context.Session.TenantId
+                DurationMs = 0
+                Timestamp  = Get-Date
+            }
+        }
+    }
 
     if ($operationResult.Success -and $Context.Selection.Incident -and $Context.Selection.Incident.IncidentId -eq $IncidentId) {
         if ($body.Contains('assignedTo')) {
@@ -276,6 +333,15 @@ function Set-XdrIncidentTriage {
 
         if ($body.Contains('determination')) {
             $Context.Selection.Incident.Determination = $body.determination
+        }
+
+        if ($body.Contains('resolvingComment')) {
+            if ($Context.Selection.Incident.PSObject.Properties.Name -contains 'ResolvingComment') {
+                $Context.Selection.Incident.ResolvingComment = $body.resolvingComment
+            }
+            else {
+                $Context.Selection.Incident | Add-Member -MemberType NoteProperty -Name 'ResolvingComment' -Value $body.resolvingComment -Force
+            }
         }
     }
 

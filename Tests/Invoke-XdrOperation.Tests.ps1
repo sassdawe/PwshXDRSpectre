@@ -25,4 +25,24 @@ Describe 'Invoke-XdrOperation' {
             $context.Diagnostics.LastError.Operation | Should -Be 'UnitTestFail'
         }
     }
+
+    It 'captures missing Graph permissions and disables write capabilities' {
+        InModuleScope PwshXDRSpectre {
+            $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+            $context.Capabilities.IncidentActions = @('AssignIncident', 'UpdateIncidentStatus')
+            $context.Capabilities.AlertActions = @('GetAlerts', 'UpdateAlertStatus')
+
+            $permissionError = 'Missing user permissions. API required permissions: SecurityData.Manage, user permissions: SecurityData.Read,SecurityData.Hunting.Read.'
+
+            $result = Invoke-XdrOperation -Operation 'UnitTestPermissionFail' -Context $context -ScriptBlock { throw $permissionError }
+
+            $result.Success | Should -BeFalse
+            $context.Session.PermissionHealth.HasSufficientWritePermissions | Should -BeFalse
+            $context.Session.PermissionHealth.DetectionSource | Should -Be 'graph-error'
+            $context.Session.PermissionHealth.RequiredPermissions | Should -Contain 'SecurityData.Manage'
+            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'SecurityData.Read'
+            $context.Capabilities.IncidentActions.Count | Should -Be 0
+            $context.Capabilities.AlertActions | Should -Be @('GetAlerts')
+        }
+    }
 }

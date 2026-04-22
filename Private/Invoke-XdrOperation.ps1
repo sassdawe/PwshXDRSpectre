@@ -22,6 +22,56 @@ function Invoke-XdrOperation {
 
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
+    function Update-ContextPermissionHealthFromError {
+        param(
+            [Parameter(Mandatory)]
+            [object]$RuntimeContext,
+
+            [Parameter(Mandatory)]
+            [string]$ErrorMessage
+        )
+
+        if (-not $RuntimeContext -or -not $RuntimeContext.Session) {
+            return
+        }
+
+        $normalizedError = [regex]::Replace([string]$ErrorMessage, '\s+', ' ').Trim()
+        if ([string]::IsNullOrWhiteSpace($normalizedError)) {
+            return
+        }
+
+        if (-not $RuntimeContext.Session.PSObject.Properties.Name.Contains('PermissionHealth')) {
+            $RuntimeContext.Session | Add-Member -MemberType NoteProperty -Name PermissionHealth -Value ([pscustomobject][ordered]@{
+                    HasSufficientWritePermissions = $true
+                    DetectionSource               = 'default'
+                    RequiredPermissions           = @()
+                    AvailablePermissions          = @()
+                    LastUpdatedAt                 = $null
+                })
+        }
+
+        $permissionPattern = '(?i)Missing user permissions\.?\s*API required permissions:\s*(?<required>.+?)\s*,\s*user permissions:\s*(?<user>.+)$'
+        $match = [regex]::Match($normalizedError, $permissionPattern)
+        if (-not $match.Success) {
+            return
+        }
+
+        $requiredPermissions = @($match.Groups['required'].Value -split ',' | ForEach-Object { $_.Trim().TrimEnd('.') } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+        $availablePermissions = @($match.Groups['user'].Value -split ',' | ForEach-Object { $_.Trim().TrimEnd('.') } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+        $RuntimeContext.Session.PermissionHealth.HasSufficientWritePermissions = $false
+        $RuntimeContext.Session.PermissionHealth.DetectionSource = 'graph-error'
+        $RuntimeContext.Session.PermissionHealth.RequiredPermissions = $requiredPermissions
+        $RuntimeContext.Session.PermissionHealth.AvailablePermissions = $availablePermissions
+        $RuntimeContext.Session.PermissionHealth.LastUpdatedAt = Get-Date
+
+        if ($RuntimeContext.Capabilities) {
+            # Fail closed for mutating actions when Graph reports missing write permissions.
+            $RuntimeContext.Capabilities.IncidentActions = @()
+            $RuntimeContext.Capabilities.AlertActions = @('GetAlerts')
+        }
+    }
+
     try {
         $data = & $ScriptBlock
         $stopwatch.Stop()
@@ -48,6 +98,10 @@ function Invoke-XdrOperation {
     }
     catch {
         $stopwatch.Stop()
+
+        if ($Context) {
+            Update-ContextPermissionHealthFromError -RuntimeContext $Context -ErrorMessage ([string]$_.Exception.Message)
+        }
 
         $errorData = New-XdrErrorRecord -Operation $Operation -ErrorRecord $_ -TargetObject $TargetObject -SafeMessage $FailureMessage
 

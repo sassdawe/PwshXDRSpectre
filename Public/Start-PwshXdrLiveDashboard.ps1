@@ -212,7 +212,13 @@ function Start-PwshXdrLiveDashboard {
         param([Spectre.Console.LiveDisplayContext]$LiveContext)
 
         $getHeaderPanel = {
-            $fallbackMarkup = "[bold $($context.Ui.ThemeColor)]HELLO XDR SPECTRE[/]"
+            $headerColor = if (
+                $context.Session -and
+                $context.Session.PermissionHealth -and
+                -not $context.Session.PermissionHealth.HasSufficientWritePermissions
+            ) { 'red' } else { $context.Ui.ThemeColor }
+
+            $fallbackMarkup = "[bold $headerColor]HELLO XDR SPECTRE[/]"
 
             $windowWidth = 0
             try {
@@ -227,7 +233,7 @@ function Start-PwshXdrLiveDashboard {
             }
 
             try {
-                return (Write-SpectreFigletText -Text 'Hello XDR Spectre' -Alignment 'Center' -Color $context.Ui.ThemeColor -FigletFontPath "$PSScriptRoot/../ANSI Shadow.flf" -PassThru | Format-SpectrePanel -Expand)
+                return (Write-SpectreFigletText -Text 'Hello XDR Spectre' -Alignment 'Center' -Color $headerColor -FigletFontPath "$PSScriptRoot/../ANSI Shadow.flf" -PassThru | Format-SpectrePanel -Expand)
             }
             catch {
                 return (Format-SpectrePanel -Data $fallbackMarkup -Expand)

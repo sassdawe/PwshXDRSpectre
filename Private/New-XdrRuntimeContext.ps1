@@ -22,6 +22,13 @@ function New-XdrRuntimeContext {
             Analyst     = $null
             IsConnected = $false
             StartedAt   = Get-Date
+            PermissionHealth = [pscustomobject][ordered]@{
+                HasSufficientWritePermissions = $true
+                DetectionSource               = 'default'
+                RequiredPermissions           = @()
+                AvailablePermissions          = @()
+                LastUpdatedAt                 = $null
+            }
         }
         Selection = [pscustomobject][ordered]@{
             Incident = $null
