@@ -104,6 +104,21 @@ function Start-PwshXdrLiveDashboard {
         return "[white]$Title[/]"
     }
 
+    function Get-PanelBorderColor {
+        param(
+            [string]$PanelName,
+            [string]$ActivePanel,
+            [string]$AccentColor,
+            [string]$BaseColor = 'deepskyblue1'
+        )
+
+        if ($PanelName -eq $ActivePanel) {
+            return $AccentColor
+        }
+
+        return $BaseColor
+    }
+
     function Set-LiveStatusMessage {
         param(
             [string]$Message,
@@ -1003,7 +1018,7 @@ function Start-PwshXdrLiveDashboard {
                 }
             }
 
-            $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Expand
+            $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
             $incidentDetails = [pscustomobject]@{
                 IncidentId    = $selectedIncident.IncidentId
@@ -1016,7 +1031,7 @@ function Start-PwshXdrLiveDashboard {
                 IncidentWebUrl = $selectedIncident.IncidentWebUrl
                 PanelFocus    = $activePanel
                 Created       = $selectedIncident.CreatedDateTime
-            } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Expand
+            } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
             $alertLines = if ($context.Data.Alerts) {
                 $context.Data.Alerts | ForEach-Object {
@@ -1032,7 +1047,7 @@ function Start-PwshXdrLiveDashboard {
                 @('Press Enter on an incident to load alerts.')
             }
 
-            $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title "Alert List ($($context.Data.Alerts.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($alertLines | Out-String)) -Expand
+            $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title "Alert List ($($context.Data.Alerts.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($alertLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'alerts' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
             $alertDetails = if ($selectedAlert) {
                 [pscustomobject]@{
@@ -1043,10 +1058,10 @@ function Start-PwshXdrLiveDashboard {
                     PanelFocus  = $activePanel
                     Created     = $selectedAlert.CreatedDateTime
                     AlertWebUrl = $selectedAlert.AlertWebUrl
-                } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Expand
+                } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
             }
             else {
-                Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand
+                Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
             }
 
             $incidentActionLines = @()
@@ -1226,15 +1241,15 @@ function Start-PwshXdrLiveDashboard {
                 $resolutionLines += "[white]Ready to resolve this incident.[/]"
                 $resolutionLines += '[grey]Enter/Y confirm | N back | Esc cancel[/]'
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Resolution' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resolutionLines -join "`n") -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Resolution' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resolutionLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
             }
             else {
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
             }
 
             $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution) -join ' | '
             $helpHeaderText = "Help | $contextHelpLine"
-            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (& $getHelpPanelContent) -Expand
+            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (& $getHelpPanelContent) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
             $layout['header'].Update((& $getHeaderPanel)) | Out-Null
             $layout['incidents'].Update($incidentPanel) | Out-Null

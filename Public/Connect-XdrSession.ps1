@@ -53,10 +53,16 @@ function Connect-XdrSession {
         $RuntimeContext.Session.PermissionHealth.AvailablePermissions = $availableScopes
         $RuntimeContext.Session.PermissionHealth.LastUpdatedAt = Get-Date
 
-        if ($availableScopes.Count -gt 0 -and -not ($availableScopes -contains 'SecurityIncident.ReadWrite.All')) {
+        $requiredWritePermissions = @(
+            'SecurityIncident.ReadWrite.All',
+            'SecurityData.Manage'
+        )
+        $missingWritePermissions = @($requiredWritePermissions | Where-Object { $availableScopes -notcontains $_ })
+
+        if ($availableScopes.Count -gt 0 -and $missingWritePermissions.Count -gt 0) {
             $RuntimeContext.Session.PermissionHealth.HasSufficientWritePermissions = $false
             $RuntimeContext.Session.PermissionHealth.DetectionSource = 'graph-scope'
-            $RuntimeContext.Session.PermissionHealth.RequiredPermissions = @('SecurityIncident.ReadWrite.All')
+            $RuntimeContext.Session.PermissionHealth.RequiredPermissions = $missingWritePermissions
             $RuntimeContext.Capabilities.IncidentActions = @()
             $RuntimeContext.Capabilities.AlertActions = @('GetAlerts')
         }
