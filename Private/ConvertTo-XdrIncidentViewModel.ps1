@@ -20,11 +20,15 @@ function ConvertTo-XdrIncidentViewModel {
         DisplayName     = $Incident.DisplayName
         Status          = $Incident.Status
         Severity        = $Incident.Severity
+        Classification  = $Incident.Classification
         AssignedTo      = $Incident.AssignedTo
         Determination   = $Incident.Determination
         CreatedDateTime = $Incident.CreatedDateTime
+        LastUpdateDateTime = $Incident.LastUpdateDateTime
         AlertCount      = @($Incident.Alerts).Count
         AlertRefs       = @($Incident.Alerts)
+        SystemTags      = @($Incident.SystemTags)
+        CustomTags      = @($Incident.CustomTags)
         IncidentWebUrl  = $incidentWebUrl
         TenantId        = $TenantId
         RawObject       = $Incident

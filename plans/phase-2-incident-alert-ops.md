@@ -203,9 +203,9 @@
 ## Manual Validation Checklist
 
 - [x] Change incident status from Active to In progress
-- [ ] Resolve incident without entering a comment — verify default comment is applied
+- [x] Resolve incident without entering a comment — verify default comment is applied
 - [ ] Update classification and determination using allowed options
-- [ ] Update alert to New, In progress, and Resolved
+- [x] Update alert to New, In progress, and Resolved
 - [ ] Validate assign-to-me uses `mail` first and `userPrincipalName` when mail is empty
 - [ ] Trigger a capability restriction and confirm disabled reason appears in the dedicated panel
 - [x] Validate confirmation prompt appears for actions flagged as disruptive

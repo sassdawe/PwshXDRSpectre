@@ -43,9 +43,9 @@ function Start-PwshXdrLiveDashboard {
         ),
         (
             New-SpectreLayout -Name 'alert_content' -Ratio 5 -Columns @(
-                (New-SpectreLayout -Name 'alerts' -Ratio 2 -Data 'empty'),
+                (New-SpectreLayout -Name 'alerts' -Ratio 3 -Data 'empty'),
                 (New-SpectreLayout -Name 'alert_details' -Ratio 4 -Data 'empty'),
-                (New-SpectreLayout -Name 'action_status' -Ratio 3 -Data 'empty')
+                (New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')
             )
         ),
         (New-SpectreLayout -Name 'help' -MinimumSize 3 -Ratio 1 -Data 'empty')
@@ -428,17 +428,58 @@ function Start-PwshXdrLiveDashboard {
                 continue
             }
 
-            $incidentLines = $context.Data.Incidents | ForEach-Object {
-                if ($_.IncidentId -eq $selectedIncident.IncidentId) {
-                    "[bold $($context.Ui.ThemeColor)]$(Get-SpectreEscapedText $_.DisplayName)[/]"
+            $incidentLines = @('Sev ID         Title                                    Status')
+            $incidentLines += @($context.Data.Incidents | ForEach-Object {
+                $incidentIdText = [string]$_.IncidentId
+                $displayNameText = [string]$_.DisplayName
+                $statusText = [string]$_.Status
+                $severityText = [string]$_.Severity
+                $severityKey = if ([string]::IsNullOrWhiteSpace($severityText)) { '' } else { $severityText.ToLowerInvariant() }
+                $statusKey = if ([string]::IsNullOrWhiteSpace($statusText)) { '' } else { $statusText.ToLowerInvariant() }
+
+                $severityGlyph = switch ($severityKey) {
+                    'high' { 'Ⓗ' }
+                    'medium' { 'Ⓜ' }
+                    'low' { 'Ⓛ' }
+                    default { 'Ⓤ' }
                 }
-                elseif ([string]$_.Status -ieq 'resolved') {
-                    "[lightgreen]$(Get-SpectreEscapedText $_.DisplayName)[/]"
+
+                $severityColor = switch ($severityKey) {
+                    'high' { 'red' }
+                    'medium' { 'yellow' }
+                    'low' { 'green' }
+                    default { 'grey' }
+                }
+                $severityColumn = $severityGlyph.PadRight(3)
+
+                $statusColor = switch -Regex ($statusKey) {
+                    '^active$|^new$' { 'deepskyblue1' }
+                    '^in ?progress$' { 'yellow' }
+                    '^resolved$' { 'lightgreen' }
+                    default { 'grey' }
+                }
+
+                $idColumn = ("#{0}" -f $incidentIdText)
+                if ($idColumn.Length -gt 10) { $idColumn = $idColumn.Substring(0, 10) }
+                $idColumn = $idColumn.PadRight(10)
+
+                $titleColumn = $displayNameText
+                if ($titleColumn.Length -gt 40) { $titleColumn = $titleColumn.Substring(0, 37) + '...' }
+                $titleColumn = $titleColumn.PadRight(40)
+
+                $statusColumn = if ([string]::IsNullOrWhiteSpace($statusText)) { 'Unknown' } else { $statusText }
+                if ($statusColumn.Length -gt 6) { $statusColumn = $statusColumn.Substring(0, 6) }
+
+                $rowPrefix = "[bold $severityColor]$severityColumn[/] $idColumn $titleColumn "
+                $rowStatus = "[bold $statusColor]$statusColumn[/]"
+
+                if ($_.IncidentId -eq $selectedIncident.IncidentId) {
+                    "[bold $severityColor]$severityColumn[/] [bold $($context.Ui.ThemeColor)]$idColumn $titleColumn[/] $rowStatus"
                 }
                 else {
-                    Get-SpectreEscapedText $_.DisplayName
+                    "$rowPrefix$rowStatus"
                 }
-            }
+            })
 
             $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
@@ -446,23 +487,63 @@ function Start-PwshXdrLiveDashboard {
                 IncidentId    = $selectedIncident.IncidentId
                 DisplayName   = $selectedIncident.DisplayName
                 Status        = $selectedIncident.Status
+                Classification = $selectedIncident.Classification
                 Determination = $selectedIncident.Determination
                 AssignedTo    = $selectedIncident.AssignedTo
                 Severity      = $selectedIncident.Severity
                 AlertCount    = $selectedIncident.AlertCount
+                SystemTags    = @($selectedIncident.SystemTags)
+                CustomTags    = @($selectedIncident.CustomTags)
+                LastUpdated   = $selectedIncident.LastUpdateDateTime
                 IncidentWebUrl = $selectedIncident.IncidentWebUrl
                 Created       = $selectedIncident.CreatedDateTime
             } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Expand
 
             $alertLines = if ($context.Data.Alerts) {
-                $context.Data.Alerts | ForEach-Object {
+                @('Sev Title                                         Status')
+                @($context.Data.Alerts | ForEach-Object {
+                    $titleText = [string]$_.Title
+                    $statusText = [string]$_.Status
+                    $severityText = [string]$_.Severity
+                    $severityKey = if ([string]::IsNullOrWhiteSpace($severityText)) { '' } else { $severityText.ToLowerInvariant() }
+                    $statusKey = if ([string]::IsNullOrWhiteSpace($statusText)) { '' } else { $statusText.ToLowerInvariant() }
+
+                    $severityGlyph = switch ($severityKey) {
+                        'high' { 'Ⓗ' }
+                        'medium' { 'Ⓜ' }
+                        'low' { 'Ⓛ' }
+                        default { 'Ⓤ' }
+                    }
+
+                    $severityColor = switch ($severityKey) {
+                        'high' { 'red' }
+                        'medium' { 'yellow' }
+                        'low' { 'green' }
+                        default { 'grey' }
+                    }
+                    $severityColumn = $severityGlyph.PadRight(3)
+
+                    $statusColor = switch -Regex ($statusKey) {
+                        '^active$|^new$' { 'deepskyblue1' }
+                        '^in ?progress$' { 'yellow' }
+                        '^resolved$' { 'lightgreen' }
+                        default { 'grey' }
+                    }
+
+                    $titleColumn = $titleText
+                    if ($titleColumn.Length -gt 46) { $titleColumn = $titleColumn.Substring(0, 43) + '...' }
+                    $titleColumn = $titleColumn.PadRight(46)
+
+                    $statusColumn = if ([string]::IsNullOrWhiteSpace($statusText)) { 'Unknown' } else { $statusText }
+                    if ($statusColumn.Length -gt 6) { $statusColumn = $statusColumn.Substring(0, 6) }
+
                     if ($selectedAlert -and $_.AlertId -eq $selectedAlert.AlertId) {
-                        "[bold $($context.Ui.ThemeColor)]$(Get-SpectreEscapedText $_.Title)[/]"
+                        "[bold $severityColor]$severityColumn[/] [bold $($context.Ui.ThemeColor)]$titleColumn[/] [bold $statusColor]$statusColumn[/]"
                     }
                     else {
-                        Get-SpectreEscapedText $_.Title
+                        "[bold $severityColor]$severityColumn[/] $titleColumn [bold $statusColor]$statusColumn[/]"
                     }
-                }
+                })
             }
             else {
                 @('Press Enter on an incident to load alerts.')

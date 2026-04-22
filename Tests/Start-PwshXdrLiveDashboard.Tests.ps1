@@ -27,4 +27,36 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
 
         $content | Should -Not -Match 'PanelFocus\s*='
     }
+
+    It 'includes incident tags and classification metadata in the incident details payload' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('Classification = $selectedIncident.Classification') | Should -BeTrue
+        $content.Contains('SystemTags    = @($selectedIncident.SystemTags)') | Should -BeTrue
+        $content.Contains('CustomTags    = @($selectedIncident.CustomTags)') | Should -BeTrue
+        $content.Contains('LastUpdated   = $selectedIncident.LastUpdateDateTime') | Should -BeTrue
+        $content | Should -Not -Match 'RedirectIncidentId\s*='
+    }
+
+    It 'renders incident list entries with severity badge and incident id' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("'Sev ID         Title                                    Status'") | Should -BeTrue
+        $content.Contains('$severityColor = switch ($severityKey) {') | Should -BeTrue
+        $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
+        $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
+        $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 3 -Data 'empty')") | Should -BeTrue
+        $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
+    }
+
+    It 'renders alert list entries with severity badge incident-style columns and status' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("'Sev Title                                         Status'") | Should -BeTrue
+        $content.Contains('$titleText = [string]$_.Title') | Should -BeTrue
+        $content.Contains('$statusText = [string]$_.Status') | Should -BeTrue
+        $content.Contains('$severityText = [string]$_.Severity') | Should -BeTrue
+        $content | Should -Not -Match '\$alertIdText\s*='
+    }
 }
