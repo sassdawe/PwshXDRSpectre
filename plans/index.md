@@ -15,7 +15,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | Phase | Title | Status | Depends on |
 |-------|-------|--------|------------|
 | [Phase 1](phase-1-foundation.md) | Foundation and Architecture | 🟡 In Progress | — |
-| [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | ⚪ Not Started | Phase 1 |
+| [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | 🟡 In Progress | Phase 1 |
 | [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | ⚪ Not Started | Phase 2 |
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 4 |
@@ -36,12 +36,16 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [x] Testing baseline (Pester)
 
 ### Phase 2 — Incident and Alert Operations
-- [ ] Policy file schema and loader (`config/triage-policy.json`)
-- [ ] Incident triage service (`Set-XdrIncidentTriage`)
-- [ ] Alert triage service (`Set-XdrAlertStatus`)
-- [ ] Assign-to-me identity resolver
-- [ ] Confirmation safety policy enforcement
-- [ ] Dedicated disabled-reasons panel
+- [x] Policy file schema and loader (`config/triage-policy.json`)
+- [x] Incident triage service (`Set-XdrIncidentTriage`)
+- [x] Alert triage service (`Set-XdrAlertStatus`)
+- [x] Assign-to-me identity resolver
+- [x] Confirmation safety policy enforcement
+- [x] Dedicated disabled-reasons panel
+- [x] Resolution workflow UX hardening (`Alt+` shortcuts, `Ctrl+Q`, `PgUp/PgDn`, focus lock)
+- [x] Permission-aware degraded mode and visual indicators (capability downgrade + red logo)
+- [x] Active panel border theme highlighting
+- [x] Connect-session permission classification tests
 
 ### Phase 3 — Entity Pivots and Containment
 - [ ] Entity extraction and normalization

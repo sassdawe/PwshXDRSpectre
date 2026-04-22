@@ -1,9 +1,9 @@
 # Phase 2 — Incident and Alert Operations
 
-**Status**: 🟡 In Progress (mostly implemented)  
+**Status**: 🟡 In Progress (implementation largely complete; remaining manual validation and a few stretch tests)  
 **Depends on**: [Phase 1 — Foundation](phase-1-foundation.md)  
 **Blocks**: Phase 3  
-**Last updated**: 2026-04-21
+**Last updated**: 2026-04-22
 
 ---
 
@@ -67,11 +67,14 @@
   - Classification
   - Determination
   - AssignedTo
-  - Comment (with auto-fill fallback on resolve)
+  - Comment
 - [x] **2.2** Implement `Private/Get-XdrAssignTargetIdentity.ps1` — resolves analyst identity using `mail` first, then `userPrincipalName` as fallback
 - [x] **2.3** Ensure resolving-comment auto-fill triggers only when comment is missing and status is `resolved`
 - [x] **2.4** Ensure service builds proper Graph PATCH payload before calling `Invoke-XdrOperation`
 - [x] **2.5** Implement `Public/Get-XdrTriageOptions.ps1` — returns available status, classification, and determination options from policy
+- [x] **2.6** Route resolving comments to Graph incident `resolvingComment` property when closing incidents
+- [x] **2.7** Route normal incident comments through `POST /security/incidents/{incidentId}/comments`
+- [x] **2.8** Ensure selected incident objects missing `ResolvingComment` are updated safely without runtime failure
 
 ### Workstream 3: Alert Triage Service
 
@@ -140,11 +143,32 @@
 - [ ] **7.12** Alert triage service builds proper payload for each status
 - [x] **7.13** Capability failure returns structured non-terminating error
 - [ ] **7.14** Invalid policy values fail closed before any Graph call is made
+- [x] **7.17** Normal incident comment flow posts to incident comments endpoint
+- [x] **7.18** Resolving comment update is safe when selected incident initially lacks `ResolvingComment`
+- [x] **7.19** Connect-session permission classification tests cover both read-write and downgraded read-only paths
 
 **UI wiring tests:**
 
 - [ ] **7.15** Live dashboard triage actions call services only — no direct Graph calls
 - [ ] **7.16** Disabled-reasons panel updates reason text when context changes
+
+### Workstream 8: Dashboard UX Hardening (Completed Additions)
+
+- [x] **8.1** Add guided 3-step incident resolution workflow in Action Status panel (determination → resolving comment → confirm)
+- [x] **8.2** Lock panel focus to resolution panel during active resolution workflow, then restore previous panel on complete/cancel
+- [x] **8.3** Add panel navigation with `PgUp/PgDn` while preserving existing `Tab`/`Shift+Tab` model
+- [x] **8.4** Add resolution-step navigation with `PgUp/PgDn`
+- [x] **8.5** Change dashboard exit to `Ctrl+Q` and reserve `Esc` for cancel/back in modal workflows
+- [x] **8.6** Convert action shortcuts to `Alt+` combinations and disable shortcut capture during free-text input
+- [x] **8.7** Add active-panel border highlighting in theme color
+
+### Workstream 9: Permission-Aware Degraded Mode (Completed Additions)
+
+- [x] **9.1** Add runtime permission-health model to context session state
+- [x] **9.2** Implement scope-based write sufficiency classification from Graph context (minimum: `SecurityIncident.ReadWrite.All`)
+- [x] **9.3** Parse Graph forbidden messages to capture required and available permissions and update permission health
+- [x] **9.4** Downgrade mutating capabilities to read-only action sets when permissions are insufficient
+- [x] **9.5** Render dashboard logo in red when write permissions are insufficient
 
 ---
 
@@ -168,6 +192,9 @@
 - [x] Alert status triage for New, In progress, and Resolved works in live dashboard
 - [x] Confirmation behavior is policy-driven and validated by tests
 - [x] Disabled-reasons panel is always visible and context-aware
+- [x] Resolved incident updates use Graph `resolvingComment` while normal comments use incident comment endpoint
+- [x] Dashboard supports keyboard-safe workflow controls (`Alt+` shortcuts, `Ctrl+Q`, `PgUp/PgDn`) and resolution focus locking
+- [x] Permission-aware degraded mode updates capabilities and visual state (red logo) when write permissions are insufficient
 - [ ] Policy edits are protected by unit tests that catch typos and invalid entries
 - [x] UI layer performs no direct Graph mutation calls
 
@@ -208,4 +235,8 @@
 - [Public/Set-XdrIncidentTriage.ps1](../Public/Set-XdrIncidentTriage.ps1) — incident triage service
 - [Public/Set-XdrAlertStatus.ps1](../Public/Set-XdrAlertStatus.ps1) — alert triage service
 - [Private/Get-XdrTriagePolicy.ps1](../Private/Get-XdrTriagePolicy.ps1) — policy loader
+- [Public/Connect-XdrSession.ps1](../Public/Connect-XdrSession.ps1) — permission-health detection and capability downgrade logic
+- [Private/Invoke-XdrOperation.ps1](../Private/Invoke-XdrOperation.ps1) — forbidden-permission parsing and runtime permission updates
+- [Public/Start-PwshXdrLiveDashboard.ps1](../Public/Start-PwshXdrLiveDashboard.ps1) — action/status UI, resolution workflow, keyboard UX, visual permission cues
+- [Tests/Connect-XdrSession.Tests.ps1](../Tests/Connect-XdrSession.Tests.ps1) — scope-based permission classification tests
 - [Invoke-PwshXDRDashboard.ps1](../Invoke-PwshXDRDashboard.ps1) — live dashboard wiring target
