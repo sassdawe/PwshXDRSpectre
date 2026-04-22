@@ -21,4 +21,10 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('Get-XdrActionDisableReasons -ActionName "Set alert status to $statusLabel" -ActionType Alert -Context $context -CurrentStatus $selectedAlert.Status -RequestedStatus $requestedStatus') | Should -BeTrue
         $content.Contains("`$reasons = @('Unavailable')") | Should -BeTrue
     }
+
+    It 'does not expose PanelFocus in incident or alert detail JSON payloads' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content | Should -Not -Match 'PanelFocus\s*='
+    }
 }

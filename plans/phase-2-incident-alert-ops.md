@@ -1,6 +1,6 @@
 # Phase 2 — Incident and Alert Operations
 
-**Status**: 🟡 In Progress (implementation largely complete; remaining manual validation and a few stretch tests)  
+**Status**: 🟡 In Progress (implementation complete; remaining manual validation only)  
 **Depends on**: [Phase 1 — Foundation](phase-1-foundation.md)  
 **Blocks**: Phase 3  
 **Last updated**: 2026-04-22
@@ -202,13 +202,13 @@
 
 ## Manual Validation Checklist
 
-- [ ] Change incident status from Active to In progress
+- [x] Change incident status from Active to In progress
 - [ ] Resolve incident without entering a comment — verify default comment is applied
 - [ ] Update classification and determination using allowed options
 - [ ] Update alert to New, In progress, and Resolved
 - [ ] Validate assign-to-me uses `mail` first and `userPrincipalName` when mail is empty
 - [ ] Trigger a capability restriction and confirm disabled reason appears in the dedicated panel
-- [ ] Validate confirmation prompt appears for actions flagged as disruptive
+- [x] Validate confirmation prompt appears for actions flagged as disruptive
 
 ---
 

@@ -1,0 +1,74 @@
+function Get-ContextAwareHelpLines {
+    <#
+    .SYNOPSIS
+    Returns keyboard help lines based on current dashboard state.
+
+    .DESCRIPTION
+    Produces concise contextual guidance for the active panel and modal states
+    such as confirmation prompts, text input, or incident resolution workflow.
+
+    .PARAMETER ActivePanel
+    The currently active panel.
+
+    .PARAMETER SelectedIncident
+    Selected incident object.
+
+    .PARAMETER SelectedAlert
+    Selected alert object.
+
+    .PARAMETER PendingConfirmation
+    Current confirmation payload.
+
+    .PARAMETER PendingTextInput
+    Current text input payload.
+
+    .PARAMETER PendingIncidentResolution
+    Current incident resolution workflow payload.
+
+    .OUTPUTS
+    System.String[]
+
+    .EXAMPLE
+    Get-ContextAwareHelpLines -ActivePanel incidents
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$ActivePanel,
+
+        [Parameter()]
+        [object]$SelectedIncident,
+
+        [Parameter()]
+        [object]$SelectedAlert,
+
+        [Parameter()]
+        [object]$PendingConfirmation,
+
+        [Parameter()]
+        [object]$PendingTextInput,
+
+        [Parameter()]
+        [object]$PendingIncidentResolution
+    )
+
+    if ($null -ne $PendingIncidentResolution) {
+        return @('Incident resolution workflow active | PgUp/PgDn step switch | Use Incident Resolution panel | Esc cancel')
+    }
+
+    if ($null -ne $PendingTextInput) {
+        return @('Comment input mode | Type text | Enter submit | Backspace edit | Esc cancel | Shortcuts disabled')
+    }
+
+    $baseLine = 'Alt+A/U/O/I/R/C incident | Alt+L load alerts | Alt+N/P/M alert | F5 refresh | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+Q exit'
+
+    switch ($ActivePanel) {
+        'incidents' { return @('↑/↓ incidents | Enter or L loads alerts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+        'incident_details' { return @('Alt+A/U/O/I/R/C selected incident | Alt+L or Enter loads alerts | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+        'alerts' { return @('↑/↓ alerts | Alt+N/P/M selected alert | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/C/L/N/P/M shortcuts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+    }
+
+    return @($baseLine)
+}

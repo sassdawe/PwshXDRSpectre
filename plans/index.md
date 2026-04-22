@@ -15,7 +15,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | Phase | Title | Status | Depends on |
 |-------|-------|--------|------------|
 | [Phase 1](phase-1-foundation.md) | Foundation and Architecture | 🟡 In Progress | — |
-| [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | 🟡 In Progress (manual validation pending) | Phase 1 |
+| [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | 🟡 In Progress (implementation complete; manual validation pending) | Phase 1 |
 | [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | ⚪ Not Started | Phase 2 |
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 4 |
@@ -46,7 +46,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [x] Permission-aware degraded mode and visual indicators (capability downgrade + red logo)
 - [x] Active panel border theme highlighting
 - [x] Connect-session permission classification tests
-- [x] Phase 2 planned test items complete (38/38 passing)
+- [x] Phase 2 planned and extracted-helper test items complete (63/63 passing)
 
 ### Phase 3 — Entity Pivots and Containment
 - [ ] Entity extraction and normalization
