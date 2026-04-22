@@ -3,6 +3,32 @@ BeforeAll {
 }
 
 Describe 'Set-XdrIncidentTriage' {
+    It 'builds proper incident payload for each supported status' {
+        InModuleScope PwshXDRSpectre {
+            $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+            $context.Capabilities.IncidentActions = @('UpdateIncidentStatus')
+
+            Mock Update-MgSecurityIncident {
+                $script:lastBody = $BodyParameter
+                [pscustomobject]@{ Id = $IncidentId; Status = $BodyParameter.status }
+            }
+
+            $cases = @(
+                @{ Display = 'Active'; Graph = 'active' },
+                @{ Display = 'In progress'; Graph = 'inProgress' },
+                @{ Display = 'Resolved'; Graph = 'resolved' }
+            )
+
+            foreach ($case in $cases) {
+                $script:lastBody = $null
+                $result = Set-XdrIncidentTriage -Context $context -IncidentId 'inc-status' -Status $case.Display -SkipConfirmation
+
+                $result.Success | Should -BeTrue
+                $script:lastBody.status | Should -Be $case.Graph
+            }
+        }
+    }
+
     It 'builds status payload for in progress updates' {
         InModuleScope PwshXDRSpectre {
             $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
@@ -152,6 +178,24 @@ Describe 'Set-XdrIncidentTriage' {
 
             $result.Success | Should -BeFalse
             $result.Message | Should -Be 'Capability not available: UpdateIncidentStatus'
+        }
+    }
+
+    It 'fails closed for invalid incident status policy values before Graph mutation' {
+        InModuleScope PwshXDRSpectre {
+            $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+            $context.Capabilities.IncidentActions = @('UpdateIncidentStatus')
+
+            $policy = Get-XdrTriagePolicy
+            $invalidPolicy = $policy | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            $invalidPolicy.incidentStatusMap = @($invalidPolicy.incidentStatusMap | Where-Object { $_.label -ne 'Active' })
+
+            Mock Update-MgSecurityIncident {
+                throw 'Graph mutation should not run for invalid policy values.'
+            }
+
+            { Set-XdrIncidentTriage -Context $context -IncidentId 'inc-invalid' -Status 'Active' -SkipConfirmation -Policy $invalidPolicy } | Should -Throw "Unknown triage value 'Active' for map 'incidentStatusMap'"
+            Assert-MockCalled Update-MgSecurityIncident -Times 0 -Exactly
         }
     }
 }

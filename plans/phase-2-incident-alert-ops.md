@@ -138,19 +138,19 @@
 
 **Mocked service tests:**
 
-- [ ] **7.10** Incident triage service builds proper payload for each status
+- [x] **7.10** Incident triage service builds proper payload for each status
 - [x] **7.11** Incident resolve flow includes default comment when field is empty
-- [ ] **7.12** Alert triage service builds proper payload for each status
+- [x] **7.12** Alert triage service builds proper payload for each status
 - [x] **7.13** Capability failure returns structured non-terminating error
-- [ ] **7.14** Invalid policy values fail closed before any Graph call is made
+- [x] **7.14** Invalid policy values fail closed before any Graph call is made
 - [x] **7.17** Normal incident comment flow posts to incident comments endpoint
 - [x] **7.18** Resolving comment update is safe when selected incident initially lacks `ResolvingComment`
 - [x] **7.19** Connect-session permission classification tests cover both read-write and downgraded read-only paths
 
 **UI wiring tests:**
 
-- [ ] **7.15** Live dashboard triage actions call services only — no direct Graph calls
-- [ ] **7.16** Disabled-reasons panel updates reason text when context changes
+- [x] **7.15** Live dashboard triage actions call services only — no direct Graph calls
+- [x] **7.16** Disabled-reasons panel updates reason text when context changes
 
 ### Workstream 8: Dashboard UX Hardening (Completed Additions)
 
