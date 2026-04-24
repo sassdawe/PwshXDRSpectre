@@ -19,7 +19,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | ⚪ Not Started | Phase 2 |
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 4 |
-| [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | ⚪ Not Started | All phases |
+| [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All phases |
 
 **Status key**: ⚪ Not Started · 🟡 In Progress · 🔴 Blocked · ✅ Completed
 
@@ -71,7 +71,8 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 ### Phase 6 — UX Hardening, Testing, and Docs
 - [ ] Dedicated layout panes (Incidents, Alerts, Entities, Actions, Query Catalog, Results, Log)
 - [ ] Keyboard help and non-blocking feedback
-- [ ] Pester test expansion
+- [~] Pester test expansion
+- [x] Dedicated `Tests/<Function>.Tests.ps1` coverage layout for every `Private/` and `Public/` script
 - [ ] End-to-end test tenant validation
 - [ ] Documentation update
 

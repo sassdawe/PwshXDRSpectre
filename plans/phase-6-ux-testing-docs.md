@@ -1,9 +1,9 @@
 # Phase 6 — UX Hardening, Testing, and Docs
 
-**Status**: ⚪ Not Started  
+**Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-04-21
+**Last updated**: 2026-04-24
 
 ---
 
@@ -57,6 +57,10 @@
 - [ ] **3.4** Distinguish transient status messages from persistent error states in the status bar
 
 ### Workstream 4: Expanded Pester Tests
+
+- [x] Per-function test file layout completed for every script in `Private/` and `Public/`
+- [x] Legacy aggregate helper and entry-script test files retired in favor of dedicated test files
+- [x] Full suite runs cleanly with dedicated-file scaffolds in place (`67` passed, `9` skipped placeholders)
 
 **Schema validation tests:**
 
