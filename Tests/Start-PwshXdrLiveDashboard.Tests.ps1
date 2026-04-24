@@ -59,4 +59,14 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$severityText = [string]$_.Severity') | Should -BeTrue
         $content | Should -Not -Match '\$alertIdText\s*='
     }
+
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Start-PwshXdrLiveDashboard).Description | Should -Not -BeNullOrEmpty
+        }
+    }
 }

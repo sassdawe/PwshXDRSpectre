@@ -198,4 +198,14 @@ Describe 'Set-XdrIncidentTriage' {
             Assert-MockCalled Update-MgSecurityIncident -Times 0 -Exactly
         }
     }
+
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Set-XdrIncidentTriage).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Set-XdrIncidentTriage).Description | Should -Not -BeNullOrEmpty
+        }
+    }
 }

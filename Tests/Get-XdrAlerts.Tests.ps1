@@ -3,6 +3,13 @@ BeforeAll {
 }
 
 Describe 'Get-XdrAlerts' {
-    It 'has dedicated coverage placeholder' -Skip {
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Get-XdrAlerts).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Get-XdrAlerts).Description | Should -Not -BeNullOrEmpty
+        }
     }
 }

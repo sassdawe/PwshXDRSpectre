@@ -3,6 +3,13 @@ BeforeAll {
 }
 
 Describe 'Get-XdrTriageOptions' {
-    It 'has dedicated coverage placeholder' -Skip {
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Get-XdrTriageOptions).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Get-XdrTriageOptions).Description | Should -Not -BeNullOrEmpty
+        }
     }
 }

@@ -87,4 +87,14 @@ Describe 'Set-XdrAlertStatus' {
             Assert-MockCalled Update-MgSecurityAlertV2 -Times 0 -Exactly
         }
     }
+
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Set-XdrAlertStatus).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Set-XdrAlertStatus).Description | Should -Not -BeNullOrEmpty
+        }
+    }
 }

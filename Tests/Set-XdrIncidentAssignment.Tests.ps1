@@ -3,6 +3,13 @@ BeforeAll {
 }
 
 Describe 'Set-XdrIncidentAssignment' {
-    It 'has dedicated coverage placeholder' -Skip {
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Set-XdrIncidentAssignment).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Set-XdrIncidentAssignment).Description | Should -Not -BeNullOrEmpty
+        }
     }
 }
