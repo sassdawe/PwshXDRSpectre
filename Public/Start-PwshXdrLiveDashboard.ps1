@@ -1,4 +1,43 @@
 function Start-PwshXdrLiveDashboard {
+    <#
+        .SYNOPSIS
+        Launches the interactive PowerShell XDR live dashboard TUI.
+
+        .DESCRIPTION
+        Connects to Microsoft Defender XDR via Microsoft Graph, loads incidents and
+        alerts, and renders a full-screen terminal user interface built with
+        PwshSpectreConsole. The dashboard supports keyboard-driven navigation,
+        incident triage, alert status updates, analyst assignment, and real-time
+        background alert prefetching.
+
+        .PARAMETER TenantId
+        The Azure AD tenant ID for the target organization.
+
+        .PARAMETER ClientId
+        The Azure AD application (client) ID used for Microsoft Graph authentication.
+
+        .PARAMETER Limit
+        Maximum number of incidents to load on startup. When 0 or not specified, all
+        available incidents are retrieved.
+
+        .PARAMETER UseDeviceCode
+        When specified, uses device code flow for interactive authentication instead of
+        the default browser-based interactive flow.
+
+        .OUTPUTS
+        None. The dashboard runs interactively until the user presses Ctrl+Q.
+
+        .EXAMPLE
+        Start-PwshXdrLiveDashboard -TenantId 'xxxxxxxx-...' -ClientId 'yyyyyyyy-...'
+
+        .EXAMPLE
+        Start-PwshXdrLiveDashboard -TenantId 'xxxxxxxx-...' -ClientId 'yyyyyyyy-...' `
+            -Limit 50 -UseDeviceCode
+
+        .NOTES
+        Requires PwshSpectreConsole and Microsoft.PowerShell.ThreadJob modules.
+        Press Ctrl+Q to exit the dashboard.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

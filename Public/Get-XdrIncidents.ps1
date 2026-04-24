@@ -1,4 +1,34 @@
 function Get-XdrIncidents {
+    <#
+        .SYNOPSIS
+        Retrieves Microsoft Defender XDR incidents and converts them to view models.
+
+        .DESCRIPTION
+        Fetches incidents from the Microsoft Graph Security API, optionally limiting the
+        result count, converts each incident to a normalized XDR incident view model,
+        and stores the result on the runtime context. The context cache is updated with
+        the retrieved incidents and a LastRefresh timestamp.
+
+        .PARAMETER Context
+        The runtime context object. Retrieved incidents are stored in Context.Data.Incidents.
+
+        .PARAMETER Limit
+        Maximum number of incidents to return. When 0 or not specified, all incidents
+        are retrieved.
+
+        .OUTPUTS
+        PSCustomObject containing Success, Operation, Message, Data (array of incident
+        view models), Error, and Metadata properties.
+
+        .EXAMPLE
+        $result = Get-XdrIncidents -Context $ctx
+
+        .EXAMPLE
+        $result = Get-XdrIncidents -Context $ctx -Limit 25
+
+        .NOTES
+        Requires a connected session with at least SecurityIncident.Read.All permissions.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

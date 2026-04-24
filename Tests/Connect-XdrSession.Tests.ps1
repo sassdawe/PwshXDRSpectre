@@ -73,4 +73,14 @@ Describe 'Connect-XdrSession' {
             $context.Capabilities.AlertActions | Should -Be @('GetAlerts')
         }
     }
+
+    Context 'comment-based help' {
+        It 'has a Synopsis' {
+            (Get-Help Connect-XdrSession).Synopsis | Should -Not -BeNullOrEmpty
+        }
+
+        It 'has a Description' {
+            (Get-Help Connect-XdrSession).Description | Should -Not -BeNullOrEmpty
+        }
+    }
 }
