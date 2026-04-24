@@ -1,4 +1,64 @@
 function Set-XdrIncidentTriage {
+    <#
+        .SYNOPSIS
+        Applies one or more triage attributes to a Microsoft Defender XDR incident.
+
+        .DESCRIPTION
+        Builds a Microsoft Graph PATCH payload from any combination of Status,
+        Classification, Determination, and assignment parameters, enforces capability
+        guards and safety policy confirmations, posts the update, and optionally
+        appends a comment to the incident activity feed.
+
+        .PARAMETER Context
+        The runtime context object that holds session, capability, and selection state.
+
+        .PARAMETER IncidentId
+        The unique identifier of the incident to update.
+
+        .PARAMETER Status
+        The human-readable incident status to apply (e.g., 'Active', 'In progress', 'Resolved').
+
+        .PARAMETER Classification
+        The classification label to apply (e.g., 'True positive', 'False positive').
+
+        .PARAMETER Determination
+        The determination label to apply (e.g., 'Malware', 'Phishing').
+
+        .PARAMETER Comment
+        An analyst comment to append to the incident activity feed.
+
+        .PARAMETER AssignedTo
+        The UPN or display name of the analyst to assign the incident to.
+
+        .PARAMETER AssignToMe
+        When specified, resolves the current user's identity and assigns the incident
+        to that identity.
+
+        .PARAMETER ClearAssignment
+        When specified, removes any existing assignment from the incident.
+
+        .PARAMETER SkipConfirmation
+        When specified, bypasses safety policy confirmation prompts.
+
+        .PARAMETER Policy
+        The triage policy used for enum mapping and safety checks. Defaults to
+        the policy returned by Get-XdrTriagePolicy.
+
+        .OUTPUTS
+        PSCustomObject containing Success, Operation, Message, Data, Error, and Metadata
+        properties.
+
+        .EXAMPLE
+        Set-XdrIncidentTriage -Context $ctx -IncidentId 'inc-42' -Status 'Resolved' `
+            -Classification 'True positive' -Determination 'Malware' -SkipConfirmation
+
+        .EXAMPLE
+        Set-XdrIncidentTriage -Context $ctx -IncidentId 'inc-42' -AssignToMe
+
+        .NOTES
+        Requires at least one of UpdateIncidentStatus, ClassifyIncident, or AssignIncident
+        capabilities depending on which parameters are supplied.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

@@ -1,4 +1,46 @@
 function Connect-XdrSession {
+    <#
+        .SYNOPSIS
+        Establishes an authenticated session with Microsoft Defender XDR via Microsoft Graph.
+
+        .DESCRIPTION
+        Connects to Microsoft Graph using either an existing runtime context object or a
+        ClientId / TenantId pair. After authentication, inspects the granted Graph scopes
+        and stores permission health information on the context so the rest of the module
+        can enforce capability guards at runtime.
+
+        .PARAMETER Context
+        A runtime context object created by New-XdrRuntimeContext. When supplied the
+        function uses the TenantId and ClientId already stored inside the context.
+
+        .PARAMETER ClientId
+        The Azure AD application (client) ID to use for authentication.
+        Required when not providing a pre-built Context object.
+
+        .PARAMETER TenantId
+        The Azure AD tenant ID for the target organization.
+        Required when not providing a pre-built Context object.
+
+        .PARAMETER UseDeviceCode
+        When specified, uses device code flow for interactive authentication instead of
+        the default browser-based interactive flow.
+
+        .OUTPUTS
+        PSCustomObject containing Success, Operation, Message, Data, Error, and Metadata
+        properties. The returned object follows the standard XDR operation result shape.
+
+        .EXAMPLE
+        $ctx = New-XdrRuntimeContext -TenantId 'xxxxxxxx-...' -ClientId 'yyyyyyyy-...'
+        Connect-XdrSession -Context $ctx
+
+        .EXAMPLE
+        Connect-XdrSession -TenantId 'xxxxxxxx-...' -ClientId 'yyyyyyyy-...' -UseDeviceCode
+
+        .NOTES
+        Requires the Microsoft.Graph PowerShell SDK. The SecurityIncident.ReadWrite.All
+        Graph permission is needed for full write capabilities; without it the session
+        is placed in read-only mode.
+    #>
     [CmdletBinding()]
     param(
         # Bring your own context object.

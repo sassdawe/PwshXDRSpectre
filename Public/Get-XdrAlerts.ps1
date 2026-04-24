@@ -1,4 +1,31 @@
 function Get-XdrAlerts {
+    <#
+        .SYNOPSIS
+        Retrieves and normalizes security alerts for a selected incident.
+
+        .DESCRIPTION
+        Resolves alert references from the provided incident object, fetches each alert
+        from the Microsoft Graph Security API, converts them to XDR alert view models,
+        and stores the results on the runtime context for use by the live dashboard.
+
+        .PARAMETER Context
+        The runtime context object. Retrieved alerts are stored in Context.Data.Alerts.
+
+        .PARAMETER Incident
+        The incident object (from Get-XdrIncidents or the live context) whose alerts
+        should be retrieved. Supports both AlertRefs and Alerts property shapes.
+
+        .OUTPUTS
+        PSCustomObject containing Success, Operation, Message, Data (array of alert view
+        models), Error, and Metadata properties.
+
+        .EXAMPLE
+        $result = Get-XdrAlerts -Context $ctx -Incident $selectedIncident
+
+        .NOTES
+        Requires a connected session. Returns an empty Data array when the incident has
+        no associated alerts.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
