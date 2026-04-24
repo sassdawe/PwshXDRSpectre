@@ -25,7 +25,7 @@ function Start-PwshXdrLiveDashboard {
         the default browser-based interactive flow.
 
         .OUTPUTS
-        None. The dashboard runs interactively until the user presses Q or Escape.
+        None. The dashboard runs interactively until the user presses Ctrl+Q.
 
         .EXAMPLE
         Start-PwshXdrLiveDashboard -TenantId 'xxxxxxxx-...' -ClientId 'yyyyyyyy-...'
@@ -36,7 +36,7 @@ function Start-PwshXdrLiveDashboard {
 
         .NOTES
         Requires PwshSpectreConsole and Microsoft.PowerShell.ThreadJob modules.
-        Press Q or Escape to exit the dashboard. Press H for inline help.
+        Press Ctrl+Q to exit the dashboard.
     #>
     [CmdletBinding()]
     param(
