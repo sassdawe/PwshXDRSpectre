@@ -27,9 +27,11 @@ jobs:
         shell: pwsh
         run: |
           Set-StrictMode -Version Latest
-          Install-Module -Name Pester -Scope CurrentUser -Force -SkipPublisherCheck
-          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          $pesterVersion = '5.7.1'
+          $psScriptAnalyzerVersion = '1.24.0'
 
+          Install-Module -Name Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion $psScriptAnalyzerVersion -Scope CurrentUser -Force -SkipPublisherCheck
       - name: Validate module manifest
         shell: pwsh
         run: |
