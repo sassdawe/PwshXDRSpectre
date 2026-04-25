@@ -51,7 +51,7 @@ Optional authentication mode:
 
 ```powershell
 Import-Module ./src/PwshXDRSpectre.psm1;
-Start-PwshXdrLiveDashboard tenantId '<tenant-guid>' -clientID '<app-client-id>' -UseDeviceCode
+Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>' -UseDeviceCode
 ```
 
 Example UI:
