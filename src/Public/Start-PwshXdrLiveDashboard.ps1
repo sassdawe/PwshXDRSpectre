@@ -208,7 +208,7 @@ function Start-PwshXdrLiveDashboard {
             }
 
             $key = Get-XdrLastKeyPressed
-            if ($key -ne $null) {
+            if ($null -ne $key) {
                 $keyChar = ([string]$key.KeyChar).ToLowerInvariant()
                 $isShiftPressed = (($key.Modifiers -band [ConsoleModifiers]::Shift) -ne 0)
                 $isCtrlPressed = (($key.Modifiers -band [ConsoleModifiers]::Control) -ne 0)
