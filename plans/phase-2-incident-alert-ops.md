@@ -239,4 +239,4 @@
 - [Private/Invoke-XdrOperation.ps1](../Private/Invoke-XdrOperation.ps1) — forbidden-permission parsing and runtime permission updates
 - [Public/Start-PwshXdrLiveDashboard.ps1](../Public/Start-PwshXdrLiveDashboard.ps1) — action/status UI, resolution workflow, keyboard UX, visual permission cues
 - [Tests/Connect-XdrSession.Tests.ps1](../Tests/Connect-XdrSession.Tests.ps1) — scope-based permission classification tests
-- [Invoke-PwshXDRDashboard.ps1](../Invoke-PwshXDRDashboard.ps1) — live dashboard wiring target
+- [src/Public/Start-PwshXdrLiveDashboard.ps1](../src/Public/Start-PwshXdrLiveDashboard.ps1) — live dashboard wiring target
