@@ -13,8 +13,7 @@ The project now uses a module-first structure and shared runtime context:
 
 Current dashboard wrappers:
 
-- `Invoke-PwshXDRDashboard.ps1` -> `Start-PwshXdrLiveDashboard`
-- `PwshXDRDashboard.ps1` -> `Start-PwshXdrLiveDashboard` (legacy alias)
+`Start-PwshXdrLiveDashboard`
 
 Live dashboard mode uses:
 
@@ -29,7 +28,7 @@ Live dashboard mode uses:
 
 Delegated permissions are recommended, so no certificate or client secret is required.
 
-![delegated MSGraph permissions](pwshxdr-delegated-api.png)
+![delegated MSGraph permissions](./images/pwshxdr-delegated-api.png)
 
 Any action performed with delegated permissions will be associated with your user identity in audit logs.
 
@@ -44,31 +43,27 @@ Any action performed with delegated permissions will be associated with your use
 ### Live dashboard
 
 ```powershell
-./Invoke-PwshXDRDashboard.ps1 -tenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -clientID '7580ada2-de37-4ed3-8222-d4743cba052e' -limit 25
-```
-
-Legacy alias (same live dashboard behavior):
-
-```powershell
-./PwshXDRDashboard.ps1 -tenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -clientID '7580ada2-de37-4ed3-8222-d4743cba052e' -limit 25
+Import-Module ./src/PwshXDRSpectre.psm1;
+Start-PwshXdrLiveDashboard -TenantId '867b6ce7-bde1-4b57-ad45-26c49b675e6c' -ClientId '7580ada2-de37-4ed3-8222-d4743cba052e'
 ```
 
 Optional authentication mode:
 
 ```powershell
-./Invoke-PwshXDRDashboard.ps1 -tenantId '<tenant-guid>' -clientID '<app-client-id>' -UseDeviceCode
+Import-Module ./src/PwshXDRSpectre.psm1;
+Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>' -UseDeviceCode
 ```
 
 Example UI:
 
-![PwshXDRSpectre in usage](PwshXDR-usage.png)
+![PwshXDRSpectre in usage](./images/PwshXDR-usage.png)
 
 ## Tests
 
 Run baseline Phase 1 tests:
 
 ```powershell
-Invoke-Pester -Path ./Tests -Output Detailed
+Invoke-Pester -Path ./src/Tests -Output Detailed
 ```
 
 ## Inspired by
