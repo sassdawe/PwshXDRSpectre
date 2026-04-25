@@ -12,6 +12,8 @@ jobs:
   dependency-review:
     name: Review Dependency Changes
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - name: Checkout
