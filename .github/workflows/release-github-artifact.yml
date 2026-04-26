@@ -30,16 +30,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@v6.0.2
 
       - name: Install PowerShell tooling
         shell: pwsh
         run: |
           Set-StrictMode -Version Latest
-          $pesterVersion = '5.7.1'
-          $psScriptAnalyzerVersion = '1.24.0'
+          $pesterVersion = '5.7.1' # version pin for testing consistency
+          $psScriptAnalyzerVersion = '1.24.0' # version pin for testing consistency
           Install-Module -Name Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module -Name PSScriptAnalyzer -RequiredVersion $psScriptAnalyzerVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PwshSpectreConsole -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Security -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Authentication -Scope CurrentUser -Force -SkipPublisherCheck
 
       - name: Validate module manifest
         shell: pwsh
@@ -83,7 +86,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@v6.0.2
 
       - name: Resolve release tag and module version
         id: release_meta
@@ -169,7 +172,7 @@ jobs:
           gh release upload "$RELEASE_TAG" ./artifacts/*.nupkg --clobber
 
       - name: Upload CI artifact copy
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: github-release-nupkg
           path: artifacts/*.nupkg
