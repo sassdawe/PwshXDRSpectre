@@ -62,11 +62,11 @@ Private/
   New-XdrErrorRecord.ps1
 ```
 
-- [x] **2.1** Move Graph connection and analyst lookup out of `PwshXDRDashboard.ps1` into session functions (`Connect-XdrSession`, `Get-XdrCurrentUser`)
+- [x] **2.1** Move Graph connection and analyst lookup out of dashboard entry logic into session functions (`Connect-XdrSession`, `Get-XdrCurrentUser`)
 - [x] **2.2** Split `Update-IncidentTable.ps1` into two layers: data retrieval (`Get-XdrIncidents`) and presentation formatting (`Format-XdrIncidentTable`)
-- [ ] **2.3** Move reusable panel helpers from `Invoke-PwshXDRDashboard.ps1` into private UI helper functions
+- [ ] **2.3** Move reusable panel helpers from dashboard entry logic into private UI helper functions
 - [x] **2.4** Update `PwshXDRSpectre.psm1` to dot-source all Public and Private functions
-- [x] **2.5** Keep existing script files (`PwshXDRDashboard.ps1`, `Invoke-PwshXDRDashboard.ps1`) as compatibility shims that import the module and delegate to public functions
+- [x] **2.5** Remove deprecated compatibility shim scripts and keep module public functions as the only supported entry points
 
 ### Workstream 3: Service Layer and Data Contracts
 
@@ -86,7 +86,7 @@ Introduce a service layer so UI code never calls Graph cmdlets directly.
 - [x] **3.4** Implement `Get-XdrCurrentUser` — resolve `/me` once and cache in `Context.Session.Analyst`
 - [x] **3.5** Implement `ConvertTo-XdrIncidentViewModel` — normalize raw Graph incident objects to the incident view model
 - [x] **3.6** Implement `ConvertTo-XdrAlertViewModel` — normalize raw Graph alert objects to the alert view model
-- [x] **3.7** Replace all direct raw Graph object shaping in `PwshXDRDashboard.ps1`, `Invoke-PwshXDRDashboard.ps1`, and `Update-IncidentTable.ps1` with view model converters
+- [x] **3.7** Replace all direct raw Graph object shaping in dashboard entry flows and `Update-IncidentTable.ps1` with view model converters
 
 ### Workstream 4: Operation Result and Error Contract
 
@@ -186,7 +186,6 @@ Add a Pester test suite covering non-UI logic so later phases can evolve without
 
 ## Relevant Files
 
-- [PwshXDRDashboard.ps1](../PwshXDRDashboard.ps1) — current action loop to evolve into modular dispatcher-backed flow
-- [Invoke-PwshXDRDashboard.ps1](../Invoke-PwshXDRDashboard.ps1) — live TUI layout/event loop
+- [src/Public/Start-PwshXdrLiveDashboard.ps1](../src/Public/Start-PwshXdrLiveDashboard.ps1) — live TUI layout/event loop
 - [Update-IncidentTable.ps1](../Update-IncidentTable.ps1) — incident/alert shaping logic to split
 - [README.md](../README.md) — update setup, permissions, and architecture overview

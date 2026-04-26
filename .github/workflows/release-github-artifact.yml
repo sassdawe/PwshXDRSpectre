@@ -1,0 +1,179 @@
+name: Publish GitHub Release Artifact
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (for example v0.1.0)
+        required: true
+        type: string
+      prerelease:
+        description: Mark release as pre-release
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Install PowerShell tooling
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $pesterVersion = '5.7.1' # version pin for testing consistency
+          $psScriptAnalyzerVersion = '1.24.0' # version pin for testing consistency
+          Install-Module -Name Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion $psScriptAnalyzerVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PwshSpectreConsole -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Security -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Authentication -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Validate module manifest
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          Test-ModuleManifest -Path ./src/PwshXDRSpectre.psd1 | Out-Null
+
+      - name: Run PSScriptAnalyzer (errors only)
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $analysisTargets = @(
+            './src/PwshXDRSpectre.psm1',
+            './src/Public',
+            './src/Private'
+          )
+
+          $findings = Invoke-ScriptAnalyzer -Path $analysisTargets -Recurse -Severity Error
+          if ($findings) {
+            $findings | Format-Table -AutoSize
+            throw "PSScriptAnalyzer reported $($findings.Count) error-level finding(s)."
+          }
+
+      - name: Run Pester test suite
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $config = New-PesterConfiguration
+          $config.Run.Path = './src/Tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+  release:
+    name: Build Package and Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Resolve release tag and module version
+        id: release_meta
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $manifest = Test-ModuleManifest -Path ./src/PwshXDRSpectre.psd1
+          $moduleVersion = $manifest.Version.ToString()
+
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $tag = '${{ inputs.tag }}'
+          }
+          else {
+            $tag = $env:GITHUB_REF.Substring('refs/tags/'.Length)
+          }
+
+          if (-not $tag.StartsWith('v')) {
+            throw "Release tag must start with 'v'. Received: $tag"
+          }
+
+          $tagVersion = $tag.Substring(1)
+          if ($tagVersion -ne $moduleVersion) {
+            throw "Tag version $tagVersion does not match manifest version $moduleVersion."
+          }
+
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "module-version=$moduleVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Build nupkg artifact
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+
+          $requiredAssetPath = './src/ANSI Shadow.flf'
+          if (-not (Test-Path -Path $requiredAssetPath -PathType Leaf)) {
+            throw "Required module asset is missing: $requiredAssetPath"
+          }
+
+          New-Item -ItemType Directory -Path ./artifacts -Force | Out-Null
+          New-Item -ItemType Directory -Path ./artifacts/package -Force | Out-Null
+
+          Copy-Item -Path ./src -Destination ./artifacts/package/PwshXDRSpectre -Recurse -Force
+
+          $requiredPackagedAssetPath = './artifacts/package/PwshXDRSpectre/ANSI Shadow.flf'
+          if (-not (Test-Path -Path $requiredPackagedAssetPath -PathType Leaf)) {
+            throw "Required module asset was not copied into package directory: $requiredPackagedAssetPath"
+          }
+
+          $packagePath = "./artifacts/PwshXDRSpectre.${{ steps.release_meta.outputs.module-version }}.nupkg"
+          Compress-Archive -Path ./artifacts/package/PwshXDRSpectre -DestinationPath $packagePath -Force
+
+          $verificationPath = './artifacts/verify'
+          New-Item -ItemType Directory -Path $verificationPath -Force | Out-Null
+          Expand-Archive -Path $packagePath -DestinationPath $verificationPath -Force
+
+          $requiredArchivedAssetPath = './artifacts/verify/PwshXDRSpectre/ANSI Shadow.flf'
+          if (-not (Test-Path -Path $requiredArchivedAssetPath -PathType Leaf)) {
+            throw "Required module asset was not present in package artifact: $requiredArchivedAssetPath"
+          }
+
+      - name: Create or update GitHub release and upload package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release_meta.outputs.tag }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; uploading package asset."
+          else
+            prerelease_flag=""
+            if [[ "${PRERELEASE:-false}" == "true" ]]; then
+              prerelease_flag="--prerelease"
+            fi
+            gh release create "$RELEASE_TAG" \
+              --title "$RELEASE_TAG" \
+              --notes "Automated release artifact for $RELEASE_TAG" \
+              $prerelease_flag
+          fi
+
+          gh release upload "$RELEASE_TAG" ./artifacts/*.nupkg --clobber
+
+      - name: Upload CI artifact copy
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: github-release-nupkg
+          path: artifacts/*.nupkg
+          if-no-files-found: error

@@ -1,0 +1,86 @@
+name: CI Quality Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Validate Manifest, Lint, and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Install PowerShell tooling
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $pesterVersion = '5.7.1' # version pin for testing consistency
+          $psScriptAnalyzerVersion = '1.24.0' # version pin for testing consistency
+          Install-Module -Name Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion $psScriptAnalyzerVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PwshSpectreConsole -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Security -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Authentication -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Validate module manifest
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          Test-ModuleManifest -Path ./src/PwshXDRSpectre.psd1 | Out-Null
+
+      - name: Run PSScriptAnalyzer (errors only)
+        shell: pwsh
+        run: |
+            Set-StrictMode -Version Latest
+
+            $analysisTargets = @(
+            './src/PwshXDRSpectre.psm1'
+            './src/Public'
+            './src/Private'
+            )
+
+            $findings = foreach ($t in $analysisTargets) {
+            Invoke-ScriptAnalyzer -Path $t -Recurse -Severity Error
+            }
+
+            if ($findings) {
+            $findings | Sort-Object ScriptName, Line, RuleName | Format-Table -AutoSize
+            throw "PSScriptAnalyzer reported $($findings.Count) error-level finding(s)."
+            }
+
+      - name: Run Pester test suite
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          New-Item -ItemType Directory -Path ./artifacts -Force | Out-Null
+
+          $config = New-PesterConfiguration
+          $config.Run.Path = './src/Tests'
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = 'Detailed'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = './artifacts/pester-results.xml'
+          $config.TestResult.OutputFormat = 'NUnitXml'
+
+          Invoke-Pester -Configuration $config
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: pester-results
+          path: artifacts/pester-results.xml
+          if-no-files-found: error

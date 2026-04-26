@@ -58,7 +58,7 @@ I used your decisions: Graph + direct REST, single active tenant UX, repo-based 
 
 ### 1. Runtime context model
 
-Create a single in-memory context object that becomes the authoritative state for both [PwshXDRDashboard.ps1](PwshXDRDashboard.ps1#L1) and [Invoke-PwshXDRDashboard.ps1](Invoke-PwshXDRDashboard.ps1#L1).
+Create a single in-memory context object that becomes the authoritative state for dashboard entry and live dashboard rendering flows.
 
 Minimum fields:
 1. `Session`: active tenant id, client id, current analyst identity, connection status, started-at timestamp.
@@ -145,9 +145,9 @@ Private/
 ```
 
 Refactor targets from current files:
-1. Move Graph connection and analyst lookup out of [PwshXDRDashboard.ps1](PwshXDRDashboard.ps1#L10) into session functions.
+1. Move Graph connection and analyst lookup out of dashboard entry logic into session functions.
 2. Split [Update-IncidentTable.ps1](Update-IncidentTable.ps1#L1) into two layers: data retrieval and presentation formatting.
-3. Move the reusable panel helpers from [Invoke-PwshXDRDashboard.ps1](Invoke-PwshXDRDashboard.ps1#L30) into private UI helper functions.
+3. Move the reusable panel helpers from live dashboard entry logic into private UI helper functions.
 4. Keep existing script files as wrappers that import the module and call public functions, so current usage does not break immediately.
 
 ### 3. Service layer and data contracts
@@ -166,7 +166,7 @@ View model contracts to define early:
 2. Alert view model: `AlertId`, `Title`, `Status`, `Severity`, `CreatedDateTime`, `AlertWebUrl`, `IncidentId`, `RawObject`.
 3. Menu option model: `Label`, `Value`, `Description`, `IsEnabled`.
 
-This solves the current problem where the same raw Graph objects are shaped differently in [PwshXDRDashboard.ps1](PwshXDRDashboard.ps1#L32), [Invoke-PwshXDRDashboard.ps1](Invoke-PwshXDRDashboard.ps1#L203), and [Update-IncidentTable.ps1](Update-IncidentTable.ps1#L21).
+This solves the current problem where the same raw Graph objects are shaped differently across dashboard flows and [Update-IncidentTable.ps1](Update-IncidentTable.ps1#L21).
 
 ### 4. Operation result and error contract
 
@@ -263,8 +263,7 @@ Tests/
 3. Avoid over-designing entity models in Phase 1; only define incident and alert contracts now, then add user/device/file models in Phase 3.
 
 **Relevant files**
-- [PwshXDRDashboard.ps1](PwshXDRDashboard.ps1#L1) - current action loop to evolve into modular dispatcher-backed flow
-- [Invoke-PwshXDRDashboard.ps1](Invoke-PwshXDRDashboard.ps1#L1) - live TUI layout/event loop to extend for analyst workflow panes
+- [src/Public/Start-PwshXdrLiveDashboard.ps1](src/Public/Start-PwshXdrLiveDashboard.ps1#L1) - live TUI layout/event loop to extend for analyst workflow panes
 - [Update-IncidentTable.ps1](Update-IncidentTable.ps1#L1) - incident/alert shaping logic to split into data layer + presentation layer
 - [README.md](README.md#L1) - update setup, permissions, query JSON format, and memory-store behavior
 

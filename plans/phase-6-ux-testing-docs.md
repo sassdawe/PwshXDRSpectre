@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-04-24
+**Last updated**: 2026-04-25
 
 ---
 
@@ -88,7 +88,7 @@
 
 **Full test run gate:**
 
-- [ ] **4.13** `Invoke-Pester -CI` passes with zero failures before any merge
+- [x] **4.13** `Invoke-Pester -CI` passes with zero failures before any merge (validated locally; enforced in `.github/workflows/ci-quality-gates.yml`)
 
 ### Workstream 5: End-to-End Test Tenant Validation
 
@@ -126,6 +126,7 @@
   - How to extend the triage policy
 - [ ] **6.3** Add inline comment documentation to all public functions following the self-explanatory code commenting standard
 - [ ] **6.4** Verify all existing `README.md` links are still valid after the module restructure
+- [x] **6.5** Add release engineering docs for module manifest, CI quality gates, and PowerShell Gallery publish flow
 
 ---
 

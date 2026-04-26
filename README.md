@@ -66,6 +66,63 @@ Run baseline Phase 1 tests:
 Invoke-Pester -Path ./src/Tests -Output Detailed
 ```
 
+## Module Manifest
+
+The module manifest is located at `src/PwshXDRSpectre.psd1`.
+
+Validate it locally:
+
+```powershell
+Test-ModuleManifest -Path ./src/PwshXDRSpectre.psd1
+```
+
+## CI and Release Pipelines
+
+GitHub Actions workflows:
+
+- `.github/workflows/ci-quality-gates.yml`
+	- Runs on PRs, `main`, and manual dispatch.
+	- Validates module manifest.
+	- Runs `PSScriptAnalyzer` with error-level gating.
+	- Runs full `Invoke-Pester` test suite and uploads results.
+- `.github/workflows/release-powershell-gallery.yml`
+	- Runs on tags matching `v*` and manual dispatch.
+	- Re-runs quality gates.
+	- Validates that tag version matches manifest `ModuleVersion`.
+	- Builds and uploads a distributable ZIP artifact.
+	- Publishes to PowerShell Gallery when release conditions are met.
+- `.github/workflows/release-github-artifact.yml`
+	- Runs on tags matching `v*` and manual dispatch.
+	- Re-runs quality gates.
+	- Builds a versioned `.nupkg` artifact from the module source.
+	- Creates (or updates) the GitHub Release and uploads the package asset.
+
+## Security and SDLC
+
+Security governance and secure delivery controls are defined in:
+
+- `.github/SDLC-POLICY.md`
+- `SECURITY.md`
+
+Security automation workflows:
+
+- `.github/workflows/codeql-code-scanning.yml` — GitHub CodeQL code scanning
+- `.github/workflows/dependency-review.yml` — dependency risk gate on pull requests
+- `.github/workflows/secret-scanning.yml` — secret detection via Gitleaks
+- `.github/dependabot.yml` — automated GitHub Actions dependency updates
+
+### Publishing to PowerShell Gallery
+
+1. Configure repository secret `PSGALLERY_API_KEY`.
+2. Bump `ModuleVersion` in `src/PwshXDRSpectre.psd1`.
+3. Create and push a matching tag, for example `v0.1.0`.
+
+Manual alternative:
+
+```powershell
+Publish-Module -Path ./src -Repository PSGallery -NuGetApiKey '<api-key>'
+```
+
 ## Inspired by
 
 https://github.com/ShaunLawrie/PwshEc2Tools
