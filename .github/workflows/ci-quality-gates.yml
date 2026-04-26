@@ -27,11 +27,14 @@ jobs:
         shell: pwsh
         run: |
           Set-StrictMode -Version Latest
-          $pesterVersion = '5.7.1'
-          $psScriptAnalyzerVersion = '1.24.0'
-
+          $pesterVersion = '5.7.1' # version pin for testing consistency
+          $psScriptAnalyzerVersion = '1.24.0' # version pin for testing consistency
           Install-Module -Name Pester -RequiredVersion $pesterVersion -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module -Name PSScriptAnalyzer -RequiredVersion $psScriptAnalyzerVersion -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name PwshSpectreConsole -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Security -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module -Name Microsoft.Graph.Authentication -Scope CurrentUser -Force -SkipPublisherCheck
+          
       - name: Validate module manifest
         shell: pwsh
         run: |
