@@ -34,7 +34,7 @@ jobs:
           Install-Module -Name PwshSpectreConsole -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module -Name Microsoft.Graph.Security -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module -Name Microsoft.Graph.Authentication -Scope CurrentUser -Force -SkipPublisherCheck
-          
+
       - name: Validate module manifest
         shell: pwsh
         run: |
@@ -44,18 +44,22 @@ jobs:
       - name: Run PSScriptAnalyzer (errors only)
         shell: pwsh
         run: |
-          Set-StrictMode -Version Latest
-          $analysisTargets = @(
-            './src/PwshXDRSpectre.psm1',
-            './src/Public',
-            './src/Private'
-          )
+            Set-StrictMode -Version Latest
 
-          $findings = Invoke-ScriptAnalyzer -Path $analysisTargets -Recurse -Severity Error
-          if ($findings) {
-            $findings | Format-Table -AutoSize
+            $analysisTargets = @(
+            './src/PwshXDRSpectre.psm1'
+            './src/Public'
+            './src/Private'
+            )
+
+            $findings = foreach ($t in $analysisTargets) {
+            Invoke-ScriptAnalyzer -Path $t -Recurse -Severity Error
+            }
+
+            if ($findings) {
+            $findings | Sort-Object ScriptName, Line, RuleName | Format-Table -AutoSize
             throw "PSScriptAnalyzer reported $($findings.Count) error-level finding(s)."
-          }
+            }
 
       - name: Run Pester test suite
         shell: pwsh
