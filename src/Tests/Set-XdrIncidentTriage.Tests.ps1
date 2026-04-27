@@ -199,6 +199,66 @@ Describe 'Set-XdrIncidentTriage' {
         }
     }
 
+    Context 'AssignedTo parameter validation' {
+        It 'accepts a valid UPN as AssignedTo' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+                $context.Capabilities.IncidentActions = @('AssignIncident')
+
+                Mock Update-MgSecurityIncident {
+                    $script:lastBody = $BodyParameter
+                    [pscustomobject]@{ Id = $IncidentId; AssignedTo = $BodyParameter.assignedTo }
+                }
+
+                $result = Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-1' -AssignedTo 'analyst@contoso.com' -SkipConfirmation
+
+                $result.Success | Should -BeTrue
+                $script:lastBody.assignedTo | Should -Be 'analyst@contoso.com'
+            }
+        }
+
+        It 'rejects a plain username without a domain' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+
+                { Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-2' -AssignedTo 'notanemail' -SkipConfirmation } |
+                    Should -Throw '*AssignedTo must be a valid email address or UPN*'
+            }
+        }
+
+        It 'rejects a value missing the TLD segment' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+
+                { Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-3' -AssignedTo 'analyst@contoso' -SkipConfirmation } |
+                    Should -Throw '*AssignedTo must be a valid email address or UPN*'
+            }
+        }
+
+        It 'bypasses AssignedTo validation when using AssignToMe' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+                $context.Capabilities.IncidentActions = @('AssignIncident')
+                $context.Session.Analyst = [pscustomobject]@{
+                    Mail              = 'me@contoso.com'
+                    UserPrincipalName = 'me@contoso.com'
+                    DisplayName       = 'Me'
+                }
+
+                Mock Update-MgSecurityIncident {
+                    $script:lastBody = $BodyParameter
+                    [pscustomobject]@{ Id = $IncidentId; AssignedTo = $BodyParameter.assignedTo }
+                }
+
+                # AssignToMe resolves identity internally; AssignedTo is never supplied by the caller
+                $result = Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-4' -AssignToMe -SkipConfirmation
+
+                $result.Success | Should -BeTrue
+                $script:lastBody.assignedTo | Should -Be 'me@contoso.com'
+            }
+        }
+    }
+    
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Set-XdrIncidentTriage).Synopsis | Should -Not -BeNullOrEmpty

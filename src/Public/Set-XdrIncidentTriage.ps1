@@ -79,7 +79,9 @@ function Set-XdrIncidentTriage {
         [Parameter()]
         [string]$Comment,
 
+        # Email address or UPN of the analyst to assign the incident to. Ignored if AssignToMe or ClearAssignment is specified.
         [Parameter()]
+        [ValidateScript({ $_ -match '^[^@\s]+@[^@\s]+\.[^@\s]+$' }, ErrorMessage = 'AssignedTo must be a valid email address or UPN.')]
         [string]$AssignedTo,
 
         [Parameter()]
