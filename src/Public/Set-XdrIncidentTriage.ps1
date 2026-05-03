@@ -28,7 +28,10 @@ function Set-XdrIncidentTriage {
         An analyst comment to append to the incident activity feed.
 
         .PARAMETER AssignedTo
-        The UPN or display name of the analyst to assign the incident to.
+        The email address or UPN of the analyst to assign the incident to.
+        Must match the format user@domain.tld. Mutually exclusive with -AssignToMe
+        and -ClearAssignment; use those switches to assign to yourself or clear the
+        assignment instead.
 
         .PARAMETER AssignToMe
         When specified, resolves the current user's identity and assigns the incident
@@ -59,7 +62,7 @@ function Set-XdrIncidentTriage {
         Requires at least one of UpdateIncidentStatus, ClassifyIncident, or AssignIncident
         capabilities depending on which parameters are supplied.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
     param(
         [Parameter(Mandatory)]
         [object]$Context,
@@ -79,13 +82,14 @@ function Set-XdrIncidentTriage {
         [Parameter()]
         [string]$Comment,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'AssignByAddress')]
+        [ValidateScript({ $_ -match '^[^@\s]+@[^@\s]+\.[^@\s]+$' }, ErrorMessage = 'AssignedTo must be a valid email address or UPN.')]
         [string]$AssignedTo,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'AssignToCurrentUser')]
         [switch]$AssignToMe,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'RemoveAssignment')]
         [switch]$ClearAssignment,
 
         [Parameter()]

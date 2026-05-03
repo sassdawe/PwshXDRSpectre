@@ -1,6 +1,6 @@
 @{
     RootModule        = 'PwshXDRSpectre.psm1'
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
     GUID              = '5f7f5f28-74c4-4d6e-9f54-93f6c6f8d3d1'
     Author            = 'David Sass'
     CompanyName       = 'Kolislab'
