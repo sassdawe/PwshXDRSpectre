@@ -28,7 +28,9 @@ function Set-XdrIncidentTriage {
         An analyst comment to append to the incident activity feed.
 
         .PARAMETER AssignedTo
-        The UPN or display name of the analyst to assign the incident to.
+        The email address or UPN of the analyst to assign the incident to.
+        Must match the format user@domain.tld. Use -AssignToMe to assign to the
+        current user, or -ClearAssignment to remove the assignment.
 
         .PARAMETER AssignToMe
         When specified, resolves the current user's identity and assigns the incident
