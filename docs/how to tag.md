@@ -1,4 +1,4 @@
-I’ll map your workflow rules to a simple tagging flow and give copy/paste-safe commands for first release, re-tagging mistakes, and manual dispatch fallback.Use tags as release markers in Git. Your workflow in release-github-artifact.yml runs automatically when a pushed tag matches v*.
+I’ll map your workflow rules to a simple tagging flow and give copy/paste-safe commands for first release, re-tagging mistakes, and manual dispatch fallback. Use tags as release markers in Git. Your workflow in release-github-artifact.yml runs automatically when a pushed tag matches v*.
 
 Important rules from your workflow:
 1. Tag must start with v
