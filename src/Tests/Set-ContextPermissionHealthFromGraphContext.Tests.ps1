@@ -40,8 +40,8 @@ Describe 'Set-ContextPermissionHealthFromGraphContext' {
             $context.Session.PermissionHealth.DetectionSource | Should -Be 'graph-scope'
             $context.Session.PermissionHealth.HasSufficientWritePermissions | Should -BeFalse
             $context.Session.PermissionHealth.RequiredPermissions | Should -Be @('SecurityIncident.ReadWrite.All')
-            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'User.Read'
-            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain ' SecurityAlert.ReadWrite.All '
+            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'user.read'
+            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'securityalert.readwrite.all'
             $context.Session.PermissionHealth.AvailablePermissions.Count | Should -Be 2
             $context.Session.PermissionHealth.LastUpdatedAt | Should -Not -BeNullOrEmpty
             $context.Capabilities.IncidentActions.Count | Should -Be 0
@@ -66,7 +66,7 @@ Describe 'Set-ContextPermissionHealthFromGraphContext' {
             $context.Session.PermissionHealth.HasSufficientWritePermissions | Should -BeTrue
             $context.Session.PermissionHealth.DetectionSource | Should -Be 'graph-scope'
             $context.Session.PermissionHealth.RequiredPermissions.Count | Should -Be 0
-            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'SecurityIncident.ReadWrite.All'
+            $context.Session.PermissionHealth.AvailablePermissions | Should -Contain 'securityincident.readwrite.all'
             $context.Capabilities.IncidentActions | Should -Contain 'UpdateIncidentStatus'
             $context.Capabilities.AlertActions | Should -Contain 'UpdateAlertStatus'
         }

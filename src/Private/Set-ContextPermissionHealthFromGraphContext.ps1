@@ -18,7 +18,7 @@
 
         $availableScopes = @()
         if ($graphContext -and $graphContext.Scopes) {
-            $availableScopes = @($graphContext.Scopes | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+            $availableScopes = @($graphContext.Scopes | ForEach-Object { ([string]$_).Trim().ToLower() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
         }
 
         if (-not $RuntimeContext.Session.PSObject.Properties.Name.Contains('PermissionHealth')) {
@@ -34,7 +34,7 @@
         $RuntimeContext.Session.PermissionHealth.AvailablePermissions = $availableScopes
         $RuntimeContext.Session.PermissionHealth.LastUpdatedAt = Get-Date
 
-        $hasIncidentWriteScope = ($availableScopes -contains 'SecurityIncident.ReadWrite.All')
+        $hasIncidentWriteScope = ($availableScopes -contains 'securityincident.readwrite.all')
 
         if ($availableScopes.Count -gt 0 -and -not $hasIncidentWriteScope) {
             $RuntimeContext.Session.PermissionHealth.HasSufficientWritePermissions = $false
