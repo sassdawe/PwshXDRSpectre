@@ -235,7 +235,7 @@ Describe 'Set-XdrIncidentTriage' {
             }
         }
 
-        It 'bypasses AssignedTo validation when using AssignToMe' {
+        It 'resolves AssignToMe and sets assignedTo to the current analyst' {
             InModuleScope PwshXDRSpectre {
                 $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
                 $context.Capabilities.IncidentActions = @('AssignIncident')
