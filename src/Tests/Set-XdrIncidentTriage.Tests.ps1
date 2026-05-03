@@ -257,8 +257,26 @@ Describe 'Set-XdrIncidentTriage' {
                 $script:lastBody.assignedTo | Should -Be 'me@contoso.com'
             }
         }
+
+        It 'rejects combining AssignedTo with AssignToMe (parameter set exclusivity)' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+
+                { Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-5' -AssignedTo 'analyst@contoso.com' -AssignToMe -SkipConfirmation } |
+                    Should -Throw
+            }
+        }
+
+        It 'rejects combining AssignedTo with ClearAssignment (parameter set exclusivity)' {
+            InModuleScope PwshXDRSpectre {
+                $context = New-XdrRuntimeContext -TenantId 'tenant-1' -ClientId 'client-1'
+
+                { Set-XdrIncidentTriage -Context $context -IncidentId 'inc-val-6' -AssignedTo 'analyst@contoso.com' -ClearAssignment -SkipConfirmation } |
+                    Should -Throw
+            }
+        }
     }
-    
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Set-XdrIncidentTriage).Synopsis | Should -Not -BeNullOrEmpty
