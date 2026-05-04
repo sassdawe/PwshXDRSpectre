@@ -7,7 +7,7 @@ Describe 'Get-ContextAwareHelpLines' {
         InModuleScope PwshXDRSpectre {
             $lines = Get-ContextAwareHelpLines -ActivePanel incidents -PendingIncidentResolution ([pscustomobject]@{ Step = 'determination' })
 
-            $lines | Should -Match 'Incident resolution workflow active'
+            $lines | Should -Match 'Incident resolution wizard active'
         }
     }
 

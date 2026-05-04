@@ -53,21 +53,21 @@ function Get-ContextAwareHelpLines {
     )
 
     if ($null -ne $PendingIncidentResolution) {
-        return @('Incident resolution workflow active | PgUp/PgDn step switch | Use Incident Resolution panel | Esc cancel')
+        return @('Incident resolution wizard active | Enter next page | PgUp/PgDn back/next | Y submit on final page | Esc cancel')
     }
 
     if ($null -ne $PendingTextInput) {
         return @('Comment input mode | Type text | Enter submit | Backspace edit | Esc cancel | Shortcuts disabled')
     }
 
-    $baseLine = 'Alt+A/U/O/I/R/C incident | Alt+L load alerts | Alt+N/P/M alert | F5 refresh | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+Q exit'
+    $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+N/P/M alert | F5 refresh | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load'
 
     switch ($ActivePanel) {
-        'incidents' { return @('↑/↓ incidents | Enter or L loads alerts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
-        'incident_details' { return @('Alt+A/U/O/I/R/C selected incident | Alt+L or Enter loads alerts | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
-        'alerts' { return @('↑/↓ alerts | Alt+N/P/M selected alert | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
-        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
-        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/C/L/N/P/M shortcuts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+Q exit') }
+        'incidents' { return @('↑/↓ incidents | Enter or L loads alerts | F5 refresh incidents | Tab or PgUp/PgDn switch') }
+        'incident_details' { return @('Alt+A/U/O/I/R/K/C selected incident | Alt+L or Enter loads alerts | Tab or PgUp/PgDn switch') }
+        'alerts' { return @('↑/↓ alerts | Alt+N/P/M selected alert | F5 refresh incidents | Tab or PgUp/PgDn switch') }
+        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Tab or PgUp/PgDn switch') }
+        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/K/C/L/N/P/M shortcuts | F5 refresh incidents | Tab or PgUp/PgDn switch') }
     }
 
     return @($baseLine)
