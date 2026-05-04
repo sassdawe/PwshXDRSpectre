@@ -875,7 +875,7 @@ function Start-PwshXdrLiveDashboard {
                             $resolutionLines += "$prefix [bold $color]$label[/]"
                         }
                         $resolutionLines += ''
-                        $resolutionLines += '[grey]| [/][orange1]Enter[/][grey] or [/][orange1]PgDn[/][grey] next | [/][orange1]Up[/][grey]/[/][orange1]Down[/][grey] select | [/][orange1]Esc[/][grey] cancel[/]'
+                        $resolutionLines += '[grey][orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]Up[/]/[orange1]Down[/] select | [orange1]Esc[/] cancel[/]'
                     }
                     'determination' {
                         $resolutionLines += "[bold $($context.Ui.ThemeColor)]Step 2/4: Determination[/]"
@@ -892,7 +892,7 @@ function Start-PwshXdrLiveDashboard {
                             $resolutionLines += "$prefix [bold $color]$label[/]"
                         }
                         $resolutionLines += ''
-                        $resolutionLines += '[grey]| [/][orange1]Enter[/][grey] or [/][orange1]PgDn[/][grey] next | [/][orange1]PgUp[/][grey] back | [/][orange1]Up[/][grey]/[/][orange1]Down[/][grey] select | [/][orange1]Esc[/][grey] cancel[/]'
+                        $resolutionLines += '[grey][orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]PgUp[/] back | [orange1]Up[/]/[orange1]Down[/] select | [orange1]Esc[/] cancel[/]'
                     }
                     'comment' {
                         $resolutionLines += "[bold $($context.Ui.ThemeColor)]Step 3/4: Resolving comment[/]"
@@ -904,7 +904,7 @@ function Start-PwshXdrLiveDashboard {
                             $resolutionLines += "[white]$(Get-SpectreEscapedText $commentValue)[/]"
                         }
                         $resolutionLines += ''
-                        $resolutionLines += '[grey]Type comment | [/][orange1]Enter[/][grey] or [/][orange1]PgDn[/][grey] next | [/][orange1]PgUp[/][grey] back | [/][orange1]Esc[/][grey] cancel[/]'
+                        $resolutionLines += '[grey]Type comment | [orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]PgUp[/] back | [orange1]Esc[/] cancel[/]'
                     }
                     default {
                         $resolutionLines += "[bold $($context.Ui.ThemeColor)]Step 4/4: Final confirmation[/]"
@@ -913,7 +913,7 @@ function Start-PwshXdrLiveDashboard {
                         $resolutionLines += "[white]Determination:[/] [bold]$selectedDeterminationLabel[/]"
                         $resolutionLines += "[white]Ready to resolve this incident.[/]"
                         $resolutionLines += ''
-                        $resolutionLines += '[grey]| [/][orange1]Enter[/][grey] or [/][orange1]Y[/][grey] confirm | [/][orange1]N[/][grey] or [/][orange1]PgUp[/][grey] back | [/][orange1]Esc[/][grey] cancel[/]'
+                        $resolutionLines += '[grey][orange1]Enter[/] or [orange1]Y[/] confirm | [orange1]N[/] or [orange1]PgUp[/] back | [orange1]Esc[/] cancel[/]'
                     }
                 }
 
