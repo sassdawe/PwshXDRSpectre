@@ -25,6 +25,12 @@ function Get-ContextAwareHelpLines {
     .PARAMETER PendingIncidentResolution
     Current incident resolution workflow payload.
 
+    .PARAMETER PendingIncidentClassification
+    Current incident classification workflow payload.
+
+    .PARAMETER PendingIncidentComment
+    Current incident comment workflow payload.
+
     .OUTPUTS
     System.String[]
 
@@ -49,11 +55,25 @@ function Get-ContextAwareHelpLines {
         [object]$PendingTextInput,
 
         [Parameter()]
-        [object]$PendingIncidentResolution
+        [object]$PendingIncidentResolution,
+
+        [Parameter()]
+        [object]$PendingIncidentClassification,
+
+        [Parameter()]
+        [object]$PendingIncidentComment
     )
 
     if ($null -ne $PendingIncidentResolution) {
         return @('Incident resolution wizard active | Enter next page | PgUp/PgDn back/next | Y submit on final page | Esc cancel')
+    }
+
+    if ($null -ne $PendingIncidentClassification) {
+        return @('Incident classification wizard active | Enter next page | PgUp back | Y submit on final page | Esc cancel')
+    }
+
+    if ($null -ne $PendingIncidentComment) {
+        return @('Incident comment wizard active | Type comment | Enter next page | PgUp back | Y submit on final page | Esc cancel')
     }
 
     if ($null -ne $PendingTextInput) {

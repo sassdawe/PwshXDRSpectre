@@ -43,6 +43,12 @@ function Invoke-XdrLiveActionShortcut {
     .PARAMETER PendingIncidentResolution
     Pending incident resolution payload reference.
 
+    .PARAMETER ActivePanelBeforeComment
+    Previous panel reference before incident comment workflow.
+
+    .PARAMETER PendingIncidentComment
+    Pending incident comment workflow payload reference.
+
     .PARAMETER ModulePath
     Module path used by background jobs.
 
@@ -107,6 +113,12 @@ function Invoke-XdrLiveActionShortcut {
 
         [Parameter()]
         [ref]$PendingIncidentClassification,
+
+        [Parameter()]
+        [ref]$ActivePanelBeforeComment,
+
+        [Parameter()]
+        [ref]$PendingIncidentComment,
 
         [Parameter(Mandatory)]
         [string]$ModulePath,
@@ -259,6 +271,7 @@ function Invoke-XdrLiveActionShortcut {
                 $PendingTextInput.Value = $null
                 $PendingIncidentResolution.Value = $null
                 $PendingIncidentClassification.Value = [pscustomobject]@{
+                    Step                  = 'classification'
                     ClassificationOptions = $classificationChoices
                     ClassificationIndex   = $currentIndex
                 }
@@ -272,22 +285,33 @@ function Invoke-XdrLiveActionShortcut {
             }
         }
         'c' {
-            $PendingTextInput.Value = [pscustomobject]@{
-                Mode   = 'incident_comment'
-                Title  = 'INCIDENT COMMENT'
-                Prompt = 'Enter comment for selected incident'
-                Value  = ''
-                Submit = {
-                    param([string]$InputText)
+            if (-not $SelectedIncident) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident is selected for this shortcut.' -Level 'warning'
+                break
+            }
 
-                    if ([string]::IsNullOrWhiteSpace($InputText)) {
-                        Set-LiveStatusMessage -Context $Context -Message 'Comment cannot be empty.' -Level 'warning'
-                        return
-                    }
+            $canOpenWizard = $PSBoundParameters.ContainsKey('PendingIncidentComment') -and $null -ne $PendingIncidentComment
+            if (-not $canOpenWizard) {
+                Set-LiveStatusMessage -Context $Context -Message 'Comment workflow is unavailable in this context.' -Level 'warning'
+                break
+            }
 
-                    $commentResult = Set-XdrIncidentTriage -Context $Context -IncidentId $SelectedIncident.IncidentId -Comment $InputText
-                    Set-StatusFromResult -Context $Context -Result $commentResult
-                }
+            if ($PSBoundParameters.ContainsKey('ActivePanelBeforeComment') -and $null -ne $ActivePanelBeforeComment) {
+                $ActivePanelBeforeComment.Value = $ActivePanel.Value
+            }
+
+            $ActivePanel.Value = 'action_status'
+            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+            $Context.Selection.Panel = $ActivePanel.Value
+
+            $PendingTextInput.Value = $null
+            $PendingIncidentResolution.Value = $null
+            if ($PSBoundParameters.ContainsKey('PendingIncidentClassification') -and $null -ne $PendingIncidentClassification) {
+                $PendingIncidentClassification.Value = $null
+            }
+            $PendingIncidentComment.Value = [pscustomobject]@{
+                Step    = 'comment'
+                Comment = ''
             }
         }
         'n' {

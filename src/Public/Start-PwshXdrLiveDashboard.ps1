@@ -114,8 +114,10 @@ function Start-PwshXdrLiveDashboard {
         $pendingTextInput = $null
         $pendingIncidentResolution = $null
         $pendingIncidentClassification = $null
+        $pendingIncidentComment = $null
         $activePanelBeforeResolution = $null
         $activePanelBeforeClassification = $null
+        $activePanelBeforeComment = $null
         $ignoreEnterUntil = [datetime]::MinValue
         $alertsByIncidentId = @{}
         $selectedAlertIdByIncidentId = @{}
@@ -214,10 +216,15 @@ function Start-PwshXdrLiveDashboard {
                 $activePanelIndex = [array]::IndexOf($panelOrder, 'action_status')
                 $context.Selection.Panel = $activePanel
             }
+            elseif ($null -ne $pendingIncidentComment) {
+                $activePanel = 'action_status'
+                $activePanelIndex = [array]::IndexOf($panelOrder, 'action_status')
+                $context.Selection.Panel = $activePanel
+            }
 
             # For text input mode, capture all buffered keys to prevent character loss during rapid typing
             # For other modes, capture only the last key (navigation, selections)
-            $keys = if ($null -ne $pendingTextInput) {
+            $keys = if ($null -ne $pendingTextInput -or ($null -ne $pendingIncidentComment -and [string]$pendingIncidentComment.Step -eq 'comment')) {
                 @(Get-XdrAllKeysPressed)
             } else {
                 $key = Get-XdrLastKeyPressed
@@ -239,6 +246,7 @@ function Start-PwshXdrLiveDashboard {
                     $currentInputTime -lt $ignoreEnterUntil -and
                     $null -eq $pendingIncidentResolution -and
                     $null -eq $pendingIncidentClassification -and
+                    $null -eq $pendingIncidentComment -and
                     $null -eq $pendingTextInput -and
                     -not $pendingConfirmation
                 ) {
@@ -372,38 +380,120 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Incident classification picker canceled.' -Level 'warning'
                     }
                     else {
+                        $currentClassificationStep = [string]$pendingIncidentClassification.Step
+                        if ([string]::IsNullOrWhiteSpace($currentClassificationStep)) {
+                            $currentClassificationStep = 'classification'
+                            $pendingIncidentClassification.Step = $currentClassificationStep
+                        }
+
                         $optionCount = @($pendingIncidentClassification.ClassificationOptions).Count
-                        if ($optionCount -gt 0 -and $key.Key -eq 'DownArrow') {
-                            $pendingIncidentClassification.ClassificationIndex = ($pendingIncidentClassification.ClassificationIndex + 1) % $optionCount
-                        }
-                        elseif ($optionCount -gt 0 -and $key.Key -eq 'UpArrow') {
-                            $pendingIncidentClassification.ClassificationIndex = ($pendingIncidentClassification.ClassificationIndex - 1 + $optionCount) % $optionCount
-                        }
-                        elseif ($key.Key -eq 'Enter') {
-                            $selectedClassificationOption = $pendingIncidentClassification.ClassificationOptions[$pendingIncidentClassification.ClassificationIndex]
-                            $selectedClassificationLabel = [string]$selectedClassificationOption.label
 
-                            $targetIncidentId = [string]$selectedIncident.IncidentId
-                            $targetClassification = $selectedClassificationLabel
-                            $pendingConfirmation = [pscustomobject]@{
-                                ActionName = 'Set incident classification'
-                                Prompt     = "Set incident classification to '$targetClassification'?"
-                                Execute    = {
-                                    Set-XdrIncidentTriage -Context $context -IncidentId $targetIncidentId -Classification $targetClassification
+                        if ($currentClassificationStep -eq 'classification') {
+                            if ($optionCount -gt 0 -and $key.Key -eq 'DownArrow') {
+                                $pendingIncidentClassification.ClassificationIndex = ($pendingIncidentClassification.ClassificationIndex + 1) % $optionCount
+                            }
+                            elseif ($optionCount -gt 0 -and $key.Key -eq 'UpArrow') {
+                                $pendingIncidentClassification.ClassificationIndex = ($pendingIncidentClassification.ClassificationIndex - 1 + $optionCount) % $optionCount
+                            }
+                            elseif ($key.Key -eq 'Enter' -or $key.Key -eq 'PageDown') {
+                                $pendingIncidentClassification.Step = 'confirm'
+                            }
+                        }
+                        elseif ($currentClassificationStep -eq 'confirm') {
+                            if ($key.Key -eq 'PageUp' -or (-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'n')) {
+                                $pendingIncidentClassification.Step = 'classification'
+                            }
+                            elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'y') -or $key.Key -eq 'Enter') {
+                                $selectedClassificationOption = $pendingIncidentClassification.ClassificationOptions[$pendingIncidentClassification.ClassificationIndex]
+                                $selectedClassificationLabel = [string]$selectedClassificationOption.label
+
+                                $classificationResult = Set-XdrIncidentTriage -Context $context -IncidentId $selectedIncident.IncidentId -Classification $selectedClassificationLabel
+                                Set-StatusFromResult -Context $context -Result $classificationResult
+
+                                $pendingIncidentClassification = $null
+                                if (-not [string]::IsNullOrWhiteSpace([string]$activePanelBeforeClassification)) {
+                                    $activePanel = [string]$activePanelBeforeClassification
+                                    $activePanelIndex = [array]::IndexOf($panelOrder, $activePanel)
+                                    if ($activePanelIndex -lt 0) {
+                                        $activePanelIndex = 0
+                                        $activePanel = $panelOrder[$activePanelIndex]
+                                    }
+                                    $context.Selection.Panel = $activePanel
+                                }
+                                $activePanelBeforeClassification = $null
+                                $ignoreEnterUntil = (Get-Date).AddMilliseconds(300)
+                            }
+                        }
+                    }
+                }
+                elseif ($null -ne $pendingIncidentComment) {
+                    $keyHandled = $true
+                    if ($key.Key -eq 'Escape') {
+                        $pendingIncidentComment = $null
+                        if (-not [string]::IsNullOrWhiteSpace([string]$activePanelBeforeComment)) {
+                            $activePanel = [string]$activePanelBeforeComment
+                            $activePanelIndex = [array]::IndexOf($panelOrder, $activePanel)
+                            if ($activePanelIndex -lt 0) {
+                                $activePanelIndex = 0
+                                $activePanel = $panelOrder[$activePanelIndex]
+                            }
+                            $context.Selection.Panel = $activePanel
+                        }
+                        $activePanelBeforeComment = $null
+                        Set-LiveStatusMessage -Context $context -Message 'Incident comment wizard canceled.' -Level 'warning'
+                    }
+                    else {
+                        $currentCommentStep = [string]$pendingIncidentComment.Step
+                        if ([string]::IsNullOrWhiteSpace($currentCommentStep)) {
+                            $currentCommentStep = 'comment'
+                            $pendingIncidentComment.Step = $currentCommentStep
+                        }
+
+                        if ($currentCommentStep -eq 'comment') {
+                            if ($key.Key -eq 'Enter' -or $key.Key -eq 'PageDown') {
+                                if ([string]::IsNullOrWhiteSpace([string]$pendingIncidentComment.Comment)) {
+                                    Set-LiveStatusMessage -Context $context -Message 'Comment cannot be empty.' -Level 'warning'
+                                }
+                                else {
+                                    $pendingIncidentComment.Step = 'confirm'
                                 }
                             }
-
-                            $pendingIncidentClassification = $null
-                            if (-not [string]::IsNullOrWhiteSpace([string]$activePanelBeforeClassification)) {
-                                $activePanel = [string]$activePanelBeforeClassification
-                                $activePanelIndex = [array]::IndexOf($panelOrder, $activePanel)
-                                if ($activePanelIndex -lt 0) {
-                                    $activePanelIndex = 0
-                                    $activePanel = $panelOrder[$activePanelIndex]
+                            elseif ($key.Key -eq 'Backspace') {
+                                if (-not [string]::IsNullOrEmpty([string]$pendingIncidentComment.Comment)) {
+                                    $pendingIncidentComment.Comment = [string]$pendingIncidentComment.Comment.Substring(0, [string]$pendingIncidentComment.Comment.Length - 1)
                                 }
-                                $context.Selection.Panel = $activePanel
                             }
-                            $activePanelBeforeClassification = $null
+                            elseif ($key.KeyChar -and -not [char]::IsControl($key.KeyChar) -and -not $isAltPressed -and -not $isCtrlPressed) {
+                                $pendingIncidentComment.Comment = ([string]$pendingIncidentComment.Comment) + [string]$key.KeyChar
+                            }
+                        }
+                        elseif ($currentCommentStep -eq 'confirm') {
+                            if ($key.Key -eq 'PageUp' -or (-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'n')) {
+                                $pendingIncidentComment.Step = 'comment'
+                            }
+                            elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'y') -or $key.Key -eq 'Enter') {
+                                $commentText = [string]$pendingIncidentComment.Comment
+                                if ([string]::IsNullOrWhiteSpace($commentText)) {
+                                    Set-LiveStatusMessage -Context $context -Message 'Comment cannot be empty.' -Level 'warning'
+                                    $pendingIncidentComment.Step = 'comment'
+                                }
+                                else {
+                                    $commentResult = Set-XdrIncidentTriage -Context $context -IncidentId $selectedIncident.IncidentId -Comment $commentText
+                                    Set-StatusFromResult -Context $context -Result $commentResult
+                                    $pendingIncidentComment = $null
+                                    $ignoreEnterUntil = (Get-Date).AddMilliseconds(300)
+                                    if (-not [string]::IsNullOrWhiteSpace([string]$activePanelBeforeComment)) {
+                                        $activePanel = [string]$activePanelBeforeComment
+                                        $activePanelIndex = [array]::IndexOf($panelOrder, $activePanel)
+                                        if ($activePanelIndex -lt 0) {
+                                            $activePanelIndex = 0
+                                            $activePanel = $panelOrder[$activePanelIndex]
+                                        }
+                                        $context.Selection.Panel = $activePanel
+                                    }
+                                    $activePanelBeforeComment = $null
+                                }
+                            }
                         }
                     }
                 }
@@ -561,14 +651,14 @@ function Start-PwshXdrLiveDashboard {
                 elseif ($key.Key -eq 'Enter' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
                     $selectedAction = $actionEntries[$selectedActionIndex]
                     if ($selectedAction.IsEnabled) {
-                        Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex)
+                        Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex)
                     }
                     else {
                         Set-LiveStatusMessage -Context $context -Message "$($selectedAction.Label) is not available right now." -Level 'warning'
                     }
                 }
                 elseif ($isAltPressed -and $keyChar -in @('a', 'u', 'o', 'i', 'r', 'k', 'c', 'l', 'n', 'p', 'm')) {
-                    Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex)
+                    Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex)
                 }
             }  # end foreach ($key in $keys)
 
@@ -921,28 +1011,79 @@ function Start-PwshXdrLiveDashboard {
             }
             elseif ($null -ne $pendingIncidentClassification) {
                 $classificationLines = @()
-                $classificationLines += "[bold $($context.Ui.ThemeColor)]Incident Classification (ACTIVE)[/]"
-                foreach ($idx in 0..([Math]::Max(0, @($pendingIncidentClassification.ClassificationOptions).Count - 1))) {
-                    if (@($pendingIncidentClassification.ClassificationOptions).Count -eq 0) {
-                        break
+                $classificationStep = [string]$pendingIncidentClassification.Step
+                if ([string]::IsNullOrWhiteSpace($classificationStep)) {
+                    $classificationStep = 'classification'
+                }
+
+                if ($classificationStep -eq 'confirm') {
+                    $selectedClassificationOption = $pendingIncidentClassification.ClassificationOptions[[int]$pendingIncidentClassification.ClassificationIndex]
+                    $selectedClassificationLabel = Get-SpectreEscapedText ([string]$selectedClassificationOption.label)
+                    $classificationLines += "[bold $($context.Ui.ThemeColor)]Step 2/2: Final confirmation[/]"
+                    $classificationLines += ''
+                    $classificationLines += "[white]Classification:[/] [bold]$selectedClassificationLabel[/]"
+                    $classificationLines += "[white]Ready to apply this incident classification.[/]"
+                    $classificationLines += ''
+                    $classificationLines += '[grey][orange1]Enter[/] or [orange1]Y[/] confirm | [orange1]N[/] or [orange1]PgUp[/] back | [orange1]Esc[/] cancel[/]'
+                }
+                else {
+                    $classificationLines += "[bold $($context.Ui.ThemeColor)]Step 1/2: Classification[/]"
+                    $classificationLines += ''
+                    foreach ($idx in 0..([Math]::Max(0, @($pendingIncidentClassification.ClassificationOptions).Count - 1))) {
+                        if (@($pendingIncidentClassification.ClassificationOptions).Count -eq 0) {
+                            break
+                        }
+
+                        $option = $pendingIncidentClassification.ClassificationOptions[$idx]
+                        $label = Get-SpectreEscapedText ([string]$option.label)
+                        $prefix = if ($pendingIncidentClassification.ClassificationIndex -eq $idx) { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $color = if ($pendingIncidentClassification.ClassificationIndex -eq $idx) { $context.Ui.ThemeColor } else { 'white' }
+                        $classificationLines += "$prefix [bold $color]$label[/]"
                     }
 
-                    $option = $pendingIncidentClassification.ClassificationOptions[$idx]
-                    $label = Get-SpectreEscapedText ([string]$option.label)
-                    $prefix = if ($pendingIncidentClassification.ClassificationIndex -eq $idx) { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
-                    $color = if ($pendingIncidentClassification.ClassificationIndex -eq $idx) { $context.Ui.ThemeColor } else { 'white' }
-                    $classificationLines += "$prefix [bold $color]$label[/]"
+                    $classificationLines += ''
+                    $classificationLines += '[grey][orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]Up[/]/[orange1]Down[/] select | [orange1]Esc[/] cancel[/]'
                 }
-                $classificationLines += ''
-                $classificationLines += '[grey]Up/Down select | Enter continue to confirm | Esc cancel[/]'
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Classification' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($classificationLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Classification Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($classificationLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+            }
+            elseif ($null -ne $pendingIncidentComment) {
+                $commentLines = @()
+                $commentStep = [string]$pendingIncidentComment.Step
+                if ([string]::IsNullOrWhiteSpace($commentStep)) {
+                    $commentStep = 'comment'
+                }
+
+                if ($commentStep -eq 'confirm') {
+                    $commentValue = Get-SpectreEscapedText ([string]$pendingIncidentComment.Comment)
+                    $commentLines += "[bold $($context.Ui.ThemeColor)]Step 2/2: Final confirmation[/]"
+                    $commentLines += ''
+                    $commentLines += '[white]Comment:[/]'
+                    $commentLines += "[white]$commentValue[/]"
+                    $commentLines += ''
+                    $commentLines += '[grey][orange1]Enter[/] or [orange1]Y[/] confirm | [orange1]N[/] or [orange1]PgUp[/] back | [orange1]Esc[/] cancel[/]'
+                }
+                else {
+                    $commentLines += "[bold $($context.Ui.ThemeColor)]Step 1/2: Incident comment[/]"
+                    $commentLines += ''
+                    $commentValue = [string]$pendingIncidentComment.Comment
+                    if ([string]::IsNullOrWhiteSpace($commentValue)) {
+                        $commentLines += '[grey]<empty>[/]'
+                    }
+                    else {
+                        $commentLines += "[white]$(Get-SpectreEscapedText $commentValue)[/]"
+                    }
+                    $commentLines += ''
+                    $commentLines += '[grey]Type comment | [orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]Backspace[/] edit | [orange1]Esc[/] cancel[/]'
+                }
+
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Comment Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($commentLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
             }
             else {
                 $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
             }
 
-            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution) -join ' | '
+            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
             $helpHeaderText = "Help | $contextHelpLine"
             $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt)) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
 

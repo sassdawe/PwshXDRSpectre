@@ -18,4 +18,12 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines | Should -Match 'Alt\+N/P/M selected alert'
         }
     }
+
+    It 'returns incident comment wizard guidance when pending incident comment exists' {
+        InModuleScope PwshXDRSpectre {
+            $lines = Get-ContextAwareHelpLines -ActivePanel action_status -PendingIncidentComment ([pscustomobject]@{ Step = 'comment' })
+
+            $lines | Should -Match 'Incident comment wizard active'
+        }
+    }
 }
