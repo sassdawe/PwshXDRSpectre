@@ -9,3 +9,15 @@ function Get-XdrLastKeyPressed {
 
     return $lastKeyPressed
 }
+
+function Get-XdrAllKeysPressed {
+    [CmdletBinding()]
+    param()
+
+    $allKeys = @()
+    while ([Console]::KeyAvailable) {
+        $allKeys += [Console]::ReadKey($true)
+    }
+
+    return $allKeys
+}
