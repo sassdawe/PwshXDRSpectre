@@ -1,4 +1,4 @@
-function Test-XDRPermissions {
+function Test-XdrPermissions {
     <#
         .SYNOPSIS
         Validates Defender XDR permission level for the current Graph session.
@@ -18,10 +18,10 @@ function Test-XDRPermissions {
         and Metadata properties.
 
         .EXAMPLE
-        Test-XDRPermissions
+        Test-XdrPermissions
 
         .EXAMPLE
-        Test-XDRPermissions -Context $ctx
+        Test-XdrPermissions -Context $ctx
 
         .NOTES
         Access levels are determined from Graph delegated scopes:
@@ -34,7 +34,7 @@ function Test-XDRPermissions {
         [object]$Context
     )
 
-    $operationName = 'Test-XDRPermissions'
+    $operationName = 'Test-XdrPermissions'
 
     $graphContext = $null
     try {

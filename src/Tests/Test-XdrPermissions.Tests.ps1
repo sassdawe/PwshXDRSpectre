@@ -2,7 +2,7 @@ BeforeAll {
     Import-Module "$PSScriptRoot/../PwshXDRSpectre.psm1" -Force
 }
 
-Describe 'Test-XDRPermissions' {
+Describe 'Test-XdrPermissions' {
     It 'returns Operator when SecurityIncident.ReadWrite.All is present' {
         InModuleScope PwshXDRSpectre {
             Mock Get-MgContext {
@@ -12,7 +12,7 @@ Describe 'Test-XDRPermissions' {
                 }
             }
 
-            $result = Test-XDRPermissions
+            $result = Test-XdrPermissions
 
             $result.Success | Should -BeTrue
             $result.Data.AccessLevel | Should -Be 'Operator'
@@ -30,7 +30,7 @@ Describe 'Test-XDRPermissions' {
                 }
             }
 
-            $result = Test-XDRPermissions
+            $result = Test-XdrPermissions
 
             $result.Success | Should -BeTrue
             $result.Data.AccessLevel | Should -Be 'Reader'
@@ -48,7 +48,7 @@ Describe 'Test-XDRPermissions' {
                 }
             }
 
-            $result = Test-XDRPermissions
+            $result = Test-XdrPermissions
 
             $result.Success | Should -BeFalse
             $result.Data.AccessLevel | Should -Be 'None'
@@ -69,7 +69,7 @@ Describe 'Test-XDRPermissions' {
                 }
             }
 
-            $result = Test-XDRPermissions -Context $context
+            $result = Test-XdrPermissions -Context $context
 
             $result.Success | Should -BeTrue
             $context.Session.PermissionHealth.DetectionSource | Should -Be 'graph-scope'
@@ -84,7 +84,7 @@ Describe 'Test-XDRPermissions' {
                 throw 'Graph context unavailable'
             }
 
-            $result = Test-XDRPermissions
+            $result = Test-XdrPermissions
 
             $result.Success | Should -BeFalse
             $result.Data.AccessLevel | Should -Be 'None'
@@ -95,11 +95,11 @@ Describe 'Test-XDRPermissions' {
 
     Context 'comment-based help' {
         It 'has a Synopsis' {
-            (Get-Help Test-XDRPermissions).Synopsis | Should -Not -BeNullOrEmpty
+            (Get-Help Test-XdrPermissions).Synopsis | Should -Not -BeNullOrEmpty
         }
 
         It 'has a Description' {
-            (Get-Help Test-XDRPermissions).Description | Should -Not -BeNullOrEmpty
+            (Get-Help Test-XdrPermissions).Description | Should -Not -BeNullOrEmpty
         }
     }
 }

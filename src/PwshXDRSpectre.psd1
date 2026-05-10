@@ -25,7 +25,7 @@
         'Set-XdrIncidentAssignment',
         'Set-XdrIncidentTriage',
         'Start-PwshXdrLiveDashboard',
-        'Test-XDRPermissions'
+        'Test-XdrPermissions'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
