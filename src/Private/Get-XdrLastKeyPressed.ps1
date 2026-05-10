@@ -14,10 +14,10 @@ function Get-XdrAllKeysPressed {
     [CmdletBinding()]
     param()
 
-    $allKeys = @()
+    $allKeys = [System.Collections.Generic.List[System.ConsoleKeyInfo]]::new()
     while ([Console]::KeyAvailable) {
-        $allKeys += [Console]::ReadKey($true)
+        [void]$allKeys.Add([Console]::ReadKey($true))
     }
 
-    return $allKeys
+    return $allKeys.ToArray()
 }
