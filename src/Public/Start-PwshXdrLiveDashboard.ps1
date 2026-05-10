@@ -224,7 +224,11 @@ function Start-PwshXdrLiveDashboard {
 
             # For text input mode, capture all buffered keys to prevent character loss during rapid typing
             # For other modes, capture only the last key (navigation, selections)
-            $keys = if ($null -ne $pendingTextInput -or ($null -ne $pendingIncidentComment -and [string]$pendingIncidentComment.Step -eq 'comment')) {
+            $keys = if (
+                $null -ne $pendingTextInput -or
+                ($null -ne $pendingIncidentComment -and [string]$pendingIncidentComment.Step -eq 'comment') -or
+                ($null -ne $pendingIncidentResolution -and [string]$pendingIncidentResolution.Step -eq 'comment')
+            ) {
                 @(Get-XdrAllKeysPressed)
             } else {
                 $key = Get-XdrLastKeyPressed

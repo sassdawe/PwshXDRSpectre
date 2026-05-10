@@ -91,6 +91,15 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("-Title 'Incident Resolution Wizard'") | Should -BeTrue
     }
 
+    It 'uses buffered key capture for text-entry wizard steps' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$null -ne `$pendingTextInput -or") | Should -BeTrue
+        $content.Contains("(`$null -ne `$pendingIncidentComment -and [string]`$pendingIncidentComment.Step -eq 'comment') -or") | Should -BeTrue
+        $content.Contains("(`$null -ne `$pendingIncidentResolution -and [string]`$pendingIncidentResolution.Step -eq 'comment')") | Should -BeTrue
+        $content.Contains('@(Get-XdrAllKeysPressed)') | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty
