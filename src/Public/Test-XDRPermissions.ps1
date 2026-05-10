@@ -58,6 +58,24 @@ function Test-XDRPermissions {
         }
     }
 
+    if ($null -eq $graphContext -or [string]::IsNullOrWhiteSpace([string]$graphContext.TenantId)) {
+        return [pscustomobject]@{
+            Success   = $false
+            Operation = $operationName
+            Message   = 'No active Microsoft Graph context was found. Connect first using Connect-XdrSession.'
+            Data      = [pscustomobject]@{
+                AccessLevel         = 'None'
+                HasReaderAccess     = $false
+                HasOperatorAccess   = $false
+                AvailableScopes     = @()
+                MissingScopes       = @('SecurityIncident.Read.All')
+                IsConnectedToGraph  = $false
+            }
+            Error     = $null
+            Metadata  = $null
+        }
+    }
+
     $availableScopes = @()
     if ($graphContext -and $graphContext.Scopes) {
         $availableScopes = @(
