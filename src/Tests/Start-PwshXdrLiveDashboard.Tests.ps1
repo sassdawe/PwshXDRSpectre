@@ -100,6 +100,17 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('@(Get-XdrAllKeysPressed)') | Should -BeTrue
     }
 
+    It 'supports toggling between incident details and related entities panel' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'e')") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
+        $content.Contains("`$showEntityPanel = `$true") | Should -BeTrue
+        $content.Contains("`$showEntityPanel = `$false") | Should -BeTrue
+        $content.Contains("-Title 'Related Entities (Alt+D details)'") | Should -BeTrue
+        $content.Contains("Alt+D to return to Incident Details") | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty

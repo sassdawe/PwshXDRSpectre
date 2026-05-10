@@ -109,6 +109,7 @@ function Start-PwshXdrLiveDashboard {
         $selectedActionIndex = 0
         $selectedIncident = $null
         $selectedAlert = $null
+        $showEntityPanel = $false
         $actionEntries = @()
         $pendingConfirmation = $null
         $pendingTextInput = $null
@@ -132,7 +133,7 @@ function Start-PwshXdrLiveDashboard {
             if (-not $authAttempted) {
                 $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
             $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
-            $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+            $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details (Alt+E entities)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
             $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
             $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
             $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
@@ -141,7 +142,7 @@ function Start-PwshXdrLiveDashboard {
 
                 $authAttempted = $true
             $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
-            $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
+            $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details (Alt+E entities)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
             $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
             $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt)) -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -179,7 +180,7 @@ function Start-PwshXdrLiveDashboard {
             if (-not $dataLoaded) {
                 $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading incidents...' -Expand)) | Out-Null
-                $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading incidents...' -Expand)) | Out-Null
+                $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details (Alt+E entities)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading incidents...' -Expand)) | Out-Null
                 $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading capabilities...' -Expand)) | Out-Null
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt)) -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -540,7 +541,14 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Action canceled.' -Level 'warning'
                     }
                 }
-
+                elseif ($isAltPressed -and $keyChar -eq 'e') {
+                    $showEntityPanel = $true
+                    Set-LiveStatusMessage -Context $context -Message 'Showing related entities panel.' -Level 'info'
+                }
+                elseif ($isAltPressed -and $keyChar -eq 'd') {
+                    $showEntityPanel = $false
+                    Set-LiveStatusMessage -Context $context -Message 'Showing incident details panel.' -Level 'info'
+                }
                 elseif ($key.Key -eq 'PageUp') {
                     $activePanelIndex = ($activePanelIndex - 1 + $panelOrder.Count) % $panelOrder.Count
                     $activePanel = $panelOrder[$activePanelIndex]
@@ -669,7 +677,9 @@ function Start-PwshXdrLiveDashboard {
             if (-not $context.Data.Incidents) {
                 $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
-                $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
+                $emptyIncidentDetailsTitle = if ($showEntityPanel) { 'Related Entities (Alt+D details)' } else { 'Incident Details (Alt+E entities)' }
+                $emptyIncidentDetailsData = if ($showEntityPanel) { 'No incident selected. Press Alt+D for details view.' } else { 'No incident selected.' }
+                $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title $emptyIncidentDetailsTitle -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data $emptyIncidentDetailsData -Expand)) | Out-Null
                 $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
                 $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand)) | Out-Null
                 $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
@@ -734,21 +744,102 @@ function Start-PwshXdrLiveDashboard {
 
             $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incidents' -ActivePanel $activePanel) -Expand
 
-            $incidentDetails = [pscustomobject]@{
-                IncidentId    = $selectedIncident.IncidentId
-                DisplayName   = $selectedIncident.DisplayName
-                Status        = $selectedIncident.Status
-                Classification = $selectedIncident.Classification
-                Determination = $selectedIncident.Determination
-                AssignedTo    = $selectedIncident.AssignedTo
-                Severity      = $selectedIncident.Severity
-                AlertCount    = $selectedIncident.AlertCount
-                SystemTags    = @($selectedIncident.SystemTags)
-                CustomTags    = @($selectedIncident.CustomTags)
-                LastUpdated   = $selectedIncident.LastUpdateDateTime
-                IncidentWebUrl = $selectedIncident.IncidentWebUrl
-                Created       = $selectedIncident.CreatedDateTime
-            } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+            $incidentDetails = if ($showEntityPanel) {
+                $entityLines = @()
+                $entityLines += '[bold grey]Incident-linked entities[/]'
+
+                $runtimeEntities = @($context.Data.Entities | Where-Object {
+                        $entityIncidentId = [string]$_.IncidentId
+                        -not [string]::IsNullOrWhiteSpace($entityIncidentId) -and $entityIncidentId -eq [string]$selectedIncident.IncidentId
+                    })
+
+                if ($runtimeEntities.Count -gt 0) {
+                    foreach ($entity in $runtimeEntities) {
+                        $entityType = if ($entity.PSObject.Properties.Name -contains 'EntityType' -and -not [string]::IsNullOrWhiteSpace([string]$entity.EntityType)) {
+                            [string]$entity.EntityType
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'UserId') {
+                            'User'
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'DeviceId') {
+                            'Device'
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'Sha256') {
+                            'File'
+                        }
+                        else {
+                            'Entity'
+                        }
+
+                        $entityValue = if ($entity.PSObject.Properties.Name -contains 'DisplayName' -and -not [string]::IsNullOrWhiteSpace([string]$entity.DisplayName)) {
+                            [string]$entity.DisplayName
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'UserPrincipalName' -and -not [string]::IsNullOrWhiteSpace([string]$entity.UserPrincipalName)) {
+                            [string]$entity.UserPrincipalName
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'DeviceId' -and -not [string]::IsNullOrWhiteSpace([string]$entity.DeviceId)) {
+                            [string]$entity.DeviceId
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'UserId' -and -not [string]::IsNullOrWhiteSpace([string]$entity.UserId)) {
+                            [string]$entity.UserId
+                        }
+                        elseif ($entity.PSObject.Properties.Name -contains 'Sha256' -and -not [string]::IsNullOrWhiteSpace([string]$entity.Sha256)) {
+                            [string]$entity.Sha256
+                        }
+                        else {
+                            'Unknown'
+                        }
+
+                        $entityLines += "- [white]$([string](Get-SpectreEscapedText $entityType))[/]: [grey]$([string](Get-SpectreEscapedText $entityValue))[/]"
+                    }
+                }
+                else {
+                    if (-not [string]::IsNullOrWhiteSpace([string]$selectedIncident.AssignedTo)) {
+                        $entityLines += "- [white]User[/]: [grey]$([string](Get-SpectreEscapedText ([string]$selectedIncident.AssignedTo)))[/]"
+                    }
+
+                    $relatedAlertRows = @($context.Data.Alerts | Where-Object {
+                            [string]$_.IncidentId -eq [string]$selectedIncident.IncidentId
+                        })
+
+                    foreach ($alertRow in $relatedAlertRows) {
+                        $alertEntityLabel = if ([string]::IsNullOrWhiteSpace([string]$alertRow.Title)) {
+                            [string]$alertRow.AlertId
+                        }
+                        else {
+                            [string]$alertRow.Title
+                        }
+
+                        $entityLines += "- [white]Alert[/]: [grey]$([string](Get-SpectreEscapedText $alertEntityLabel))[/]"
+                    }
+                }
+
+                if ($entityLines.Count -le 1) {
+                    $entityLines += '[grey]No related entities are available yet for this incident.[/]'
+                }
+
+                $entityLines += ''
+                $entityLines += '[grey]Alt+D to return to Incident Details[/]'
+
+                Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Related Entities (Alt+D details)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($entityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+            }
+            else {
+                [pscustomobject]@{
+                    IncidentId    = $selectedIncident.IncidentId
+                    DisplayName   = $selectedIncident.DisplayName
+                    Status        = $selectedIncident.Status
+                    Classification = $selectedIncident.Classification
+                    Determination = $selectedIncident.Determination
+                    AssignedTo    = $selectedIncident.AssignedTo
+                    Severity      = $selectedIncident.Severity
+                    AlertCount    = $selectedIncident.AlertCount
+                    SystemTags    = @($selectedIncident.SystemTags)
+                    CustomTags    = @($selectedIncident.CustomTags)
+                    LastUpdated   = $selectedIncident.LastUpdateDateTime
+                    IncidentWebUrl = $selectedIncident.IncidentWebUrl
+                    Created       = $selectedIncident.CreatedDateTime
+                } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details (Alt+E entities)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+            }
 
             $alertLines = if ($context.Data.Alerts) {
                 @('Sev Title                                         Status')

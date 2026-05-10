@@ -28,4 +28,13 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines | Should -Match 'Ctrl\+C exit'
         }
     }
+
+    It 'includes entity and details toggle shortcuts for incident details panel' {
+        InModuleScope PwshXDRSpectre {
+            $lines = Get-ContextAwareHelpLines -ActivePanel incident_details
+
+            $lines | Should -Match 'Alt\+E show entities'
+            $lines | Should -Match 'Alt\+D show incident details'
+        }
+    }
 }
