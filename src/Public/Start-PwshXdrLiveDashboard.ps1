@@ -841,9 +841,9 @@ function Start-PwshXdrLiveDashboard {
             $classificationReasons = @(Get-XdrActionDisableReasons -ActionName 'Set incident classification' -ActionType Incident -Context $context)
             $incidentActionLines += (New-ActionStateLine -Label '(Alt+K) Set incident classification' -Reasons $classificationReasons)
             $actionEntries += [pscustomobject]@{ Shortcut = 'k'; Label = 'Set incident classification'; IsEnabled = ($classificationReasons.Count -eq 0); Reasons = $classificationReasons }
-            $incidentCommentReasons = @()
+            $incidentCommentReasons = @(Get-XdrActionDisableReasons -ActionName 'Add comment to selected incident' -ActionType Incident -Context $context)
             $incidentActionLines += (New-ActionStateLine -Label '(Alt+C) Add comment to selected incident' -Reasons $incidentCommentReasons)
-            $actionEntries += [pscustomobject]@{ Shortcut = 'c'; Label = 'Add comment to selected incident'; IsEnabled = $true; Reasons = $incidentCommentReasons }
+            $actionEntries += [pscustomobject]@{ Shortcut = 'c'; Label = 'Add comment to selected incident'; IsEnabled = ($incidentCommentReasons.Count -eq 0); Reasons = $incidentCommentReasons }
             $incidentActionLines += '(Alt+L) Load alerts for selected incident'
             $actionEntries += [pscustomobject]@{ Shortcut = 'l'; Label = 'Load alerts for selected incident'; IsEnabled = $true; Reasons = @() }
 
