@@ -154,7 +154,7 @@
 
 ### Workstream 8: Dashboard UX Hardening (Completed Additions)
 
-- [x] **8.1** Add guided 3-step incident resolution workflow in Action Status panel (determination → resolving comment → confirm)
+- [x] **8.1** Add guided 4-step incident resolution workflow in Action Status panel (classification → determination → resolving comment → confirm)
 - [x] **8.2** Lock panel focus to resolution panel during active resolution workflow, then restore previous panel on complete/cancel
 - [x] **8.3** Add panel navigation with `PgUp/PgDn` while preserving existing `Tab`/`Shift+Tab` model
 - [x] **8.4** Add resolution-step navigation with `PgUp/PgDn`

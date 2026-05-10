@@ -43,6 +43,12 @@ function Invoke-XdrLiveActionShortcut {
     .PARAMETER PendingIncidentResolution
     Pending incident resolution payload reference.
 
+    .PARAMETER ActivePanelBeforeComment
+    Previous panel reference before incident comment workflow.
+
+    .PARAMETER PendingIncidentComment
+    Pending incident comment workflow payload reference.
+
     .PARAMETER ModulePath
     Module path used by background jobs.
 
@@ -101,6 +107,18 @@ function Invoke-XdrLiveActionShortcut {
 
         [Parameter(Mandatory)]
         [ref]$PendingIncidentResolution,
+
+        [Parameter()]
+        [ref]$ActivePanelBeforeClassification,
+
+        [Parameter()]
+        [ref]$PendingIncidentClassification,
+
+        [Parameter()]
+        [ref]$ActivePanelBeforeComment,
+
+        [Parameter()]
+        [ref]$PendingIncidentComment,
 
         [Parameter(Mandatory)]
         [string]$ModulePath,
@@ -163,10 +181,40 @@ function Invoke-XdrLiveActionShortcut {
             Set-StatusFromResult -Context $Context -Result $progressResult
         }
         'r' {
+            $classificationChoices = @($TriageOptions.IncidentClassifications)
+            if ($classificationChoices.Count -eq 0) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident classification options are configured.' -Level 'warning'
+                break
+            }
+
             $determinationChoices = @($TriageOptions.IncidentDeterminations)
             if ($determinationChoices.Count -eq 0) {
                 Set-LiveStatusMessage -Context $Context -Message 'No incident determination options are configured.' -Level 'warning'
                 break
+            }
+
+            $classificationIndex = 0
+            $currentClassification = [string]$SelectedIncident.Classification
+            if (-not [string]::IsNullOrWhiteSpace($currentClassification)) {
+                for ($idx = 0; $idx -lt $classificationChoices.Count; $idx++) {
+                    $option = $classificationChoices[$idx]
+                    if ([string]$option.graphValue -eq $currentClassification -or [string]$option.label -eq $currentClassification) {
+                        $classificationIndex = $idx
+                        break
+                    }
+                }
+            }
+
+            $determinationIndex = 0
+            $currentDetermination = [string]$SelectedIncident.Determination
+            if (-not [string]::IsNullOrWhiteSpace($currentDetermination)) {
+                for ($idx = 0; $idx -lt $determinationChoices.Count; $idx++) {
+                    $option = $determinationChoices[$idx]
+                    if ([string]$option.graphValue -eq $currentDetermination -or [string]$option.label -eq $currentDetermination) {
+                        $determinationIndex = $idx
+                        break
+                    }
+                }
             }
 
             $ActivePanelBeforeResolution.Value = $ActivePanel.Value
@@ -176,29 +224,94 @@ function Invoke-XdrLiveActionShortcut {
 
             $PendingTextInput.Value = $null
             $PendingIncidentResolution.Value = [pscustomobject]@{
-                Step                 = 'determination'
-                DeterminationOptions = $determinationChoices
-                DeterminationIndex   = 0
-                ResolvingComment     = ''
+                Step                  = 'classification'
+                ClassificationOptions = $classificationChoices
+                ClassificationIndex   = $classificationIndex
+                DeterminationOptions  = $determinationChoices
+                DeterminationIndex    = $determinationIndex
+                ResolvingComment      = ''
+            }
+        }
+        'k' {
+            if (-not $SelectedIncident) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident is selected for this shortcut.' -Level 'warning'
+                break
+            }
+
+            $classificationChoices = @($TriageOptions.IncidentClassifications)
+            if ($classificationChoices.Count -eq 0) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident classification options are configured.' -Level 'warning'
+                break
+            }
+
+            $currentClassification = [string]$SelectedIncident.Classification
+            $currentIndex = -1
+            for ($idx = 0; $idx -lt $classificationChoices.Count; $idx++) {
+                $option = $classificationChoices[$idx]
+                if ([string]$option.graphValue -eq $currentClassification -or [string]$option.label -eq $currentClassification) {
+                    $currentIndex = $idx
+                    break
+                }
+            }
+
+            if ($currentIndex -lt 0) {
+                $currentIndex = 0
+            }
+
+            $canOpenPicker = $PSBoundParameters.ContainsKey('PendingIncidentClassification') -and $null -ne $PendingIncidentClassification
+            if ($canOpenPicker) {
+                if ($PSBoundParameters.ContainsKey('ActivePanelBeforeClassification') -and $null -ne $ActivePanelBeforeClassification) {
+                    $ActivePanelBeforeClassification.Value = $ActivePanel.Value
+                }
+
+                $ActivePanel.Value = 'action_status'
+                $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+                $Context.Selection.Panel = $ActivePanel.Value
+
+                $PendingTextInput.Value = $null
+                $PendingIncidentResolution.Value = $null
+                $PendingIncidentClassification.Value = [pscustomobject]@{
+                    Step                  = 'classification'
+                    ClassificationOptions = $classificationChoices
+                    ClassificationIndex   = $currentIndex
+                }
+            }
+            else {
+                # Compatibility path for callers that do not supply picker refs.
+                $nextIndex = ($currentIndex + 1) % $classificationChoices.Count
+                $nextClassificationLabel = [string]$classificationChoices[$nextIndex].label
+                $classificationResult = Set-XdrIncidentTriage -Context $Context -IncidentId $SelectedIncident.IncidentId -Classification $nextClassificationLabel
+                Set-StatusFromResult -Context $Context -Result $classificationResult
             }
         }
         'c' {
-            $PendingTextInput.Value = [pscustomobject]@{
-                Mode   = 'incident_comment'
-                Title  = 'INCIDENT COMMENT'
-                Prompt = 'Enter comment for selected incident'
-                Value  = ''
-                Submit = {
-                    param([string]$InputText)
+            if (-not $SelectedIncident) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident is selected for this shortcut.' -Level 'warning'
+                break
+            }
 
-                    if ([string]::IsNullOrWhiteSpace($InputText)) {
-                        Set-LiveStatusMessage -Context $Context -Message 'Comment cannot be empty.' -Level 'warning'
-                        return
-                    }
+            $canOpenWizard = $PSBoundParameters.ContainsKey('PendingIncidentComment') -and $null -ne $PendingIncidentComment
+            if (-not $canOpenWizard) {
+                Set-LiveStatusMessage -Context $Context -Message 'Comment workflow is unavailable in this context.' -Level 'warning'
+                break
+            }
 
-                    $commentResult = Set-XdrIncidentTriage -Context $Context -IncidentId $SelectedIncident.IncidentId -Comment $InputText
-                    Set-StatusFromResult -Context $Context -Result $commentResult
-                }
+            if ($PSBoundParameters.ContainsKey('ActivePanelBeforeComment') -and $null -ne $ActivePanelBeforeComment) {
+                $ActivePanelBeforeComment.Value = $ActivePanel.Value
+            }
+
+            $ActivePanel.Value = 'action_status'
+            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+            $Context.Selection.Panel = $ActivePanel.Value
+
+            $PendingTextInput.Value = $null
+            $PendingIncidentResolution.Value = $null
+            if ($PSBoundParameters.ContainsKey('PendingIncidentClassification') -and $null -ne $PendingIncidentClassification) {
+                $PendingIncidentClassification.Value = $null
+            }
+            $PendingIncidentComment.Value = [pscustomobject]@{
+                Step    = 'comment'
+                Comment = ''
             }
         }
         'n' {

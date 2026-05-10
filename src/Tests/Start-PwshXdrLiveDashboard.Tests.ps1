@@ -60,6 +60,46 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content | Should -Not -Match '\$alertIdText\s*='
     }
 
+    It 'keeps incident resolve mutation inside the final confirm step branch' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$currentResolutionStep = [string]`$pendingIncidentResolution.Step") | Should -BeTrue
+        $content.Contains('switch ($currentResolutionStep) {') | Should -BeTrue
+        $content.Contains("'confirm' {") | Should -BeTrue
+        $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'y') -or `$key.Key -eq 'Enter') {") | Should -BeTrue
+        $content.Contains("`$resolveResult = Set-XdrIncidentTriage -Context `$context -IncidentId `$selectedIncident.IncidentId -Status 'Resolved' -Classification `$selectedClassificationLabel -Determination `$selectedDeterminationLabel -Comment `$commentText -SkipConfirmation") | Should -BeTrue
+    }
+
+    It 'consumes modal keypresses before normal action-panel Enter handling' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$keyHandled = $false') | Should -BeTrue
+        $content.Contains('if ($null -ne $pendingIncidentResolution) {') | Should -BeTrue
+        $content.Contains('$keyHandled = $true') | Should -BeTrue
+        $content.Contains('if ($keyHandled) {') | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'Enter' -and `$activePanel -eq 'action_status' -and `$actionEntries.Count -gt 0) {") | Should -BeTrue
+    }
+
+    It 'renders incident resolution as a per-step wizard page' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("switch (`$stepName) {") | Should -BeTrue
+        $content.Contains("'classification' {") | Should -BeTrue
+        $content.Contains("'determination' {") | Should -BeTrue
+        $content.Contains("'comment' {") | Should -BeTrue
+        $content.Contains("default {") | Should -BeTrue
+        $content.Contains("-Title 'Incident Resolution Wizard'") | Should -BeTrue
+    }
+
+    It 'uses buffered key capture for text-entry wizard steps' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$null -ne `$pendingTextInput -or") | Should -BeTrue
+        $content.Contains("(`$null -ne `$pendingIncidentComment -and [string]`$pendingIncidentComment.Step -eq 'comment') -or") | Should -BeTrue
+        $content.Contains("(`$null -ne `$pendingIncidentResolution -and [string]`$pendingIncidentResolution.Step -eq 'comment')") | Should -BeTrue
+        $content.Contains('@(Get-XdrAllKeysPressed)') | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty
