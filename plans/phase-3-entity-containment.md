@@ -1,6 +1,6 @@
 # Phase 3 — Entity Pivots and Containment Actions
 
-**Status**: ⚪ Not Started  
+**Status**: 🟡 In Progress  
 **Depends on**: [Phase 2 — Incident and Alert Operations](phase-2-incident-alert-ops.md)  
 **Blocks**: Phase 5 (action history)  
 **Notes**: User, device, and file containment workstreams can run in parallel once entity extraction is complete  
@@ -32,12 +32,12 @@ Define user, device, and file view models before any containment work starts.
 | Device entity | `DeviceId`, `DisplayName`, `OSPlatform`, `OnboardingStatus`, `HealthStatus`, `RiskScore`, `IncidentId`, `AlertId`, `RawObject` |
 | File entity | `Sha256`, `FileName`, `Path`, `PrevalenceType`, `IncidentId`, `AlertId`, `RawObject` |
 
-- [ ] **1.1** Implement `Private/Get-XdrIncidentEntities.ps1` — extracts all entity references from incident evidence and alert details
+- [x] **1.1** Implement `Private/Get-XdrIncidentEntities.ps1` — extracts all entity references from incident evidence and alert details
 - [ ] **1.2** Implement `Private/ConvertTo-XdrUserEntity.ps1` — normalizes raw user objects to the user entity view model
 - [ ] **1.3** Implement `Private/ConvertTo-XdrDeviceEntity.ps1` — normalizes raw device objects to the device entity view model
 - [ ] **1.4** Implement `Private/ConvertTo-XdrFileEntity.ps1` — normalizes raw file objects to the file entity view model
-- [ ] **1.5** Populate `Context.Data.Entities` when an incident or alert is selected
-- [ ] **1.6** Add entity list panel to TUI — shows extracted entities grouped by type
+- [x] **1.5** Populate `Context.Data.Entities` when an incident or alert is selected
+- [x] **1.6** Add entity list panel to TUI — shows extracted entities grouped by type
 
 ### Workstream 2: User Containment (parallel after 1.x)
 
@@ -102,7 +102,7 @@ Encrypted on-disk persistence is implemented in Phase 5.
 
 ### Workstream 6: Tests
 
-- [ ] **6.1** `Tests/Get-XdrIncidentEntities.Tests.ps1` — entity extraction returns expected user/device/file objects
+- [x] **6.1** `Tests/Get-XdrIncidentEntities.Tests.ps1` — entity extraction returns expected user/device/file objects
 - [ ] **6.2** `Tests/ConvertTo-XdrUserEntity.Tests.ps1` — view model preserves required fields
 - [ ] **6.3** `Tests/ConvertTo-XdrDeviceEntity.Tests.ps1` — view model preserves required fields
 - [ ] **6.4** `Tests/ConvertTo-XdrFileEntity.Tests.ps1` — view model preserves required fields
@@ -117,7 +117,7 @@ Encrypted on-disk persistence is implemented in Phase 5.
 
 ## Acceptance Criteria
 
-- [ ] Entity extraction runs automatically when an incident or alert is selected
+- [x] Entity extraction runs automatically when an incident or alert is selected
 - [ ] All three containment types (user, device, file) are accessible from the TUI
 - [ ] Disruptive actions require confirmation before execution
 - [ ] Every executed action and its result is recorded in the in-memory action history

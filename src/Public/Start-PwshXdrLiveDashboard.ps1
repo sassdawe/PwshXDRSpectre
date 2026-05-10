@@ -99,16 +99,18 @@ function Start-PwshXdrLiveDashboard {
         $dataLoaded = $false
         $fatalErrorMessage = $null
 
-        $panelOrder = @('incidents', 'alerts', 'action_status')
+        $panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')
         $activePanelIndex = 0
         $activePanel = $panelOrder[$activePanelIndex]
         $context.Selection.Panel = $activePanel
 
         $selectedIndex = 0
         $selectedAlertIndex = 0
+        $selectedEntityIndex = 0
         $selectedActionIndex = 0
         $selectedIncident = $null
         $selectedAlert = $null
+        $selectedEntity = $null
         $showEntityPanel = $false
         $actionEntries = @()
         $pendingConfirmation = $null
@@ -121,13 +123,51 @@ function Start-PwshXdrLiveDashboard {
         $activePanelBeforeComment = $null
         $ignoreEnterUntil = [datetime]::MinValue
         $alertsByIncidentId = @{}
+        $entitiesByIncidentId = @{}
+        $entityAlertCountByIncidentId = @{}
         $selectedAlertIdByIncidentId = @{}
         $alertLoadJobsByIncidentId = @{}
+        $entityLoadJobsByIncidentId = @{}
         $alertPreloadQueue = [System.Collections.Queue]::new()
         $maxAlertLoadJobs = 2
         $prefetchCompletedAt = $null
         $modulePath = Join-Path $PSScriptRoot '..' 'PwshXDRSpectre.psm1'
         $triageOptions = Get-XdrTriageOptions
+
+        $startEntityExtraction = {
+            param([object]$Incident)
+
+            if (-not $Incident) {
+                return
+            }
+
+            $incidentId = [string]$Incident.IncidentId
+            if ([string]::IsNullOrWhiteSpace($incidentId)) {
+                return
+            }
+
+            if ($entityLoadJobsByIncidentId.ContainsKey($incidentId)) {
+                return
+            }
+
+            $alertsForIncident = if ($alertsByIncidentId.ContainsKey($incidentId)) {
+                @($alertsByIncidentId[$incidentId])
+            }
+            else {
+                @()
+            }
+
+            $entityLoadJobsByIncidentId[$incidentId] = Start-ThreadJob -ScriptBlock {
+                param(
+                    [string]$ModulePath,
+                    [object]$IncidentData,
+                    [object[]]$AlertData
+                )
+
+                Import-Module $ModulePath -Force | Out-Null
+                Get-XdrIncidentEntities -Incident $IncidentData -Alerts $AlertData
+            } -ArgumentList $modulePath, $Incident, $alertsForIncident
+        }
 
         while ($true) {
             if (-not $authAttempted) {
@@ -197,6 +237,10 @@ function Start-PwshXdrLiveDashboard {
                     $selectedIndex = 0
                     $selectedIncident = $context.Data.Incidents[$selectedIndex]
                     $context.Selection.Incident = $selectedIncident
+                    $selectedEntityIndex = 0
+                    $selectedEntity = $null
+                    $context.Selection.Entity = $null
+                    & $startEntityExtraction $selectedIncident
                 }
 
                 Add-XdrLiveAlertPreloads -Incidents $context.Data.Incidents -AlertPreloadQueue $alertPreloadQueue -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId
@@ -206,6 +250,49 @@ function Start-PwshXdrLiveDashboard {
 
             Invoke-XdrLiveAlertLoadJobProcessing -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -SelectedIncident $selectedIncident -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex)
             Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -MaxAlertLoadJobs $maxAlertLoadJobs -AlertPreloadQueue $alertPreloadQueue -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId
+
+            foreach ($entityJobEntry in @($entityLoadJobsByIncidentId.GetEnumerator())) {
+                $incidentIdKey = [string]$entityJobEntry.Key
+                $entityJob = $entityJobEntry.Value
+                if (-not $entityJob) {
+                    $entityLoadJobsByIncidentId.Remove($incidentIdKey)
+                    continue
+                }
+
+                if ($entityJob.State -eq 'Completed') {
+                    $entityResult = Receive-Job -Job $entityJob -ErrorAction SilentlyContinue
+                    $entitiesByIncidentId[$incidentIdKey] = @($entityResult)
+                    $entityAlertCountByIncidentId[$incidentIdKey] = if ($alertsByIncidentId.ContainsKey($incidentIdKey)) { @($alertsByIncidentId[$incidentIdKey]).Count } else { 0 }
+                    Remove-Job -Job $entityJob -Force -ErrorAction SilentlyContinue
+                    $entityLoadJobsByIncidentId.Remove($incidentIdKey)
+                }
+                elseif ($entityJob.State -in @('Failed', 'Stopped')) {
+                    $entityError = Receive-Job -Job $entityJob -ErrorAction SilentlyContinue
+                    if ($entityError) {
+                        $context.Diagnostics.Warnings += @("Entity extraction failed for incident $incidentIdKey.")
+                    }
+
+                    Remove-Job -Job $entityJob -Force -ErrorAction SilentlyContinue
+                    $entityLoadJobsByIncidentId.Remove($incidentIdKey)
+                }
+            }
+
+            if ($selectedIncident) {
+                $selectedIncidentId = [string]$selectedIncident.IncidentId
+                $selectedIncidentAlertCount = if ($alertsByIncidentId.ContainsKey($selectedIncidentId)) { @($alertsByIncidentId[$selectedIncidentId]).Count } else { 0 }
+
+                if ($entitiesByIncidentId.ContainsKey($selectedIncidentId)) {
+                    $context.Data.Entities = @($entitiesByIncidentId[$selectedIncidentId])
+                }
+                else {
+                    $context.Data.Entities = @()
+                }
+
+                $cachedAlertCount = if ($entityAlertCountByIncidentId.ContainsKey($selectedIncidentId)) { [int]$entityAlertCountByIncidentId[$selectedIncidentId] } else { -1 }
+                if ($cachedAlertCount -ne $selectedIncidentAlertCount -and -not $entityLoadJobsByIncidentId.ContainsKey($selectedIncidentId)) {
+                    & $startEntityExtraction $selectedIncident
+                }
+            }
 
             if ($null -ne $pendingIncidentResolution) {
                 $activePanel = 'action_status'
@@ -543,10 +630,16 @@ function Start-PwshXdrLiveDashboard {
                 }
                 elseif ($isAltPressed -and $keyChar -eq 'e') {
                     $showEntityPanel = $true
+                    $activePanel = 'incident_details'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
+                    $context.Selection.Panel = $activePanel
                     Set-LiveStatusMessage -Context $context -Message 'Showing related entities panel.' -Level 'info'
                 }
                 elseif ($isAltPressed -and $keyChar -eq 'd') {
                     $showEntityPanel = $false
+                    $activePanel = 'incident_details'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
+                    $context.Selection.Panel = $activePanel
                     Set-LiveStatusMessage -Context $context -Message 'Showing incident details panel.' -Level 'info'
                 }
                 elseif ($key.Key -eq 'PageUp') {
@@ -574,19 +667,30 @@ function Start-PwshXdrLiveDashboard {
                     $dataLoaded = $false
                     $context.Data.Incidents = @()
                     $context.Data.Alerts = @()
+                    $context.Data.Entities = @()
                     $selectedIndex = 0
                     $selectedAlertIndex = 0
+                    $selectedEntityIndex = 0
                     $selectedIncident = $null
                     $selectedAlert = $null
+                    $selectedEntity = $null
                     $context.Selection.Incident = $null
                     $context.Selection.Alert = $null
+                    $context.Selection.Entity = $null
                     $alertsByIncidentId.Clear()
+                    $entitiesByIncidentId.Clear()
+                    $entityAlertCountByIncidentId.Clear()
                     $selectedAlertIdByIncidentId.Clear()
                     foreach ($jobEntry in @($alertLoadJobsByIncidentId.GetEnumerator())) {
                         Stop-Job -Job $jobEntry.Value -ErrorAction SilentlyContinue | Out-Null
                         Remove-Job -Job $jobEntry.Value -Force -ErrorAction SilentlyContinue
                     }
+                    foreach ($entityJobEntry in @($entityLoadJobsByIncidentId.GetEnumerator())) {
+                        Stop-Job -Job $entityJobEntry.Value -ErrorAction SilentlyContinue | Out-Null
+                        Remove-Job -Job $entityJobEntry.Value -Force -ErrorAction SilentlyContinue
+                    }
                     $alertLoadJobsByIncidentId.Clear()
+                    $entityLoadJobsByIncidentId.Clear()
                     $alertPreloadQueue.Clear()
                     Set-LiveStatusMessage -Context $context -Message 'Refreshing incidents and alert cache...' -Level 'info'
                     continue
@@ -605,6 +709,9 @@ function Start-PwshXdrLiveDashboard {
                     $selectedIndex = ($selectedIndex + 1) % $context.Data.Incidents.Count
                     $selectedIncident = $context.Data.Incidents[$selectedIndex]
                     $context.Selection.Incident = $selectedIncident
+                    $selectedEntityIndex = 0
+                    $selectedEntity = $null
+                    $context.Selection.Entity = $null
                     $incidentId = [string]$selectedIncident.IncidentId
                     if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
                         $selectedAlert = $null
@@ -613,11 +720,22 @@ function Start-PwshXdrLiveDashboard {
                         $context.Data.Alerts = @()
                         Start-XdrLiveAlertLoadJob -Incident $selectedIncident -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId | Out-Null
                     }
+
+                    if ($entitiesByIncidentId.ContainsKey($incidentId)) {
+                        $context.Data.Entities = @($entitiesByIncidentId[$incidentId])
+                    }
+                    else {
+                        $context.Data.Entities = @()
+                    }
+                    & $startEntityExtraction $selectedIncident
                 }
                 elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'incidents') {
                     $selectedIndex = ($selectedIndex - 1 + $context.Data.Incidents.Count) % $context.Data.Incidents.Count
                     $selectedIncident = $context.Data.Incidents[$selectedIndex]
                     $context.Selection.Incident = $selectedIncident
+                    $selectedEntityIndex = 0
+                    $selectedEntity = $null
+                    $context.Selection.Entity = $null
                     $incidentId = [string]$selectedIncident.IncidentId
                     if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
                         $selectedAlert = $null
@@ -626,6 +744,14 @@ function Start-PwshXdrLiveDashboard {
                         $context.Data.Alerts = @()
                         Start-XdrLiveAlertLoadJob -Incident $selectedIncident -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId | Out-Null
                     }
+
+                    if ($entitiesByIncidentId.ContainsKey($incidentId)) {
+                        $context.Data.Entities = @($entitiesByIncidentId[$incidentId])
+                    }
+                    else {
+                        $context.Data.Entities = @()
+                    }
+                    & $startEntityExtraction $selectedIncident
                 }
                 elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'alerts' -and $context.Data.Alerts.Count -gt 0) {
                     $selectedAlertIndex = ($selectedAlertIndex + 1) % $context.Data.Alerts.Count
@@ -638,6 +764,16 @@ function Start-PwshXdrLiveDashboard {
                     $selectedAlert = $context.Data.Alerts[$selectedAlertIndex]
                     $context.Selection.Alert = $selectedAlert
                     $selectedAlertIdByIncidentId[[string]$selectedIncident.IncidentId] = [string]$selectedAlert.AlertId
+                }
+                elseif ($showEntityPanel -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
+                    $selectedEntityIndex = ($selectedEntityIndex + 1) % $context.Data.Entities.Count
+                    $selectedEntity = $context.Data.Entities[$selectedEntityIndex]
+                    $context.Selection.Entity = $selectedEntity
+                }
+                elseif ($showEntityPanel -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
+                    $selectedEntityIndex = ($selectedEntityIndex - 1 + $context.Data.Entities.Count) % $context.Data.Entities.Count
+                    $selectedEntity = $context.Data.Entities[$selectedEntityIndex]
+                    $context.Selection.Entity = $selectedEntity
                 }
                 elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
                     $selectedActionIndex = ($selectedActionIndex + 1) % $actionEntries.Count
@@ -675,6 +811,8 @@ function Start-PwshXdrLiveDashboard {
             }  # end foreach ($key in $keys)
 
             if (-not $context.Data.Incidents) {
+                $selectedEntity = $null
+                $context.Selection.Entity = $null
                 $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
                 $emptyIncidentDetailsTitle = if ($showEntityPanel) { 'Related Entities (Alt+D details)' } else { 'Incident Details (Alt+E entities)' }
@@ -752,9 +890,46 @@ function Start-PwshXdrLiveDashboard {
                         $entityIncidentId = [string]$_.IncidentId
                         -not [string]::IsNullOrWhiteSpace($entityIncidentId) -and $entityIncidentId -eq [string]$selectedIncident.IncidentId
                     })
+                $entityEntries = @($runtimeEntities)
 
-                if ($runtimeEntities.Count -gt 0) {
-                    foreach ($entity in $runtimeEntities) {
+                if ($entityEntries.Count -eq 0) {
+                    if (-not [string]::IsNullOrWhiteSpace([string]$selectedIncident.AssignedTo)) {
+                        $entityEntries += [pscustomobject]@{
+                            EntityType = 'User'
+                            DisplayName = [string]$selectedIncident.AssignedTo
+                            IncidentId = [string]$selectedIncident.IncidentId
+                            AlertId = $null
+                        }
+                    }
+
+                    $relatedAlertRows = @($context.Data.Alerts | Where-Object {
+                            [string]$_.IncidentId -eq [string]$selectedIncident.IncidentId
+                        })
+
+                    foreach ($alertRow in $relatedAlertRows) {
+                        $alertEntityLabel = if ([string]::IsNullOrWhiteSpace([string]$alertRow.Title)) {
+                            [string]$alertRow.AlertId
+                        }
+                        else {
+                            [string]$alertRow.Title
+                        }
+
+                        $entityEntries += [pscustomobject]@{
+                            EntityType = 'Alert'
+                            DisplayName = $alertEntityLabel
+                            IncidentId = [string]$selectedIncident.IncidentId
+                            AlertId = [string]$alertRow.AlertId
+                        }
+                    }
+                }
+
+                if ($entityEntries.Count -gt 0) {
+                    $selectedEntityIndex = [Math]::Min([Math]::Max($selectedEntityIndex, 0), $entityEntries.Count - 1)
+                    $selectedEntity = $entityEntries[$selectedEntityIndex]
+                    $context.Selection.Entity = $selectedEntity
+
+                    for ($entityIdx = 0; $entityIdx -lt $entityEntries.Count; $entityIdx++) {
+                        $entity = $entityEntries[$entityIdx]
                         $entityType = if ($entity.PSObject.Properties.Name -contains 'EntityType' -and -not [string]::IsNullOrWhiteSpace([string]$entity.EntityType)) {
                             [string]$entity.EntityType
                         }
@@ -790,28 +965,16 @@ function Start-PwshXdrLiveDashboard {
                             'Unknown'
                         }
 
-                        $entityLines += "- [white]$([string](Get-SpectreEscapedText $entityType))[/]: [grey]$([string](Get-SpectreEscapedText $entityValue))[/]"
+                        $isSelectedEntity = ($entityIdx -eq $selectedEntityIndex)
+                        $entityPrefix = if ($isSelectedEntity -and $activePanel -eq 'incident_details') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $entityTypeMarkup = if ($isSelectedEntity) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText $entityType))[/]" } else { "[white]$([string](Get-SpectreEscapedText $entityType))[/]" }
+                        $entityValueMarkup = if ($isSelectedEntity) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText $entityValue))[/]" } else { "[grey]$([string](Get-SpectreEscapedText $entityValue))[/]" }
+                        $entityLines += "$entityPrefix ${entityTypeMarkup}: $entityValueMarkup"
                     }
                 }
                 else {
-                    if (-not [string]::IsNullOrWhiteSpace([string]$selectedIncident.AssignedTo)) {
-                        $entityLines += "- [white]User[/]: [grey]$([string](Get-SpectreEscapedText ([string]$selectedIncident.AssignedTo)))[/]"
-                    }
-
-                    $relatedAlertRows = @($context.Data.Alerts | Where-Object {
-                            [string]$_.IncidentId -eq [string]$selectedIncident.IncidentId
-                        })
-
-                    foreach ($alertRow in $relatedAlertRows) {
-                        $alertEntityLabel = if ([string]::IsNullOrWhiteSpace([string]$alertRow.Title)) {
-                            [string]$alertRow.AlertId
-                        }
-                        else {
-                            [string]$alertRow.Title
-                        }
-
-                        $entityLines += "- [white]Alert[/]: [grey]$([string](Get-SpectreEscapedText $alertEntityLabel))[/]"
-                    }
+                    $selectedEntity = $null
+                    $context.Selection.Entity = $null
                 }
 
                 if ($entityLines.Count -le 1) {
@@ -909,6 +1072,34 @@ function Start-PwshXdrLiveDashboard {
 
             $incidentActionLines = @()
             $actionEntries = @()
+            $actionLines = @()
+
+            if ($showEntityPanel) {
+                $actionLines += 'Entity actions (preview)'
+
+                if ($selectedEntity) {
+                    $selectedEntityType = [string]$selectedEntity.EntityType
+                    $entityPreviewActions = switch -Regex ($selectedEntityType) {
+                        '^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }
+                        '^(?i:device|machine)$' { @('Isolate device', 'Run antivirus scan', 'Collect investigation package') }
+                        '^(?i:file)$' { @('Quarantine file', 'Block file indicator', 'Remove file indicator block') }
+                        '^(?i:alert)$' { @('Open alert details', 'Load alert timeline') }
+                        default { @('Entity actions coming soon') }
+                    }
+
+                    foreach ($entityAction in $entityPreviewActions) {
+                        $entityReasons = @('Not implemented yet')
+                        $actionLines += (New-ActionStateLine -Label "(Alt+X) $entityAction" -Reasons $entityReasons)
+                        $actionEntries += [pscustomobject]@{ Shortcut = ''; Label = $entityAction; IsEnabled = $false; Reasons = $entityReasons }
+                    }
+                }
+                else {
+                    $actionLines += '[grey]No entity selected.[/]'
+                }
+
+                $actionLines += ''
+            }
+
             $incidentActionLines += 'Incident actions'
             $reasons = @(Get-XdrActionDisableReasons -ActionName 'Assign incident to me' -ActionType Incident -Context $context)
             $incidentActionLines += (New-ActionStateLine -Label '(Alt+A) Assign incident to me' -Reasons $reasons)
@@ -942,7 +1133,7 @@ function Start-PwshXdrLiveDashboard {
             $incidentActionLines += '(Alt+L) Load alerts for selected incident'
             $actionEntries += [pscustomobject]@{ Shortcut = 'l'; Label = 'Load alerts for selected incident'; IsEnabled = $true; Reasons = @() }
 
-            $actionLines = @($incidentActionLines)
+            $actionLines += @($incidentActionLines)
             $actionLines += ''
             $actionLines += 'Alert actions'
 
