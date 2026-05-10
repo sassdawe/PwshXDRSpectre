@@ -4,7 +4,7 @@
 **Depends on**: [Phase 2 — Incident and Alert Operations](phase-2-incident-alert-ops.md)  
 **Blocks**: Phase 5 (action history)  
 **Notes**: User, device, and file containment workstreams can run in parallel once entity extraction is complete  
-**Last updated**: 2026-04-21
+**Last updated**: 2026-05-10
 
 ---
 
@@ -14,7 +14,7 @@
 2. Implement user containment actions: revoke active sessions and optionally disable account.
 3. Implement device containment actions: isolate device and run supported remediation.
 4. Implement file containment actions: quarantine file and block indicator workflows.
-5. Persist every executed action and its result into action history.
+5. Capture every executed action and result in runtime action history using a redaction-ready schema compatible with Phase 5 encrypted persistence.
 
 ---
 
@@ -74,7 +74,10 @@ Define user, device, and file view models before any containment work starts.
 - [ ] **4.4** Record action and result in action history (see Workstream 5)
 - [ ] **4.5** Update `Context.Capabilities.FileActions` to reflect available actions for selected file
 
-### Workstream 5: Action History Persistence
+### Workstream 5: Runtime Action History (Phase 5-Compatible)
+
+Phase 3 owns in-memory action history and TUI rendering only.
+Encrypted on-disk persistence is implemented in Phase 5.
 
 - [ ] **5.1** Define action history record schema:
   - `ActionId` (GUID)
@@ -84,11 +87,18 @@ Define user, device, and file view models before any containment work starts.
   - `ExecutedBy`
   - `ExecutedAt`
   - `Status` (`Submitted`, `Completed`, `Failed`)
-  - `Result` (summary text)
+  - `Result` (sanitized summary text only)
   - `IncidentId` (correlation)
-- [ ] **5.2** Implement `Private/Add-XdrActionHistory.ps1` — appends a new action record to the in-memory history list
-- [ ] **5.3** Populate `Context.Data` with a running `ActionHistory` list
-- [ ] **5.4** Surface the last N actions in an activity log panel in the TUI
+  - `AlertId` (optional correlation)
+- [ ] **5.2** Define field classes for compatibility with Phase 5 persistence:
+  - `safe` fields allowed after encryption
+  - `sensitive` fields requiring sanitization before persistence
+  - `forbidden` fields (raw payloads, tokens, full stack traces) that are never recorded
+- [ ] **5.3** Implement `Private/Add-XdrActionHistory.ps1` — appends a new action record to the in-memory history list
+- [ ] **5.4** Populate `Context.Data` with a running `ActionHistory` list
+- [ ] **5.5** Surface the last N actions in an activity log panel in the TUI
+- [ ] **5.6** Ensure canceled confirmation prompts do not create executed action history records
+- [ ] **5.7** Document handoff contract to Phase 5 encrypted store APIs
 
 ### Workstream 6: Tests
 
@@ -100,6 +110,8 @@ Define user, device, and file view models before any containment work starts.
 - [ ] **6.6** `Tests/Invoke-XdrDeviceContainment.Tests.ps1` — builds correct MDE API payloads; confirmation required for IsolateDevice
 - [ ] **6.7** `Tests/Invoke-XdrFileContainment.Tests.ps1` — builds correct indicator payloads; confirmation required for BlockFileIndicator
 - [ ] **6.8** `Tests/Add-XdrActionHistory.Tests.ps1` — appends records correctly; all required fields populated
+- [ ] **6.9** `Tests/Add-XdrActionHistory.Tests.ps1` — rejects forbidden fields and stores sanitized result summaries only
+- [ ] **6.10** `Tests/Add-XdrActionHistory.Tests.ps1` — does not append executed records for canceled confirmations
 
 ---
 
@@ -109,6 +121,8 @@ Define user, device, and file view models before any containment work starts.
 - [ ] All three containment types (user, device, file) are accessible from the TUI
 - [ ] Disruptive actions require confirmation before execution
 - [ ] Every executed action and its result is recorded in the in-memory action history
+- [ ] Action history entries are redaction-ready and exclude forbidden sensitive fields
+- [ ] Phase 3 writes no action history to disk; persistence is deferred to Phase 5 encrypted store APIs
 - [ ] No containment function calls Graph or MDE APIs directly from UI code
 - [ ] Capability panels reflect available actions based on entity state and permissions
 
@@ -122,6 +136,8 @@ Define user, device, and file view models before any containment work starts.
 - [ ] Isolate a test device — verify MDE action is submitted and status is polled
 - [ ] Block a file indicator — verify block is added to the tenant list
 - [ ] Verify all executed actions appear in the activity log panel
+- [ ] Trigger and cancel a confirmation-gated action — verify no executed action history record is created
+- [ ] Inspect runtime action history object — verify sanitized result text and absence of forbidden fields
 
 ---
 
