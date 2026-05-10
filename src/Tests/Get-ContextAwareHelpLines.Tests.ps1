@@ -16,6 +16,7 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines = Get-ContextAwareHelpLines -ActivePanel alerts
 
             $lines | Should -Match 'Alt\+N/P/M selected alert'
+            $lines | Should -Match 'Ctrl\+C exit'
         }
     }
 
@@ -24,6 +25,7 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines = Get-ContextAwareHelpLines -ActivePanel action_status -PendingIncidentComment ([pscustomobject]@{ Step = 'comment' })
 
             $lines | Should -Match 'Incident comment wizard active'
+            $lines | Should -Match 'Ctrl\+C exit'
         }
     }
 }
