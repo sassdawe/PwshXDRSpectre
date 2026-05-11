@@ -165,7 +165,14 @@ function Start-PwshXdrLiveDashboard {
                 )
 
                 Import-Module $ModulePath -Force | Out-Null
-                Get-XdrIncidentEntities -Incident $IncidentData -Alerts $AlertData
+                & (Get-Module PwshXDRSpectre) {
+                    param(
+                        [object]$InnerIncidentData,
+                        [object[]]$InnerAlertData
+                    )
+
+                    Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData
+                } $IncidentData, $AlertData
             } -ArgumentList $modulePath, $Incident, $alertsForIncident
         }
 

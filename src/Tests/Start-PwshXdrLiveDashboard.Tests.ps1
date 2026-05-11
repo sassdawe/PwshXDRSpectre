@@ -117,7 +117,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
         $content.Contains('Start-ThreadJob -ScriptBlock {') | Should -BeTrue
-        $content.Contains('Get-XdrIncidentEntities -Incident $IncidentData -Alerts $AlertData') | Should -BeTrue
+        $content.Contains('Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData') | Should -BeTrue
         $content.Contains("'Entity actions (preview)'") | Should -BeTrue
         $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
         $content.Contains("'^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }") | Should -BeTrue
