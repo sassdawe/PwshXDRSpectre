@@ -46,7 +46,13 @@ function Write-XdrLiveDashboardLog {
 
     try {
         $mutex = [System.Threading.Mutex]::new($false, $mutexName)
-        $lockTaken = $mutex.WaitOne(2000)
+        try {
+            $lockTaken = $mutex.WaitOne(2000)
+        }
+        catch [System.Threading.AbandonedMutexException] {
+            # Previous owner exited without releasing; we now own the mutex
+            $lockTaken = $true
+        }
         if (-not $lockTaken) {
             return
         }
