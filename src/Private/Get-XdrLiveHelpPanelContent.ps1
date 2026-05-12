@@ -64,15 +64,15 @@ function Get-XdrLiveHelpPanelContent {
         [System.Collections.Queue]$AlertPreloadQueue,
 
         [Parameter(Mandatory)]
-        [ref]$PrefetchCompletedAt
+        [ref]$PrefetchCompletedAt,
 
-        ,[Parameter()]
-        [Nullable[datetime]]$LastRefreshAt = $null
+        [Parameter()]
+        [Nullable[datetime]]$LastRefreshAt = $null,
 
-        ,[Parameter()]
-        [Nullable[datetime]]$HeartbeatAt = $null
+        [Parameter()]
+        [Nullable[datetime]]$HeartbeatAt = $null,
 
-        ,[Parameter()]
+        [Parameter()]
         [int]$HeartbeatCounter = 0
     )
 
