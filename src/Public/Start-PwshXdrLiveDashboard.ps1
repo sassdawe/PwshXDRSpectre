@@ -330,8 +330,7 @@ function Start-PwshXdrLiveDashboard {
                 $incidentsResult = Get-XdrIncidents -Context $context -Limit $Limit
                 if (-not $incidentsResult.Success) {
                     $fatalErrorMessage = $incidentsResult.Message
-                    $authSucceeded = $false
-                    Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "Initial incident load failed: $fatalErrorMessage" -Level 'ERROR'
+                    Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "Initial incident load failed while authentication state was preserved: $fatalErrorMessage" -Level 'ERROR'
                     continue
                 }
 
