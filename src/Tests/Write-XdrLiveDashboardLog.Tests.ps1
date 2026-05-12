@@ -3,6 +3,18 @@ BeforeAll {
 }
 
 Describe 'Write-XdrLiveDashboardLog' {
+    It 'does not throw when LogPath is an empty string' {
+        InModuleScope PwshXDRSpectre {
+            { Write-XdrLiveDashboardLog -LogPath '' -Message 'hello' } | Should -Not -Throw
+        }
+    }
+
+    It 'does not throw when LogPath is null' {
+        InModuleScope PwshXDRSpectre {
+            { Write-XdrLiveDashboardLog -LogPath $null -Message 'hello' } | Should -Not -Throw
+        }
+    }
+
     It 'does not throw when LogPath is whitespace only' {
         InModuleScope PwshXDRSpectre {
             { Write-XdrLiveDashboardLog -LogPath '   ' -Message 'hello' } | Should -Not -Throw

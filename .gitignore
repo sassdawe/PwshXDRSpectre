@@ -1,1 +1,3 @@
 .obsidian/*
+*.ipynb
+testResults.xml

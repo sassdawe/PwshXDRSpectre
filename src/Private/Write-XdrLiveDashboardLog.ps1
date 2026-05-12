@@ -20,6 +20,8 @@ function Write-XdrLiveDashboardLog {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowNull()]
+        [AllowEmptyString()]
         [string]$LogPath,
 
         [Parameter(Mandatory)]
