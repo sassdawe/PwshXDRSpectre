@@ -136,6 +136,18 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$context.Selection.Entity = `$null") | Should -BeTrue
     }
 
+    It 'auto-refreshes incidents every three minutes and passes last refresh to help content' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$autoRefreshInterval = [timespan]::FromMinutes(3)') | Should -BeTrue
+        $content.Contains("Auto-refreshing incidents and alerts (every 3 minutes)...") | Should -BeTrue
+        $content.Contains(". `$resetDashboardDataForRefresh 'Auto-refreshing incidents and alerts (every 3 minutes)...' `$true") | Should -BeTrue
+        $content.Contains('-LastRefreshAt $lastDataRefreshAt') | Should -BeTrue
+        $content.Contains('[switch]$WithLogs') | Should -BeTrue
+        $content.Contains('[string]$LogPath') | Should -BeTrue
+        $content.Contains('Dashboard log file: $dashboardLogPath') | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty
