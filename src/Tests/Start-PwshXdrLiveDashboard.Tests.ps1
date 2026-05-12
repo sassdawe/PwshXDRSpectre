@@ -100,6 +100,54 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('@(Get-XdrAllKeysPressed)') | Should -BeTrue
     }
 
+    It 'supports toggling between incident details and related entities panel' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'e')") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
+        $content.Contains("`$activePanel = 'incident_details'") | Should -BeTrue
+        $content.Contains("`$panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')") | Should -BeTrue
+        $content.Contains("`$showEntityPanel = `$true") | Should -BeTrue
+        $content.Contains("`$showEntityPanel = `$false") | Should -BeTrue
+        $content.Contains("-Title 'Related Entities (Alt+D details)'") | Should -BeTrue
+        $content.Contains("Alt+D to return to Incident Details") | Should -BeTrue
+    }
+
+    It 'extracts entities in background and renders entity-specific preview actions' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('Start-ThreadJob -ScriptBlock {') | Should -BeTrue
+        $content.Contains('Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData') | Should -BeTrue
+        $content.Contains("'Entity actions (preview)'") | Should -BeTrue
+        $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
+        $content.Contains("'^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }") | Should -BeTrue
+        $content.Contains("'^(?i:device|machine)$' { @('Isolate device', 'Run antivirus scan', 'Collect investigation package') }") | Should -BeTrue
+        $content.Contains("'^(?i:file)$' { @('Quarantine file', 'Block file indicator', 'Remove file indicator block') }") | Should -BeTrue
+        $content.Contains("'[grey]No entity selected.[/]'") | Should -BeTrue
+        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'DownArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+    }
+
+    It 'supports entity panel up-arrow navigation and selection reset on incident change' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'UpArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+        $content.Contains("`$selectedEntityIndex = 0") | Should -BeTrue
+        $content.Contains("`$selectedEntity = `$null") | Should -BeTrue
+        $content.Contains("`$context.Selection.Entity = `$null") | Should -BeTrue
+    }
+
+    It 'auto-refreshes incidents every three minutes and passes last refresh to help content' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$autoRefreshInterval = [timespan]::FromMinutes(3)') | Should -BeTrue
+        $content.Contains("Auto-refreshing incidents and alerts (every 3 minutes)...") | Should -BeTrue
+        $content.Contains(". `$resetDashboardDataForRefresh 'Auto-refreshing incidents and alerts (every 3 minutes)...' `$true") | Should -BeTrue
+        $content.Contains('-LastRefreshAt $lastDataRefreshAt') | Should -BeTrue
+        $content.Contains('[switch]$WithLogs') | Should -BeTrue
+        $content.Contains('[string]$LogPath') | Should -BeTrue
+        $content.Contains('Dashboard log file: $dashboardLogPath') | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty

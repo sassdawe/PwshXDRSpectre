@@ -16,9 +16,9 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 |-------|-------|--------|------------|
 | [Phase 1](phase-1-foundation.md) | Foundation and Architecture | 🟡 In Progress | — |
 | [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | 🟡 In Progress (implementation complete; manual validation pending) | Phase 1 |
-| [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | ⚪ Not Started | Phase 2 |
+| [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | 🟡 In Progress | Phase 2 |
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
-| [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 4 |
+| [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 3, Phase 4 |
 | [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All phases |
 
 **Status key**: ⚪ Not Started · 🟡 In Progress · 🔴 Blocked · ✅ Completed
@@ -49,11 +49,11 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [x] Phase 2 planned and extracted-helper test items complete (63/63 passing)
 
 ### Phase 3 — Entity Pivots and Containment
-- [ ] Entity extraction and normalization
+- [~] Entity extraction and normalization
 - [ ] User containment (revoke sessions, disable account)
 - [ ] Device containment (isolate, remediation)
 - [ ] File containment (quarantine, block indicator)
-- [ ] Action history persistence
+- [~] Runtime action history (redaction-ready, Phase 5-compatible)
 
 ### Phase 4 — Hunting Query Engine
 - [ ] Query catalog JSON schema and folder
@@ -65,6 +65,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 ### Phase 5 — Agent Workflow Memory Store
 - [ ] Local JSON persistence layer
 - [ ] Append-only history with retention rules
+- [ ] Per-user encryption for sensitive persisted history/query records
 - [ ] Store APIs (checkpoint, history, query run, cleanup)
 - [ ] Startup context restore
 

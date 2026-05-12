@@ -1,9 +1,9 @@
 # Phase 5 — Agent Workflow Memory Store
 
 **Status**: ⚪ Not Started  
-**Depends on**: [Phase 1 — Foundation](phase-1-foundation.md), [Phase 4 — Hunting Query Engine](phase-4-hunting-query.md)  
+**Depends on**: [Phase 1 — Foundation](phase-1-foundation.md), [Phase 3 — Entity Pivots and Containment Actions](phase-3-entity-containment.md), [Phase 4 — Hunting Query Engine](phase-4-hunting-query.md)  
 **Blocks**: —  
-**Last updated**: 2026-04-21
+**Last updated**: 2026-05-10
 
 ---
 
@@ -13,6 +13,7 @@
 2. Use an append-only history model with versioning and configurable retention rules.
 3. Provide clean store APIs for checkpoint save/load, history append, query run append, and retention cleanup.
 4. Restore the last analyst context on startup so sessions resume where they left off.
+5. Protect persisted action history and query-run data with per-user encryption-at-rest and explicit sensitive-data minimization.
 
 ---
 
@@ -37,6 +38,16 @@
   - `RecentActionIds` — last 10 action IDs
   - `RecentQueryRunIds` — last 10 query run IDs
 - [ ] **1.4** Ensure no secrets, tokens, or credentials are written to any store file
+- [ ] **1.5** Define action-history and query-run redaction rules before persistence:
+  - Persist only summary-safe fields by default
+  - Exclude raw API payloads and full exception dumps
+  - Truncate or sanitize analyst free-text comments and result text
+  - Classify each persisted field as `safe`, `sensitive`, or `forbidden`
+- [ ] **1.6** Define crypto envelope for persisted records (`v1`):
+  - `SchemaVersion`
+  - `Encryption` (`Algorithm`, `KeyId`, `Nonce`)
+  - `Ciphertext`
+  - `CreatedAt`
 
 ### Workstream 2: Store API Implementation
 
@@ -47,6 +58,10 @@
 - [ ] **2.5** Implement `Private/Write-XdrSessionEvent.ps1` — appends a session start or end event to `session-log.jsonl`
 - [ ] **2.6** All store writes use `ConvertTo-Json -Compress` and append with UTF-8 encoding — never overwrite append-only files
 - [ ] **2.7** All store reads handle missing files and malformed JSON gracefully (return empty/null, log warning to diagnostics)
+- [ ] **2.8** Implement `Private/Get-XdrStoreCryptoKey.ps1` to resolve a per-user encryption key from the OS credential/key store
+- [ ] **2.9** Implement `Private/Protect-XdrStoreRecord.ps1` and `Private/Unprotect-XdrStoreRecord.ps1` for encrypt/decrypt of persisted action and query records
+- [ ] **2.10** Fail closed for sensitive append-only files: if encryption key resolution or encryption fails, do not persist cleartext and log a warning in diagnostics
+- [ ] **2.11** Ensure persisted file permissions are restricted to the current user account
 
 ### Workstream 3: Retention and Cleanup
 
@@ -90,6 +105,10 @@
 - [ ] **6.5** `Tests/Invoke-XdrStoreRetention.Tests.ps1` — trims files to configured limits; retains most recent records
 - [ ] **6.6** `Tests/Clear-XdrWorkflowMemory.Tests.ps1` — removes all store files after confirmation; does nothing without confirmation
 - [ ] **6.7** Verify no test writes to production store path — mock or redirect store directory in all tests
+- [ ] **6.8** `Tests/Protect-XdrStoreRecord.Tests.ps1` — encrypted record can be decrypted only with the same user key
+- [ ] **6.9** `Tests/Add-XdrActionHistoryRecord.Tests.ps1` and `Tests/Add-XdrQueryRunRecord.Tests.ps1` verify persisted JSONL lines do not contain forbidden plaintext fields
+- [ ] **6.10** `Tests/Add-XdrActionHistoryRecord.Tests.ps1` verifies fail-closed behavior when key resolution/encryption fails (no cleartext write)
+- [ ] **6.11** `Tests/Get-XdrStoreCryptoKey.Tests.ps1` — key lookup uses user-scoped key material only
 
 ---
 
@@ -97,10 +116,12 @@
 
 - [ ] `checkpoint.json` is written after each qualifying event and can be restored on the next startup
 - [ ] `action-history.jsonl` and `query-runs.jsonl` are append-only — previous records are never modified or deleted by normal operation
+- [ ] `action-history.jsonl` and `query-runs.jsonl` store encrypted per-record payloads by default (no sensitive plaintext)
 - [ ] Retention cleanup runs on startup and trims files to configured limits
 - [ ] No secrets, tokens, or credentials appear in any store file
 - [ ] Store read/write errors are non-terminating — they surface in diagnostics only
 - [ ] `Clear-XdrWorkflowMemory` requires confirmation before deleting store files
+- [ ] If encryption key resolution fails, sensitive history/query persistence is skipped (fail closed) and a warning is recorded
 
 ---
 
@@ -110,6 +131,8 @@
 - [ ] Close and reopen the TUI — verify the selected incident is restored
 - [ ] Execute a triage action — verify the action appears in `action-history.jsonl`
 - [ ] Run a hunting query — verify the run appears in `query-runs.jsonl`
+- [ ] Inspect `action-history.jsonl` and `query-runs.jsonl` — verify encrypted envelopes are present and no sensitive plaintext fields are persisted
+- [ ] Validate decryption succeeds only for the current user context and fails in a different user context
 - [ ] Run `Invoke-XdrStoreRetention` manually — verify old records are trimmed
 - [ ] Call `Clear-XdrWorkflowMemory` — verify confirmation prompt appears; verify files are removed after confirmation
 - [ ] Inspect `checkpoint.json` — verify no tokens or passwords are present
@@ -123,6 +146,9 @@
 - Access tokens, client secrets, and passwords must never be written to the store.
 - `Save-XdrCheckpoint` must explicitly exclude `Context.Session.AccessToken` and any credential fields.
 - Validate store file paths are within the expected store directory before any read or write to prevent path traversal.
+- Persisted action-history and query-run records must be encrypted with a key scoped to the current user profile.
+- Encryption failures for sensitive append-only files must fail closed (skip persistence) rather than writing plaintext fallback records.
+- Redaction must run before encryption to avoid storing high-risk content in recoverable plaintext inside logs or diagnostics.
 
 ---
 

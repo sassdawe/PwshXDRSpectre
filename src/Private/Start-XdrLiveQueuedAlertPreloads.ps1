@@ -24,6 +24,9 @@ function Start-XdrLiveQueuedAlertPreloads {
     .PARAMETER AlertsByIncidentId
     Alert cache map keyed by incident id.
 
+    .PARAMETER LogPath
+    Optional dashboard log path passed to alert thread jobs.
+
     .OUTPUTS
     None
 
@@ -48,11 +51,14 @@ function Start-XdrLiveQueuedAlertPreloads {
         [object]$Context,
 
         [Parameter(Mandatory)]
-        [hashtable]$AlertsByIncidentId
+        [hashtable]$AlertsByIncidentId,
+
+        [Parameter()]
+        [string]$LogPath
     )
 
     while ($AlertLoadJobsByIncidentId.Count -lt $MaxAlertLoadJobs -and $AlertPreloadQueue.Count -gt 0) {
         $nextIncident = $AlertPreloadQueue.Dequeue()
-        Start-XdrLiveAlertLoadJob -Incident $nextIncident -ModulePath $ModulePath -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId | Out-Null
+        Start-XdrLiveAlertLoadJob -Incident $nextIncident -ModulePath $ModulePath -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId -LogPath $LogPath | Out-Null
     }
 }

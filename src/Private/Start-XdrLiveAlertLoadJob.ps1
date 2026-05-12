@@ -25,6 +25,9 @@ function Start-XdrLiveAlertLoadJob {
     .PARAMETER AlertLoadJobsByIncidentId
     Running jobs map keyed by incident id.
 
+    .PARAMETER LogPath
+    Optional dashboard log path used by thread jobs.
+
     .OUTPUTS
     System.Boolean
 
@@ -49,7 +52,10 @@ function Start-XdrLiveAlertLoadJob {
         [hashtable]$AlertsByIncidentId,
 
         [Parameter(Mandatory)]
-        [hashtable]$AlertLoadJobsByIncidentId
+        [hashtable]$AlertLoadJobsByIncidentId,
+
+        [Parameter()]
+        [string]$LogPath
     )
 
     if (-not $Incident) {
@@ -69,11 +75,21 @@ function Start-XdrLiveAlertLoadJob {
         return $false
     }
 
-    $job = Start-ThreadJob -ArgumentList $ModulePath, $Context, $Incident, $incidentId -ScriptBlock {
-        param($jobModulePath, $jobContext, $jobIncident, $jobIncidentId)
+    $job = Start-ThreadJob -ArgumentList $ModulePath, $Context, $Incident, $incidentId, $LogPath -ScriptBlock {
+        param($jobModulePath, $jobContext, $jobIncident, $jobIncidentId, $jobLogPath)
 
         Import-Module $jobModulePath -Force | Out-Null
+        if (-not [string]::IsNullOrWhiteSpace($jobLogPath)) {
+            Write-XdrLiveDashboardLog -LogPath $jobLogPath -Message "Alert preload job started. IncidentId=$jobIncidentId"
+        }
+
         $result = Get-XdrAlerts -Context $jobContext -Incident $jobIncident
+
+        if (-not [string]::IsNullOrWhiteSpace($jobLogPath)) {
+            $resultStatus = if ($result -and $result.Success) { 'success' } else { 'failure' }
+            Write-XdrLiveDashboardLog -LogPath $jobLogPath -Message "Alert preload job completed. IncidentId=$jobIncidentId Result=$resultStatus"
+        }
+
         [pscustomobject]@{
             IncidentId = $jobIncidentId
             Result     = $result

@@ -31,6 +31,9 @@ function Get-XdrLiveHelpPanelContent {
     .PARAMETER PrefetchCompletedAt
     Timestamp reference for completed prefetch.
 
+    .PARAMETER LastRefreshAt
+    Timestamp for last incident refresh.
+
     .OUTPUTS
     System.String
 
@@ -61,11 +64,39 @@ function Get-XdrLiveHelpPanelContent {
         [System.Collections.Queue]$AlertPreloadQueue,
 
         [Parameter(Mandatory)]
-        [ref]$PrefetchCompletedAt
+        [ref]$PrefetchCompletedAt,
+
+        [Parameter()]
+        [Nullable[datetime]]$LastRefreshAt = $null,
+
+        [Parameter()]
+        [Nullable[datetime]]$HeartbeatAt = $null,
+
+        [Parameter()]
+        [int]$HeartbeatCounter = 0
     )
 
+    $lastRefreshText = if ($null -ne $LastRefreshAt -and $LastRefreshAt -ne [datetime]::MinValue) {
+        "Last refresh: $([string](Get-SpectreEscapedText ($LastRefreshAt.ToString('yyyy-MM-dd HH:mm:ss'))))"
+    }
+    else {
+        'Last refresh: not yet'
+    }
+    $lastRefreshLine = "[grey]$lastRefreshText[/]"
+
+    # Heartbeat indicator - shows dashboard is responsive
+    $heartbeatText = if ($null -ne $HeartbeatAt) {
+        $secondsSinceHeartbeat = [int]((Get-Date) - $HeartbeatAt).TotalSeconds
+        $spinner = @('-', '\', '|', '/')[$HeartbeatCounter % 4]
+        "Heartbeat: ${secondsSinceHeartbeat}s ago ${spinner}"
+    }
+    else {
+        'Heartbeat: initializing...'
+    }
+    $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
+
     if ($null -ne $PendingIncidentResolution) {
-        return ' '
+        return "$lastRefreshLine`n$heartbeatLine"
     }
 
     if ($null -ne $PendingTextInput) {
@@ -79,7 +110,7 @@ function Get-XdrLiveHelpPanelContent {
         $prompt = Get-SpectreEscapedText ([string]$PendingTextInput.Prompt)
         $inputValue = if ([string]::IsNullOrWhiteSpace([string]$PendingTextInput.Value)) { '' } else { Get-SpectreEscapedText ([string]$PendingTextInput.Value) }
         $inputDisplay = if ([string]::IsNullOrWhiteSpace($inputValue)) { '[grey]<empty>[/]' } else { "[white]$inputValue[/]" }
-        return "[bold black on orange1] $title [/] [yellow]$prompt[/]`n$inputDisplay [grey](Enter submit | Esc cancel)[/]"
+        return "[bold black on orange1] $title [/] [yellow]$prompt[/]`n$inputDisplay [grey](Enter submit | Esc cancel)[/]`n$lastRefreshLine`n$heartbeatLine"
     }
 
     $prefetchRaw = [string](Get-XdrLiveAlertPrefetchIndicator -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId -AlertPreloadQueue $AlertPreloadQueue -PrefetchCompletedAt $PrefetchCompletedAt)
@@ -97,7 +128,7 @@ function Get-XdrLiveHelpPanelContent {
 
         $promptText = Get-SpectreEscapedText ([string]$PendingConfirmation.Prompt)
         $confirmLine = "[bold black on yellow] CONFIRM [/] [yellow]$promptText[/] [grey]Y confirm | N or Esc cancel[/]"
-        return "$statusLine`n$confirmLine"
+        return "$statusLine`n$confirmLine`n$lastRefreshLine`n$heartbeatLine"
     }
 
     if (-not [string]::IsNullOrWhiteSpace($statusText)) {
@@ -112,22 +143,22 @@ function Get-XdrLiveHelpPanelContent {
             }
 
             if ($hasPrefetchLine) {
-                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]"
+                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
             }
 
-            return "[bold $statusColor]$statusCode $statusMessageText[/]"
+            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine"
         }
 
         if ($hasPrefetchLine) {
-            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]"
+            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
         }
 
-        return "[white]$(Get-SpectreEscapedText $statusText)[/]"
+        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine"
     }
 
     if ($hasPrefetchLine) {
-        return "[grey]$prefetchLine[/]"
+        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
     }
 
-    return ' '
+    return "$lastRefreshLine`n$heartbeatLine"
 }
