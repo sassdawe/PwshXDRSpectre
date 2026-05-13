@@ -34,6 +34,9 @@ function Get-XdrLiveHelpPanelContent {
     .PARAMETER LastRefreshAt
     Timestamp for last incident refresh.
 
+    .PARAMETER ShowKeyboardHelpOverlay
+    Renders the full keyboard shortcut overlay when enabled.
+
     .OUTPUTS
     System.String
 
@@ -73,7 +76,10 @@ function Get-XdrLiveHelpPanelContent {
         [Nullable[datetime]]$HeartbeatAt = $null,
 
         [Parameter()]
-        [int]$HeartbeatCounter = 0
+        [int]$HeartbeatCounter = 0,
+
+        [Parameter()]
+        [switch]$ShowKeyboardHelpOverlay
     )
 
     $lastRefreshText = if ($null -ne $LastRefreshAt -and $LastRefreshAt -ne [datetime]::MinValue) {
@@ -129,6 +135,26 @@ function Get-XdrLiveHelpPanelContent {
         $promptText = Get-SpectreEscapedText ([string]$PendingConfirmation.Prompt)
         $confirmLine = "[bold black on yellow] CONFIRM [/] [yellow]$promptText[/] [grey]Y confirm | N or Esc cancel[/]"
         return "$statusLine`n$confirmLine`n$lastRefreshLine`n$heartbeatLine"
+    }
+
+    if ($ShowKeyboardHelpOverlay.IsPresent) {
+        $overlayLines = @(
+            '[bold black on deepskyblue1] Keyboard Shortcuts [/]',
+            '[white]F1[/] toggle keyboard help overlay',
+            '[white]F5[/] or [white]r[/] refresh incidents and alert cache',
+            '[white]Tab[/] / [white]Shift+Tab[/] or [white]PgUp/PgDn[/] switch active panel',
+            '[white]Up/Down[/] move selection in the active list',
+            '[white]Enter[/] load alerts, confirm, or run selected action',
+            '[white]Alt+A/U/O/I/R/K/C/L[/] incident actions',
+            '[white]Alt+N/P/M[/] alert status actions',
+            '[white]Alt+E[/] entities view | [white]Alt+D[/] incident details view',
+            '[white]q[/] or [white]Ctrl+Q[/] quit dashboard (requires confirmation)',
+            '[white]Esc[/] cancel current dialog | [white]Ctrl+C[/] force exit',
+            $lastRefreshLine,
+            $heartbeatLine
+        )
+
+        return ($overlayLines -join "`n")
     }
 
     if (-not [string]::IsNullOrWhiteSpace($statusText)) {

@@ -39,4 +39,21 @@ Describe 'Get-XdrLiveHelpPanelContent' {
             $content | Should -Match 'Last refresh:'
         }
     }
+
+    It 'renders keyboard shortcut overlay when requested' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{ Ui = [pscustomobject]@{ StatusMessage = '' } }
+            $prefetchCompletedAt = $null
+
+            Mock Get-SpectreEscapedText { $Text }
+
+            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -ShowKeyboardHelpOverlay
+
+            $content | Should -Match 'Keyboard Shortcuts'
+            $content | Should -Match 'F1'
+            $content | Should -Match 'F5'
+            $content | Should -Match 'q'
+            $content | Should -Match 'Ctrl\+Q'
+        }
+    }
 }

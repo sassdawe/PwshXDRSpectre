@@ -107,15 +107,18 @@ function Start-PwshXdrLiveDashboard {
     $layout = New-SpectreLayout -Name 'root' -Rows @(
         (New-SpectreLayout -Name 'header' -MinimumSize 5 -Ratio 2 -Data 'empty'),
         (
-            New-SpectreLayout -Name 'incident_content' -Ratio 5 -Columns @(
-                (New-SpectreLayout -Name 'incidents' -Ratio 2 -Data 'empty'),
-                (New-SpectreLayout -Name 'incident_details' -Ratio 4 -Data 'empty')
-            )
-        ),
-        (
-            New-SpectreLayout -Name 'alert_content' -Ratio 5 -Columns @(
-                (New-SpectreLayout -Name 'alerts' -Ratio 3 -Data 'empty'),
-                (New-SpectreLayout -Name 'alert_details' -Ratio 4 -Data 'empty'),
+            New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns @(
+                # Left column: incidents and alerts stacked
+                (New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows @(
+                    (New-SpectreLayout -Name 'incidents' -Ratio 1 -Data 'empty'),
+                    (New-SpectreLayout -Name 'alerts' -Ratio 1 -Data 'empty')
+                )),
+                # Middle column: incident details and alert details stacked
+                (New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows @(
+                    (New-SpectreLayout -Name 'incident_details' -Ratio 1 -Data 'empty'),
+                    (New-SpectreLayout -Name 'alert_details' -Ratio 1 -Data 'empty')
+                )),
+                # Right column: actions (full height)
                 (New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')
             )
         ),
@@ -132,6 +135,7 @@ function Start-PwshXdrLiveDashboard {
         $fatalErrorMessage = $null
 
         $panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')
+        $selectedIncidentDetailsTab = 'details'  # 'details' or 'entities'
         $activePanelIndex = 0
         $activePanel = $panelOrder[$activePanelIndex]
         $context.Selection.Panel = $activePanel
@@ -143,7 +147,7 @@ function Start-PwshXdrLiveDashboard {
         $selectedIncident = $null
         $selectedAlert = $null
         $selectedEntity = $null
-        $showEntityPanel = $false
+        $selectedIncidentDetailsTab = 'details'  # 'details' or 'entities'
         $actionEntries = @()
         $pendingConfirmation = $null
         $pendingTextInput = $null
@@ -153,6 +157,8 @@ function Start-PwshXdrLiveDashboard {
         $activePanelBeforeResolution = $null
         $activePanelBeforeClassification = $null
         $activePanelBeforeComment = $null
+        $pendingQuitConfirmation = $false
+        $showKeyboardHelpOverlay = $false
         $ignoreEnterUntil = [datetime]::MinValue
         $alertsByIncidentId = @{}
         $entitiesByIncidentId = @{}
@@ -267,6 +273,14 @@ function Start-PwshXdrLiveDashboard {
             # Update heartbeat on every iteration to show dashboard is responsive
             $lastHeartbeat = Get-Date
             $heartbeatCounter++
+
+            $statusExpiresAtProperty = $context.Ui.PSObject.Properties['StatusExpiresAt']
+            if ($statusExpiresAtProperty -and $statusExpiresAtProperty.Value -is [datetime]) {
+                if ((Get-Date) -ge [datetime]$statusExpiresAtProperty.Value) {
+                    $context.Ui.StatusMessage = $null
+                    $context.Ui.StatusExpiresAt = $null
+                }
+            }
 
             if (-not $authAttempted) {
                 Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message 'Authentication sequence started.'
@@ -479,7 +493,18 @@ function Start-PwshXdrLiveDashboard {
                     continue
                 }
 
-                if ($null -ne $pendingIncidentResolution) {
+                if ($pendingQuitConfirmation) {
+                    $keyHandled = $true
+                    if ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'y') -or $key.Key -eq 'Enter') {
+                        return
+                    }
+
+                    if ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'n') -or $key.Key -eq 'Escape') {
+                        $pendingQuitConfirmation = $false
+                        Set-LiveStatusMessage -Context $context -Message 'Quit canceled.' -Level 'info'
+                    }
+                }
+                elseif ($null -ne $pendingIncidentResolution) {
                     $keyHandled = $true
                     if ($key.Key -eq 'Escape') {
                         $pendingIncidentResolution = $null
@@ -762,19 +787,38 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Action canceled.' -Level 'warning'
                     }
                 }
+                elseif ($key.Key -eq 'F1') {
+                    $keyHandled = $true
+                    $showKeyboardHelpOverlay = -not $showKeyboardHelpOverlay
+                    if ($showKeyboardHelpOverlay) {
+                        Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay enabled (F1 to close).' -Level 'info'
+                    }
+                    else {
+                        Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay closed.' -Level 'info'
+                    }
+                }
+                elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'q') -or ($isCtrlPressed -and -not $isAltPressed -and $keyChar -eq 'q')) {
+                    $keyHandled = $true
+                    $pendingQuitConfirmation = $true
+                    Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
+                }
                 elseif ($isAltPressed -and $keyChar -eq 'e') {
-                    $showEntityPanel = $true
-                    $activePanel = 'incident_details'
-                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
-                    $context.Selection.Panel = $activePanel
-                    Set-LiveStatusMessage -Context $context -Message 'Showing related entities panel.' -Level 'info'
+                    if ($selectedIncident) {
+                        $selectedIncidentDetailsTab = 'entities'
+                        $activePanel = 'incident_details'
+                        $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
+                        $context.Selection.Panel = $activePanel
+                        Set-LiveStatusMessage -Context $context -Message 'Showing related entities panel. Use ↑↓ to navigate, Tab to switch tabs.' -Level 'info'
+                    }
                 }
                 elseif ($isAltPressed -and $keyChar -eq 'd') {
-                    $showEntityPanel = $false
-                    $activePanel = 'incident_details'
-                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
-                    $context.Selection.Panel = $activePanel
-                    Set-LiveStatusMessage -Context $context -Message 'Showing incident details panel.' -Level 'info'
+                    if ($selectedIncident) {
+                        $selectedIncidentDetailsTab = 'details'
+                        $activePanel = 'incident_details'
+                        $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_details')
+                        $context.Selection.Panel = $activePanel
+                        Set-LiveStatusMessage -Context $context -Message 'Showing incident details panel. Use Tab to switch tabs.' -Level 'info'
+                    }
                 }
                 elseif ($key.Key -eq 'PageUp') {
                     $activePanelIndex = ($activePanelIndex - 1 + $panelOrder.Count) % $panelOrder.Count
@@ -787,17 +831,23 @@ function Start-PwshXdrLiveDashboard {
                     $context.Selection.Panel = $activePanel
                 }
                 elseif ($key.Key -eq 'Tab') {
-                    if ($isShiftPressed) {
-                        $activePanelIndex = ($activePanelIndex - 1 + $panelOrder.Count) % $panelOrder.Count
+                    # If in incident_details panel, switch between details and entities tabs
+                    if ($activePanel -eq 'incident_details' -and $selectedIncident) {
+                        $selectedIncidentDetailsTab = if ($selectedIncidentDetailsTab -eq 'details') { 'entities' } else { 'details' }
                     }
                     else {
-                        $activePanelIndex = ($activePanelIndex + 1) % $panelOrder.Count
+                        # Normal panel navigation
+                        if ($isShiftPressed) {
+                            $activePanelIndex = ($activePanelIndex - 1 + $panelOrder.Count) % $panelOrder.Count
+                        }
+                        else {
+                            $activePanelIndex = ($activePanelIndex + 1) % $panelOrder.Count
+                        }
+                        $activePanel = $panelOrder[$activePanelIndex]
+                        $context.Selection.Panel = $activePanel
                     }
-
-                    $activePanel = $panelOrder[$activePanelIndex]
-                    $context.Selection.Panel = $activePanel
                 }
-                elseif ($key.Key -eq 'F5') {
+                elseif ($key.Key -eq 'F5' -or (-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'r')) {
                     . $resetDashboardDataForRefresh 'Refreshing incidents and alert cache...' $true
                     continue
                 }
@@ -871,12 +921,12 @@ function Start-PwshXdrLiveDashboard {
                     $context.Selection.Alert = $selectedAlert
                     $selectedAlertIdByIncidentId[[string]$selectedIncident.IncidentId] = [string]$selectedAlert.AlertId
                 }
-                elseif ($showEntityPanel -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
+                elseif ($selectedIncidentDetailsTab -eq 'entities' -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
                     $selectedEntityIndex = ($selectedEntityIndex + 1) % $context.Data.Entities.Count
                     $selectedEntity = $context.Data.Entities[$selectedEntityIndex]
                     $context.Selection.Entity = $selectedEntity
                 }
-                elseif ($showEntityPanel -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
+                elseif ($selectedIncidentDetailsTab -eq 'entities' -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'incident_details' -and $context.Data.Entities.Count -gt 0) {
                     $selectedEntityIndex = ($selectedEntityIndex - 1 + $context.Data.Entities.Count) % $context.Data.Entities.Count
                     $selectedEntity = $context.Data.Entities[$selectedEntityIndex]
                     $context.Selection.Entity = $selectedEntity
@@ -921,8 +971,8 @@ function Start-PwshXdrLiveDashboard {
                 $context.Selection.Entity = $null
                 $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
                 $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
-                $emptyIncidentDetailsTitle = if ($showEntityPanel) { 'Related Entities (Alt+D details)' } else { 'Incident Details (Alt+E entities)' }
-                $emptyIncidentDetailsData = if ($showEntityPanel) { 'No incident selected. Press Alt+D for details view.' } else { 'No incident selected.' }
+                $emptyIncidentDetailsTitle = if ($selectedIncidentDetailsTab -eq 'entities') { 'Related Entities (Tab to switch, Alt+D details)' } else { 'Incident Details (Tab to switch, Alt+E entities)' }
+                $emptyIncidentDetailsData = if ($selectedIncidentDetailsTab -eq 'entities') { 'No incident selected. Press Alt+E for entities view.' } else { 'No incident selected.' }
                 $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title $emptyIncidentDetailsTitle -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data $emptyIncidentDetailsData -Expand)) | Out-Null
                 $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
                 $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand)) | Out-Null
@@ -988,7 +1038,7 @@ function Start-PwshXdrLiveDashboard {
 
             $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incidents' -ActivePanel $activePanel) -Expand
 
-            $incidentDetails = if ($showEntityPanel) {
+            $incidentDetails = if ($selectedIncidentDetailsTab -eq 'entities') {
                 $entityLines = @()
                 $entityLines += '[bold grey]Incident-linked entities[/]'
 
@@ -1088,9 +1138,9 @@ function Start-PwshXdrLiveDashboard {
                 }
 
                 $entityLines += ''
-                $entityLines += '[grey]Alt+D to return to Incident Details[/]'
+                $entityLines += '[grey]Tab to switch to Details • Use ↑↓ to navigate[/]'
 
-                Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Related Entities (Alt+D details)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($entityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Related Entities' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($entityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
             }
             else {
                 [pscustomobject]@{
@@ -1107,7 +1157,7 @@ function Start-PwshXdrLiveDashboard {
                     LastUpdated   = $selectedIncident.LastUpdateDateTime
                     IncidentWebUrl = $selectedIncident.IncidentWebUrl
                     Created       = $selectedIncident.CreatedDateTime
-                } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Incident Details (Alt+E entities)' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title "Incident Details" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
             }
 
             $alertLines = if ($context.Data.Alerts) {
@@ -1180,7 +1230,7 @@ function Start-PwshXdrLiveDashboard {
             $actionEntries = @()
             $actionLines = @()
 
-            if ($showEntityPanel) {
+            if ($selectedIncidentDetailsTab -eq 'entities') {
                 $actionLines += 'Entity actions (preview)'
 
                 if ($selectedEntity) {
@@ -1476,8 +1526,8 @@ function Start-PwshXdrLiveDashboard {
             }
 
             $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
-            $helpHeaderText = "Help | $contextHelpLine"
-            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
+            $helpHeaderText = if ($showKeyboardHelpOverlay) { 'Help (F1 close)' } else { "Help | $contextHelpLine" }
+            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
 
             $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
             $layout['incidents'].Update($incidentPanel) | Out-Null

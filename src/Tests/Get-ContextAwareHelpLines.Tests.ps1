@@ -16,6 +16,9 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines = Get-ContextAwareHelpLines -ActivePanel alerts
 
             $lines | Should -Match 'Alt\+N/P/M selected alert'
+            $lines | Should -Match 'F1 help'
+            $lines | Should -Match 'F5/r refresh incidents'
+            $lines | Should -Match 'q quit'
             $lines | Should -Match 'Ctrl\+C exit'
         }
     }

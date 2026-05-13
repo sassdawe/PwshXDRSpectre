@@ -46,8 +46,19 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
         $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
         $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 3 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
+    }
+
+    It 'uses nested layout structure with left lists, center details, and right actions columns' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns") | Should -BeTrue
+        $content.Contains("New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows") | Should -BeTrue
+        $content.Contains("New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'incidents' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'alert_details' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')") | Should -BeTrue
     }
 
     It 'renders alert list entries with severity badge incident-style columns and status' {
@@ -107,10 +118,10 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
         $content.Contains("`$activePanel = 'incident_details'") | Should -BeTrue
         $content.Contains("`$panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')") | Should -BeTrue
-        $content.Contains("`$showEntityPanel = `$true") | Should -BeTrue
-        $content.Contains("`$showEntityPanel = `$false") | Should -BeTrue
-        $content.Contains("-Title 'Related Entities (Alt+D details)'") | Should -BeTrue
-        $content.Contains("Alt+D to return to Incident Details") | Should -BeTrue
+        $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
+        $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
+        $content.Contains("-Title 'Related Entities'") | Should -BeTrue
+        $content.Contains("Tab to switch to Details") | Should -BeTrue
     }
 
     It 'extracts entities in background and renders entity-specific preview actions' {
@@ -124,13 +135,13 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("'^(?i:device|machine)$' { @('Isolate device', 'Run antivirus scan', 'Collect investigation package') }") | Should -BeTrue
         $content.Contains("'^(?i:file)$' { @('Quarantine file', 'Block file indicator', 'Remove file indicator block') }") | Should -BeTrue
         $content.Contains("'[grey]No entity selected.[/]'") | Should -BeTrue
-        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'DownArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+        $content.Contains("elseif (`$selectedIncidentDetailsTab -eq 'entities' -and `$key.Key -eq 'DownArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
     }
 
     It 'supports entity panel up-arrow navigation and selection reset on incident change' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
-        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'UpArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+        $content.Contains("elseif (`$selectedIncidentDetailsTab -eq 'entities' -and `$key.Key -eq 'UpArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
         $content.Contains("`$selectedEntityIndex = 0") | Should -BeTrue
         $content.Contains("`$selectedEntity = `$null") | Should -BeTrue
         $content.Contains("`$context.Selection.Entity = `$null") | Should -BeTrue
@@ -146,6 +157,17 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('[switch]$WithLogs') | Should -BeTrue
         $content.Contains('[string]$LogPath') | Should -BeTrue
         $content.Contains('Dashboard log file: $dashboardLogPath') | Should -BeTrue
+    }
+
+    It 'supports keyboard help overlay, quick quit confirmation, and r refresh alias' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
+        $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
+        $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
+        $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
     }
 
     Context 'comment-based help' {

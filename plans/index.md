@@ -71,7 +71,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 
 ### Phase 6 — UX Hardening, Testing, and Docs
 - [ ] Dedicated layout panes (Incidents, Alerts, Entities, Actions, Query Catalog, Results, Log)
-- [ ] Keyboard help and non-blocking feedback
+- [~] Keyboard help and non-blocking feedback (F1 overlay, q/Ctrl+Q quit confirmation, r refresh alias, transient/persistent status behavior)
 - [~] Pester test expansion
 - [x] Dedicated `Tests/<Function>.Tests.ps1` coverage layout for every `Private/` and `Public/` script
 - [ ] End-to-end test tenant validation
