@@ -120,7 +120,8 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
-        $content.Contains("-Title 'Related Entities'") | Should -BeTrue
+        $content.Contains("[bold black on #C0C0C0]| Incident details |[/][grey70 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
+        $content.Contains("[grey70 on #1C1C1C]| Incident details |[/][bold black on #C0C0C0]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
         $content.Contains("Tab to switch to Details") | Should -BeTrue
     }
 
