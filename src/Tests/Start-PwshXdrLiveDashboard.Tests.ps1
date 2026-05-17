@@ -171,6 +171,18 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
     }
 
+    It 'keeps confirmation prompts keyboard-accessible with Y/N/Esc/Enter' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('if ($pendingQuitConfirmation) {') | Should -BeTrue
+        $content.Contains("if ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'y') -or `$key.Key -eq 'Enter') {") | Should -BeTrue
+        $content.Contains("if ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'n') -or `$key.Key -eq 'Escape') {") | Should -BeTrue
+        $content.Contains('elseif ($pendingConfirmation) {') | Should -BeTrue
+        $content.Contains("if (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'y') {") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'Enter') {") | Should -BeTrue
+        $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'n') -or `$key.Key -eq 'Escape') {") | Should -BeTrue
+    }
+
     Context 'comment-based help' {
         It 'has a Synopsis' {
             (Get-Help Start-PwshXdrLiveDashboard).Synopsis | Should -Not -BeNullOrEmpty

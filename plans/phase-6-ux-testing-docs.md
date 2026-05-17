@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-05-13 (layout restructuring complete)
+**Last updated**: 2026-05-13 (workstream 2 complete)
 
 ---
 
@@ -42,7 +42,7 @@
   - Visual title indicators: "Incident Details" vs "Related Entities"
   - Updated help text to advertise Tab key for switching tabs
 - [ ] **1.4** Apply consistent theming (color palette from `Context.Ui.ThemeColor`)
-- [ ] **1.5** Ensure all pane content is readable at 120-column terminal width minimum
+- [ ] ~~**1.5** Ensure all pane content is readable at 120-column terminal width minimum~~
 
 ### Workstream 2: Keyboard Navigation and Help
 
@@ -55,8 +55,8 @@
   - `Escape` — cancel / go back
   - `q` — quit (with confirmation)
 - [x] **2.2** Implement a keyboard help overlay panel that displays the full shortcut map
-- [ ] **2.3** Show the shortcut map hint in the status bar (e.g., `F1 Help`)
-- [ ] **2.4** Ensure all confirmation prompts are keyboard-accessible
+- [x] **2.3** Show the shortcut map hint in the status bar (e.g., `F1 Help`)
+- [x] **2.4** Ensure all confirmation prompts are keyboard-accessible
 
 ### Workstream 3: Non-Blocking Feedback
 

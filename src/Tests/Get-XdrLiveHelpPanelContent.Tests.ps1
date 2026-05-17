@@ -37,6 +37,24 @@ Describe 'Get-XdrLiveHelpPanelContent' {
             $content | Should -Match 'OK done'
             $content | Should -Match 'prefetch 1/2'
             $content | Should -Match 'Last refresh:'
+            $content | Should -Match 'F1 Help'
+        }
+    }
+
+    It 'renders keyboard hint line in default status bar content' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{ Ui = [pscustomobject]@{ StatusMessage = '' } }
+            $prefetchCompletedAt = $null
+
+            Mock Get-XdrLiveAlertPrefetchIndicator { '' }
+            Mock Get-SpectreEscapedText { $Text }
+
+            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt)
+
+            $content | Should -Match 'Hint:'
+            $content | Should -Match 'F1 Help'
+            $content | Should -Match 'Tab/Shift\+Tab Switch'
+            $content | Should -Match 'q Quit'
         }
     }
 

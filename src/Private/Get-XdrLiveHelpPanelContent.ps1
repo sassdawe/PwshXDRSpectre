@@ -100,6 +100,7 @@ function Get-XdrLiveHelpPanelContent {
         'Heartbeat: initializing...'
     }
     $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
+    $shortcutHintLine = '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
 
     if ($null -ne $PendingIncidentResolution) {
         return "$lastRefreshLine`n$heartbeatLine"
@@ -169,22 +170,22 @@ function Get-XdrLiveHelpPanelContent {
             }
 
             if ($hasPrefetchLine) {
-                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
             }
 
-            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine"
+            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
         }
 
         if ($hasPrefetchLine) {
-            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
         }
 
-        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine"
+        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
     }
 
     if ($hasPrefetchLine) {
-        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
     }
 
-    return "$lastRefreshLine`n$heartbeatLine"
+    return "$lastRefreshLine`n$heartbeatLine`n$shortcutHintLine"
 }
