@@ -20,6 +20,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 3, Phase 4 |
 | [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All phases |
+| [Phase 7](phase-7-quarantine-review.md) | Quarantine Review and Response | 🟡 In Progress | Phase 2, Phase 6 |
 
 **Status key**: ⚪ Not Started · 🟡 In Progress · 🔴 Blocked · ✅ Completed
 
@@ -77,6 +78,13 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [ ] End-to-end test tenant validation
 - [ ] Documentation update
 
+### Phase 7 — Quarantine Review and Response
+- [x] Quarantine service wrappers added for review, release, and delete
+- [ ] Delegated Exchange Online permission model validated in a test tenant
+- [ ] Dedicated quarantine TUI workflow
+- [ ] Quarantine-specific disabled-reason and permission-state UX
+- [ ] Finalized permission and role documentation
+
 ---
 
 ## Decisions Captured
@@ -88,4 +96,5 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | Query storage | Repository JSON folder |
 | Memory store | Local JSON, append-only |
 | v1 scope | Incident triage, alert triage, user/device/file containment |
+| Quarantine API surface | Exchange Online PowerShell cmdlets with delegated user sign-in |
 | Backwards compatibility | Not required |
