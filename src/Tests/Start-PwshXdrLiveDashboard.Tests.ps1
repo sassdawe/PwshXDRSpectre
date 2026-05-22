@@ -129,6 +129,11 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
         $content.Contains('Start-ThreadJob -ScriptBlock {') | Should -BeTrue
+        $content.Contains('$jobPayload = [pscustomobject]@{') | Should -BeTrue
+        $content.Contains('AlertData        = @($alertsForIncident)') | Should -BeTrue
+        $content.Contains('} -ArgumentList $jobPayload') | Should -BeTrue
+        $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerDashboardLogPath -Message "Entity extraction job started. IncidentId=$InnerIncidentId"') | Should -BeTrue
+        $content.Contains('& (Get-Module PwshXDRSpectre) {') | Should -BeTrue
         $content.Contains('Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData') | Should -BeTrue
         $content.Contains("'Entity actions (preview)'") | Should -BeTrue
         $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
@@ -168,7 +173,48 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
         $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$isShiftPressed -and `$key.Key -eq 'L')") | Should -BeTrue
         $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
+    }
+
+    It 'keeps cached incidents visible while refresh is in progress' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$hasVisibleIncidentData = @($context.Data.Incidents).Count -gt 0') | Should -BeTrue
+        $content.Contains('if (-not $hasVisibleIncidentData) {') | Should -BeTrue
+        $content.Contains('& $syncCachedDataToIncidents $context.Data.Incidents') | Should -BeTrue
+        $content.Contains('Restore-XdrLiveCachedAlertsForIncident -IncidentId ([string]$selectedIncident.IncidentId)') | Should -BeTrue
+    }
+
+    It 'treats alert prefetch as cache warming instead of visible panel updates' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId') | Should -BeTrue
+        $content.Contains('Start-XdrLiveAlertLoadJob -Incident $selectedIncident -RestoreSelectionOnCompletion -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId') | Should -BeTrue
+    }
+
+    It 'starts a restoring alert load for the initially selected incident when alerts are not cached' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('& $clearVisibleAlerts ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId)') | Should -BeTrue
+        $content.Contains('Start-XdrLiveAlertLoadJob -Incident $selectedIncident -RestoreSelectionOnCompletion -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -LogPath $dashboardLogPath | Out-Null') | Should -BeTrue
+    }
+
+    It 'updates visible alert panel state by reference when incidents change or cached alerts are restored' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('[ref]$VisibleAlerts') | Should -BeTrue
+        $content.Contains('[ref]$VisibleAlertIncidentId') | Should -BeTrue
+        $content.Contains('& $clearVisibleAlerts ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId)') | Should -BeTrue
+        $content.Contains('& $syncVisibleAlertsFromContext ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId) $selectedIncident') | Should -BeTrue
+    }
+
+    It 'shows cache status and force reload actions in the dashboard wiring' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('-SelectedIncident $selectedIncident -PendingIncidentResolution') | Should -BeTrue
+        $content.Contains("(Alt+Shift+L) Force reload alerts for selected incident") | Should -BeTrue
+        $content.Contains("Shortcut = 'reload-alerts'") | Should -BeTrue
     }
 
     It 'keeps confirmation prompts keyboard-accessible with Y/N/Esc/Enter' {

@@ -28,6 +28,12 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
     .PARAMETER SelectedAlertIndex
     Selected alert index reference.
 
+    .PARAMETER VisibleAlerts
+    Alert collection currently shown in the dashboard alert panel.
+
+    .PARAMETER VisibleAlertIncidentId
+    Incident id associated with the current visible alert panel.
+
     .OUTPUTS
     None
 
@@ -55,7 +61,13 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         [ref]$SelectedAlert,
 
         [Parameter(Mandatory)]
-        [ref]$SelectedAlertIndex
+        [ref]$SelectedAlertIndex,
+
+        [Parameter(Mandatory)]
+        [ref]$VisibleAlerts,
+
+        [Parameter(Mandatory)]
+        [ref]$VisibleAlertIncidentId
     )
 
     foreach ($jobEntry in @($AlertLoadJobsByIncidentId.GetEnumerator())) {
@@ -88,8 +100,15 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         $loadedAlerts = @($payload.Result.Data)
         $AlertsByIncidentId[$incidentId] = $loadedAlerts
 
-        if ($SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
+        $restoreSelectionOnCompletion = $false
+        if ($payload.PSObject.Properties['RestoreSelectionOnCompletion']) {
+            $restoreSelectionOnCompletion = [bool]$payload.RestoreSelectionOnCompletion
+        }
+
+        if ($restoreSelectionOnCompletion -and $SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
             Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex | Out-Null
+            $VisibleAlerts.Value = @($Context.Data.Alerts)
+            $VisibleAlertIncidentId.Value = $incidentId
         }
     }
 }

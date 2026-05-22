@@ -116,4 +116,22 @@ public static class PwshXdrTestMutexAbandoner {
             $logFile | Should -Exist
         }
     }
+
+    It 'resolves relative log paths under local app data instead of the current directory' {
+        InModuleScope PwshXDRSpectre {
+            $relativeLogPath = '44'
+            $expectedLogFile = [System.IO.Path]::GetFullPath((Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre') $relativeLogPath))
+
+            if (Test-Path -LiteralPath $expectedLogFile) {
+                Remove-Item -LiteralPath $expectedLogFile -Force -ErrorAction SilentlyContinue
+            }
+
+            Write-XdrLiveDashboardLog -LogPath $relativeLogPath -Message 'relative-path test'
+
+            $expectedLogFile | Should -Exist
+            Join-Path (Get-Location) $relativeLogPath | Should -Not -Exist
+
+            Remove-Item -LiteralPath $expectedLogFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }

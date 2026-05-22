@@ -13,6 +13,11 @@ function Start-XdrLiveAlertLoadJob {
     .PARAMETER ForceReload
     Forces load even when cache exists.
 
+    .PARAMETER RestoreSelectionOnCompletion
+    When set, completed job processing may update the visible alert selection for
+    the currently selected incident. Leave unset for background prefetch jobs that
+    should only warm cache.
+
     .PARAMETER ModulePath
     Module path loaded inside thread job.
 
@@ -41,6 +46,9 @@ function Start-XdrLiveAlertLoadJob {
 
         [Parameter()]
         [switch]$ForceReload,
+
+        [Parameter()]
+        [switch]$RestoreSelectionOnCompletion,
 
         [Parameter(Mandatory)]
         [string]$ModulePath,
@@ -75,24 +83,49 @@ function Start-XdrLiveAlertLoadJob {
         return $false
     }
 
-    $job = Start-ThreadJob -ArgumentList $ModulePath, $Context, $Incident, $incidentId, $LogPath -ScriptBlock {
-        param($jobModulePath, $jobContext, $jobIncident, $jobIncidentId, $jobLogPath)
+    $jobContext = New-XdrRuntimeContext -TenantId ([string]$Context.Session.TenantId) -ClientId ([string]$Context.Session.ClientId) -Mode 'live' -ThemeColor ([string]$Context.Ui.ThemeColor)
+    $jobContext.Session.Analyst = $Context.Session.Analyst
+    $jobContext.Session.IsConnected = $Context.Session.IsConnected
+    $jobContext.Session.PermissionHealth = [pscustomobject][ordered]@{
+        HasSufficientWritePermissions = $Context.Session.PermissionHealth.HasSufficientWritePermissions
+        DetectionSource               = $Context.Session.PermissionHealth.DetectionSource
+        RequiredPermissions           = @($Context.Session.PermissionHealth.RequiredPermissions)
+        AvailablePermissions          = @($Context.Session.PermissionHealth.AvailablePermissions)
+        LastUpdatedAt                 = $Context.Session.PermissionHealth.LastUpdatedAt
+    }
+    $jobContext.Capabilities.AlertActions = @($Context.Capabilities.AlertActions)
+
+    $job = Start-ThreadJob -ArgumentList $ModulePath, $jobContext, $Incident, $incidentId, $LogPath, $RestoreSelectionOnCompletion.IsPresent -ScriptBlock {
+        param($jobModulePath, $jobContext, $jobIncident, $jobIncidentId, $jobLogPath, $jobRestoreSelectionOnCompletion)
 
         Import-Module $jobModulePath -Force | Out-Null
         if (-not [string]::IsNullOrWhiteSpace($jobLogPath)) {
-            Write-XdrLiveDashboardLog -LogPath $jobLogPath -Message "Alert preload job started. IncidentId=$jobIncidentId"
+            & (Get-Module PwshXDRSpectre) {
+                param([string]$InnerJobLogPath, [string]$InnerJobIncidentId)
+
+                Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job started. IncidentId=$InnerJobIncidentId"
+            } $jobLogPath, $jobIncidentId
         }
 
-        $result = Get-XdrAlerts -Context $jobContext -Incident $jobIncident
+        $result = Get-XdrAlerts -Context $jobContext -Incident $jobIncident -SkipContextUpdate
 
         if (-not [string]::IsNullOrWhiteSpace($jobLogPath)) {
             $resultStatus = if ($result -and $result.Success) { 'success' } else { 'failure' }
-            Write-XdrLiveDashboardLog -LogPath $jobLogPath -Message "Alert preload job completed. IncidentId=$jobIncidentId Result=$resultStatus"
+            & (Get-Module PwshXDRSpectre) {
+                param(
+                    [string]$InnerJobLogPath,
+                    [string]$InnerJobIncidentId,
+                    [string]$InnerResultStatus
+                )
+
+                Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus"
+            } $jobLogPath, $jobIncidentId, $resultStatus
         }
 
         [pscustomobject]@{
-            IncidentId = $jobIncidentId
-            Result     = $result
+            IncidentId                  = $jobIncidentId
+            RestoreSelectionOnCompletion = [bool]$jobRestoreSelectionOnCompletion
+            Result                      = $result
         }
     }
 
