@@ -133,8 +133,11 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('AlertData        = @($alertsForIncident)') | Should -BeTrue
         $content.Contains('} -ArgumentList $jobPayload') | Should -BeTrue
         $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerDashboardLogPath -Message "Entity extraction job started. IncidentId=$InnerIncidentId"') | Should -BeTrue
+        $content.Contains('} $JobPayload.DashboardLogPath $JobPayload.IncidentId') | Should -BeTrue
         $content.Contains('& (Get-Module PwshXDRSpectre) {') | Should -BeTrue
         $content.Contains('Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData') | Should -BeTrue
+        $content.Contains('} $JobPayload.IncidentData @($JobPayload.AlertData)') | Should -BeTrue
+        $content | Should -Not -Match '\}\s*\$JobPayload\.DashboardLogPath,\s*\$JobPayload\.IncidentId'
         $content.Contains("'Entity actions (preview)'") | Should -BeTrue
         $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
         $content.Contains("'^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }") | Should -BeTrue
@@ -163,6 +166,15 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('[switch]$WithLogs') | Should -BeTrue
         $content.Contains('[string]$LogPath') | Should -BeTrue
         $content.Contains('Dashboard log file: $dashboardLogPath') | Should -BeTrue
+    }
+
+    It 'builds a whitespace-free timestamped .log filename when logs are enabled without an explicit path' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$dashboardLogTimestamp = Get-Date -Format 'yyyyMMddTHHmmssfff'") | Should -BeTrue
+        $content.Contains('$dashboardLogFileName = "live-dashboard-$dashboardLogTimestamp.log"') | Should -BeTrue
+        $content.Contains('Join-Path $dashboardLogDirectory $dashboardLogFileName') | Should -BeTrue
+        $content | Should -Not -Match 'live-dashboard-\{0\}\.log'
     }
 
     It 'supports keyboard help overlay, quick quit confirmation, and r refresh alias' {

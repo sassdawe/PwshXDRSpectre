@@ -72,7 +72,9 @@ function Start-PwshXdrLiveDashboard {
     if ($WithLogs.IsPresent) {
         $dashboardLogPath = if ([string]::IsNullOrWhiteSpace($LogPath)) {
             $dashboardLogDirectory = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'
-            Join-Path $dashboardLogDirectory ("live-dashboard-{0}.log" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+            $dashboardLogTimestamp = Get-Date -Format 'yyyyMMddTHHmmssfff'
+            $dashboardLogFileName = "live-dashboard-$dashboardLogTimestamp.log"
+            Join-Path $dashboardLogDirectory $dashboardLogFileName
         }
         else {
             $LogPath
@@ -329,7 +331,7 @@ function Start-PwshXdrLiveDashboard {
                     )
 
                     Write-XdrLiveDashboardLog -LogPath $InnerDashboardLogPath -Message "Entity extraction job started. IncidentId=$InnerIncidentId"
-                } $JobPayload.DashboardLogPath, $JobPayload.IncidentId
+                } $JobPayload.DashboardLogPath $JobPayload.IncidentId
                 & (Get-Module PwshXDRSpectre) {
                     param(
                         [object]$InnerIncidentData,
@@ -337,7 +339,7 @@ function Start-PwshXdrLiveDashboard {
                     )
 
                     Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData
-                } $JobPayload.IncidentData, @($JobPayload.AlertData)
+                } $JobPayload.IncidentData @($JobPayload.AlertData)
             } -ArgumentList $jobPayload
         }
 

@@ -20,6 +20,7 @@
         'Connect-XdrSession',
         'Get-XdrAlerts',
         'Get-XdrIncidents',
+        'Get-XdrLogPaths',
         'Get-XdrTriageOptions',
         'Set-XdrAlertStatus',
         'Set-XdrIncidentAssignment',

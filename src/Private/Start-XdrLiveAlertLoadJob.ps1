@@ -104,7 +104,7 @@ function Start-XdrLiveAlertLoadJob {
                 param([string]$InnerJobLogPath, [string]$InnerJobIncidentId)
 
                 Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job started. IncidentId=$InnerJobIncidentId"
-            } $jobLogPath, $jobIncidentId
+            } $jobLogPath $jobIncidentId
         }
 
         $result = Get-XdrAlerts -Context $jobContext -Incident $jobIncident -SkipContextUpdate
@@ -119,7 +119,7 @@ function Start-XdrLiveAlertLoadJob {
                 )
 
                 Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus"
-            } $jobLogPath, $jobIncidentId, $resultStatus
+            } $jobLogPath $jobIncidentId $resultStatus
         }
 
         [pscustomobject]@{
