@@ -94,6 +94,30 @@ function Write-XdrLiveDashboardLog {
             return
         }
 
+        if (-not [string]::IsNullOrWhiteSpace($defaultLogRoot)) {
+            $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+            if (-not $LogPath.StartsWith($defaultLogRootPrefix, $pathComparison)) {
+                Write-Warning -Message "Rejected relative log path outside the dashboard log root: $LogPath"
+                return
+            }
+
+            $resolvedLogDirectory = Split-Path -Parent $LogPath
+            if (-not [string]::IsNullOrWhiteSpace($resolvedLogDirectory)) {
+                $relativeLogDirectory = [System.IO.Path]::GetRelativePath($defaultLogRoot, $resolvedLogDirectory)
+                $currentDirectory = $defaultLogRoot
+                foreach ($segment in ($relativeLogDirectory -split '[\\/]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne '.' })) {
+                    $currentDirectory = Join-Path $currentDirectory $segment
+                    if (Test-Path -LiteralPath $currentDirectory) {
+                        $currentItem = Get-Item -LiteralPath $currentDirectory -Force -ErrorAction SilentlyContinue
+                        if ($null -ne $currentItem -and $currentItem.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
+                            Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $LogPath"
+                            return
+                        }
+                    }
+                }
+            }
+        }
+
         $logEntry = '{0} [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'), $Level.ToUpperInvariant(), $Message
         Add-Content -LiteralPath $LogPath -Value $logEntry -Encoding utf8 -ErrorAction SilentlyContinue
     }
