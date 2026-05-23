@@ -26,7 +26,7 @@ Live dashboard mode uses:
 
 ### Entra ID app registration
 
-Delegated permissions are recommended, so no certificate or client secret is required.
+Delegated permissions are the target model for this project, so no certificate or client secret is required.
 
 ![delegated MSGraph permissions](./images/pwshxdr-delegated-api.png)
 
@@ -36,6 +36,13 @@ Any action performed with delegated permissions will be associated with your use
 
 ```powershell
 #Requires -Version 7 -Modules PwshSpectreConsole, Microsoft.Graph.Authentication, Microsoft.Graph.Security
+```
+
+Quarantine review and actions use Defender for Office 365 quarantine cmdlets exposed by Exchange Online PowerShell. Install `ExchangeOnlineManagement` and connect before using quarantine commands:
+
+```powershell
+Install-Module ExchangeOnlineManagement -Scope CurrentUser
+Connect-ExchangeOnline
 ```
 
 ## Usage
@@ -57,6 +64,46 @@ Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>'
 Example UI:
 
 ![PwshXDRSpectre in usage](./images/PwshXDR-usage.png)
+
+### Quarantine review
+
+Defender for Office 365 quarantine release/delete operations are not exposed through the Microsoft Graph Security incident and alert APIs used by the live dashboard. PwshXDRSpectre therefore uses the Exchange Online PowerShell quarantine cmdlets for this feature.
+
+### Permission model clarification
+
+- **Defender XDR incidents and alerts** use delegated Microsoft Graph permissions.
+- **Defender for Office 365 quarantine review and actions** use delegated Exchange Online PowerShell access through `Connect-ExchangeOnline`.
+- Quarantine support is therefore still compatible with a delegated-only model, but it does **not** rely on Microsoft Graph delegated scopes alone.
+- For quarantine workflows, the signed-in analyst must have:
+  - an active delegated Exchange Online session
+  - the required Exchange Online / Defender for Office 365 role assignment to review, release, or delete quarantined messages
+- The exact least-privilege role mapping for release and delete still needs tenant validation and is tracked in [plans/phase-7-quarantine-review.md](./plans/phase-7-quarantine-review.md).
+
+In short: **yes, delegated access is possible with Exchange Online PowerShell**, but the authorization model is Exchange Online and Defender role-based rather than the same Graph delegated permission list used for incidents and alerts.
+
+Phased delivery plan:
+
+1. Phase 1: add quarantine retrieval plus release/delete service cmdlets through Exchange Online PowerShell.
+2. Phase 2: wire the service cmdlets into a dedicated interactive dashboard panel.
+3. Phase 3: add richer filters, bulk workflows, and audit export options.
+
+Review quarantined messages:
+
+```powershell
+Import-Module ./src/PwshXDRSpectre.psm1
+Connect-ExchangeOnline
+Get-XdrQuarantineMessage -Limit 25 |
+    Format-Table ReceivedTime, SenderAddress, RecipientAddress, Subject, QuarantineType, ReleaseStatus
+```
+
+Release or delete a quarantined message:
+
+```powershell
+Get-XdrQuarantineMessage -RecipientAddress analyst@example.com -Limit 1 |
+    Invoke-XdrQuarantineAction -Action Release -ReleaseToAll -Confirm:$false
+
+Invoke-XdrQuarantineAction -Identity '<quarantine-message-identity>' -Action Delete -Confirm:$false
+```
 
 ## Tests
 
