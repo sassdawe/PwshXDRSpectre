@@ -35,23 +35,26 @@ function Write-XdrLiveDashboardLog {
         return
     }
 
-    if (-not [System.IO.Path]::IsPathRooted($LogPath)) {
-        $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
-        $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
+    $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+    $pathComparison = if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
+        [System.StringComparison]::OrdinalIgnoreCase
+    }
+    else {
+        [System.StringComparison]::Ordinal
+    }
+    $testRelativeLogPath = {
+        param(
+            [string]$ResolvedLogPath,
+            [string]$RelativeLogPath
+        )
+
         $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-        $pathComparison = if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
-            [System.StringComparison]::OrdinalIgnoreCase
-        }
-        else {
-            [System.StringComparison]::Ordinal
+        if (-not $ResolvedLogPath.StartsWith($defaultLogRootPrefix, $pathComparison)) {
+            Write-Warning -Message "Rejected relative log path outside the dashboard log root: $RelativeLogPath"
+            return $false
         }
 
-        if (-not $resolvedLogPath.StartsWith($defaultLogRootPrefix, $pathComparison)) {
-            Write-Warning -Message "Rejected relative log path outside the dashboard log root: $LogPath"
-            return
-        }
-
-        $resolvedLogDirectory = Split-Path -Parent $resolvedLogPath
+        $resolvedLogDirectory = Split-Path -Parent $ResolvedLogPath
         if (-not [string]::IsNullOrWhiteSpace($resolvedLogDirectory)) {
             $relativeLogDirectory = [System.IO.Path]::GetRelativePath($defaultLogRoot, $resolvedLogDirectory)
             $currentDirectory = $defaultLogRoot
@@ -60,13 +63,22 @@ function Write-XdrLiveDashboardLog {
                 if (Test-Path -LiteralPath $currentDirectory) {
                     $currentItem = Get-Item -LiteralPath $currentDirectory -Force -ErrorAction SilentlyContinue
                     if ($null -ne $currentItem -and $currentItem.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-                        Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $LogPath"
-                        return
+                        Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $RelativeLogPath"
+                        return $false
                     }
                 }
             }
         }
 
+        return $true
+    }
+
+    if (-not [System.IO.Path]::IsPathRooted($LogPath)) {
+        $relativeLogPath = $LogPath
+        $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
+        if (-not (& $testRelativeLogPath $resolvedLogPath $relativeLogPath)) {
+            return
+        }
         $LogPath = $resolvedLogPath
     }
 
@@ -94,28 +106,8 @@ function Write-XdrLiveDashboardLog {
             return
         }
 
-        if (-not [string]::IsNullOrWhiteSpace($defaultLogRoot)) {
-            $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-            if (-not $LogPath.StartsWith($defaultLogRootPrefix, $pathComparison)) {
-                Write-Warning -Message "Rejected relative log path outside the dashboard log root: $LogPath"
-                return
-            }
-
-            $resolvedLogDirectory = Split-Path -Parent $LogPath
-            if (-not [string]::IsNullOrWhiteSpace($resolvedLogDirectory)) {
-                $relativeLogDirectory = [System.IO.Path]::GetRelativePath($defaultLogRoot, $resolvedLogDirectory)
-                $currentDirectory = $defaultLogRoot
-                foreach ($segment in ($relativeLogDirectory -split '[\\/]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne '.' })) {
-                    $currentDirectory = Join-Path $currentDirectory $segment
-                    if (Test-Path -LiteralPath $currentDirectory) {
-                        $currentItem = Get-Item -LiteralPath $currentDirectory -Force -ErrorAction SilentlyContinue
-                        if ($null -ne $currentItem -and $currentItem.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-                            Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $LogPath"
-                            return
-                        }
-                    }
-                }
-            }
+        if (-not [System.IO.Path]::IsPathRooted($LogPath) -and -not (& $testRelativeLogPath $LogPath $relativeLogPath)) {
+            return
         }
 
         $logEntry = '{0} [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff'), $Level.ToUpperInvariant(), $Message
