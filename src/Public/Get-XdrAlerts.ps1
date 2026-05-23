@@ -15,6 +15,11 @@ function Get-XdrAlerts {
         The incident object (from Get-XdrIncidents or the live context) whose alerts
         should be retrieved. Supports both AlertRefs and Alerts property shapes.
 
+        .PARAMETER SkipContextUpdate
+        Returns alert view models without updating Context.Data.Alerts. Use this for
+        background cache warming so the visible dashboard alert panel remains stable
+        until the user explicitly loads or selects alerts.
+
         .OUTPUTS
         PSCustomObject containing Success, Operation, Message, Data (array of alert view
         models), Error, and Metadata properties.
@@ -32,14 +37,19 @@ function Get-XdrAlerts {
         [object]$Context,
 
         [Parameter(Mandatory)]
-        [object]$Incident
+        [object]$Incident,
+
+        [Parameter()]
+        [switch]$SkipContextUpdate
     )
 
     $incidentId = if ($Incident.IncidentId) { $Incident.IncidentId } else { $Incident.Id }
     $alertRefs = if ($Incident.AlertRefs) { @($Incident.AlertRefs) } elseif ($Incident.Alerts) { @($Incident.Alerts) } else { @() }
 
     if (-not $alertRefs) {
-        $Context.Data.Alerts = @()
+        if (-not $SkipContextUpdate) {
+            $Context.Data.Alerts = @()
+        }
         return [pscustomobject]@{
             Success   = $true
             Operation = 'Get-XdrAlerts'
@@ -65,7 +75,9 @@ function Get-XdrAlerts {
     }
 
     $viewModels = @($operationResult.Data | ForEach-Object { ConvertTo-XdrAlertViewModel -Alert $_ -IncidentId $incidentId })
-    $Context.Data.Alerts = $viewModels
+    if (-not $SkipContextUpdate) {
+        $Context.Data.Alerts = $viewModels
+    }
 
     return [pscustomobject]@{
         Success   = $true

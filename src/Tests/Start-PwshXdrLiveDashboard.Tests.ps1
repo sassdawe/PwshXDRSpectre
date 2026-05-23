@@ -46,8 +46,19 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
         $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
         $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 3 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
+    }
+
+    It 'uses nested layout structure with left lists, center details, and right actions columns' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns") | Should -BeTrue
+        $content.Contains("New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows") | Should -BeTrue
+        $content.Contains("New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'incidents' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'alert_details' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')") | Should -BeTrue
     }
 
     It 'renders alert list entries with severity badge incident-style columns and status' {
@@ -107,30 +118,43 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
         $content.Contains("`$activePanel = 'incident_details'") | Should -BeTrue
         $content.Contains("`$panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')") | Should -BeTrue
-        $content.Contains("`$showEntityPanel = `$true") | Should -BeTrue
-        $content.Contains("`$showEntityPanel = `$false") | Should -BeTrue
-        $content.Contains("-Title 'Related Entities (Alt+D details)'") | Should -BeTrue
-        $content.Contains("Alt+D to return to Incident Details") | Should -BeTrue
+        $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
+        $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
+        $content.Contains("[bold black on #C0C0C0]| Incident details |[/][grey70 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
+        $content.Contains("[grey70 on #1C1C1C]| Incident details |[/][bold black on #C0C0C0]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
+        $content.Contains("Tab to switch to Details") | Should -BeTrue
     }
 
     It 'extracts entities in background and renders entity-specific preview actions' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
         $content.Contains('Start-ThreadJob -ScriptBlock {') | Should -BeTrue
+        $content.Contains('$jobPayload = [pscustomobject]@{') | Should -BeTrue
+        $content.Contains('AlertData        = @($alertsForIncident)') | Should -BeTrue
+        $content.Contains('} -ArgumentList $jobPayload') | Should -BeTrue
+        $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerDashboardLogPath -Message "Entity extraction job started. IncidentId=$InnerIncidentId"') | Should -BeTrue
+        $content.Contains('} $JobPayload.DashboardLogPath $JobPayload.IncidentId') | Should -BeTrue
+        $content.Contains('& (Get-Module PwshXDRSpectre) {') | Should -BeTrue
         $content.Contains('Get-XdrIncidentEntities -Incident $InnerIncidentData -Alerts $InnerAlertData') | Should -BeTrue
+        $content.Contains('} $JobPayload.IncidentData @($JobPayload.AlertData)') | Should -BeTrue
+        $content | Should -Not -Match '\}\s*\$JobPayload\.DashboardLogPath,\s*\$JobPayload\.IncidentId'
         $content.Contains("'Entity actions (preview)'") | Should -BeTrue
+        $content.Contains('$distinctEntityAlertIds = @($entityEntries | Where-Object {') | Should -BeTrue
+        $content.Contains('$shouldSeparateEntityAlertGroups = $distinctEntityAlertIds.Count -gt 1') | Should -BeTrue
+        $content.Contains('$entityAlertId -ne $previousEntityAlertId') | Should -BeTrue
+        $content.Contains("`$entityLines += ''") | Should -BeTrue
         $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
         $content.Contains("'^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }") | Should -BeTrue
         $content.Contains("'^(?i:device|machine)$' { @('Isolate device', 'Run antivirus scan', 'Collect investigation package') }") | Should -BeTrue
         $content.Contains("'^(?i:file)$' { @('Quarantine file', 'Block file indicator', 'Remove file indicator block') }") | Should -BeTrue
         $content.Contains("'[grey]No entity selected.[/]'") | Should -BeTrue
-        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'DownArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+        $content.Contains("elseif (`$selectedIncidentDetailsTab -eq 'entities' -and `$key.Key -eq 'DownArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
     }
 
     It 'supports entity panel up-arrow navigation and selection reset on incident change' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
-        $content.Contains("elseif (`$showEntityPanel -and `$key.Key -eq 'UpArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
+        $content.Contains("elseif (`$selectedIncidentDetailsTab -eq 'entities' -and `$key.Key -eq 'UpArrow' -and `$activePanel -eq 'incident_details' -and `$context.Data.Entities.Count -gt 0)") | Should -BeTrue
         $content.Contains("`$selectedEntityIndex = 0") | Should -BeTrue
         $content.Contains("`$selectedEntity = `$null") | Should -BeTrue
         $content.Contains("`$context.Selection.Entity = `$null") | Should -BeTrue
@@ -146,6 +170,79 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('[switch]$WithLogs') | Should -BeTrue
         $content.Contains('[string]$LogPath') | Should -BeTrue
         $content.Contains('Dashboard log file: $dashboardLogPath') | Should -BeTrue
+    }
+
+    It 'builds a whitespace-free timestamped .log filename when logs are enabled without an explicit path' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$dashboardLogTimestamp = Get-Date -Format 'yyyyMMddTHHmmssfff'") | Should -BeTrue
+        $content.Contains('$dashboardLogFileName = "live-dashboard-$dashboardLogTimestamp.log"') | Should -BeTrue
+        $content.Contains('Join-Path $dashboardLogDirectory $dashboardLogFileName') | Should -BeTrue
+        $content | Should -Not -Match 'live-dashboard-\{0\}\.log'
+    }
+
+    It 'supports keyboard help overlay, quick quit confirmation, and r refresh alias' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
+        $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
+        $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$isShiftPressed -and `$key.Key -eq 'L')") | Should -BeTrue
+        $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
+    }
+
+    It 'keeps cached incidents visible while refresh is in progress' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$hasVisibleIncidentData = @($context.Data.Incidents).Count -gt 0') | Should -BeTrue
+        $content.Contains('if (-not $hasVisibleIncidentData) {') | Should -BeTrue
+        $content.Contains('& $syncCachedDataToIncidents $context.Data.Incidents') | Should -BeTrue
+        $content.Contains('Restore-XdrLiveCachedAlertsForIncident -IncidentId ([string]$selectedIncident.IncidentId)') | Should -BeTrue
+    }
+
+    It 'treats alert prefetch as cache warming instead of visible panel updates' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId') | Should -BeTrue
+        $content.Contains('Start-XdrLiveAlertLoadJob -Incident $selectedIncident -RestoreSelectionOnCompletion -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId') | Should -BeTrue
+    }
+
+    It 'starts a restoring alert load for the initially selected incident when alerts are not cached' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('& $clearVisibleAlerts ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId)') | Should -BeTrue
+        $content.Contains('Start-XdrLiveAlertLoadJob -Incident $selectedIncident -RestoreSelectionOnCompletion -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -LogPath $dashboardLogPath | Out-Null') | Should -BeTrue
+    }
+
+    It 'updates visible alert panel state by reference when incidents change or cached alerts are restored' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('[ref]$VisibleAlerts') | Should -BeTrue
+        $content.Contains('[ref]$VisibleAlertIncidentId') | Should -BeTrue
+        $content.Contains('& $clearVisibleAlerts ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId)') | Should -BeTrue
+        $content.Contains('& $syncVisibleAlertsFromContext ([ref]$visibleAlerts) ([ref]$visibleAlertIncidentId) $selectedIncident') | Should -BeTrue
+    }
+
+    It 'shows cache status and force reload actions in the dashboard wiring' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('-SelectedIncident $selectedIncident -PendingIncidentResolution') | Should -BeTrue
+        $content.Contains("(Alt+Shift+L) Force reload alerts for selected incident") | Should -BeTrue
+        $content.Contains("Shortcut = 'reload-alerts'") | Should -BeTrue
+    }
+
+    It 'keeps confirmation prompts keyboard-accessible with Y/N/Esc/Enter' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('if ($pendingQuitConfirmation) {') | Should -BeTrue
+        $content.Contains("if ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'y') -or `$key.Key -eq 'Enter') {") | Should -BeTrue
+        $content.Contains("if ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'n') -or `$key.Key -eq 'Escape') {") | Should -BeTrue
+        $content.Contains('elseif ($pendingConfirmation) {') | Should -BeTrue
+        $content.Contains("if (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'y') {") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'Enter') {") | Should -BeTrue
+        $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'n') -or `$key.Key -eq 'Escape') {") | Should -BeTrue
     }
 
     Context 'comment-based help' {

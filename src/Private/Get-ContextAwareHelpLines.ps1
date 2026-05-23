@@ -80,14 +80,14 @@ function Get-ContextAwareHelpLines {
         return @('Comment input mode | Type text | Enter submit | Backspace edit | Esc cancel | Shortcuts disabled | Ctrl+C exit')
     }
 
-    $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | F5 refresh | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'
+    $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+Shift+L force reload alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | F1 help | F5/r refresh | q quit | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'
 
     switch ($ActivePanel) {
-        'incidents' { return @('↑/↓ incidents | Enter or L loads alerts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'incident_details' { return @('Alt+A/U/O/I/R/K/C selected incident | Alt+E show entities | Alt+D show incident details | Alt+L or Enter loads alerts | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'alerts' { return @('↑/↓ alerts | Alt+N/P/M selected alert | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/K/C/L/N/P/M shortcuts | F5 refresh incidents | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'incidents' { return @('↑/↓ incidents | Enter or Alt+L loads alerts | Alt+Shift+L force reloads alerts | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'incident_details' { return @('Alt+A/U/O/I/R/K/C selected incident | Alt+E show entities | Alt+D show incident details | Alt+L or Enter loads alerts | Alt+Shift+L force reloads alerts | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'alerts' { return @('↑/↓ alerts | Alt+Shift+L force reloads selected incident alerts | Alt+N/P/M selected alert | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Alt+Shift+L force reloads alerts | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/K/C/L/N/P/M shortcuts | Alt+Shift+L force reloads alerts | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
     }
 
     return @($baseLine)

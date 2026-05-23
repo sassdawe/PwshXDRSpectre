@@ -10,6 +10,9 @@ function Get-XdrLiveHelpPanelContent {
     .PARAMETER Context
     Runtime context object.
 
+    .PARAMETER SelectedIncident
+    Currently selected incident used to derive alert cache state.
+
     .PARAMETER PendingIncidentResolution
     Current incident resolution workflow payload.
 
@@ -34,6 +37,9 @@ function Get-XdrLiveHelpPanelContent {
     .PARAMETER LastRefreshAt
     Timestamp for last incident refresh.
 
+    .PARAMETER ShowKeyboardHelpOverlay
+    Renders the full keyboard shortcut overlay when enabled.
+
     .OUTPUTS
     System.String
 
@@ -44,6 +50,9 @@ function Get-XdrLiveHelpPanelContent {
     param(
         [Parameter(Mandatory)]
         [object]$Context,
+
+        [Parameter()]
+        [object]$SelectedIncident,
 
         [Parameter()]
         [object]$PendingIncidentResolution,
@@ -73,7 +82,10 @@ function Get-XdrLiveHelpPanelContent {
         [Nullable[datetime]]$HeartbeatAt = $null,
 
         [Parameter()]
-        [int]$HeartbeatCounter = 0
+        [int]$HeartbeatCounter = 0,
+
+        [Parameter()]
+        [switch]$ShowKeyboardHelpOverlay
     )
 
     $lastRefreshText = if ($null -ne $LastRefreshAt -and $LastRefreshAt -ne [datetime]::MinValue) {
@@ -94,9 +106,26 @@ function Get-XdrLiveHelpPanelContent {
         'Heartbeat: initializing...'
     }
     $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
+    $shortcutHintLine = '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
+
+    $selectedIncidentId = if ($SelectedIncident) { [string]$SelectedIncident.IncidentId } else { $null }
+    $cacheStateLine = if ([string]::IsNullOrWhiteSpace($selectedIncidentId)) {
+        '[grey]Alert cache: no incident selected[/]'
+    }
+    elseif ($AlertLoadJobsByIncidentId.ContainsKey($selectedIncidentId)) {
+        '[deepskyblue1]Alert cache: loading[/]'
+    }
+    elseif ($AlertsByIncidentId.ContainsKey($selectedIncidentId)) {
+        $cachedAlertCount = @($AlertsByIncidentId[$selectedIncidentId]).Count
+        $alertLabel = if ($cachedAlertCount -eq 1) { 'alert' } else { 'alerts' }
+        "[green]Alert cache: warm ($cachedAlertCount $alertLabel)[/]"
+    }
+    else {
+        '[yellow]Alert cache: cold[/]'
+    }
 
     if ($null -ne $PendingIncidentResolution) {
-        return "$lastRefreshLine`n$heartbeatLine"
+        return "$lastRefreshLine`n$heartbeatLine`n$cacheStateLine"
     }
 
     if ($null -ne $PendingTextInput) {
@@ -110,7 +139,7 @@ function Get-XdrLiveHelpPanelContent {
         $prompt = Get-SpectreEscapedText ([string]$PendingTextInput.Prompt)
         $inputValue = if ([string]::IsNullOrWhiteSpace([string]$PendingTextInput.Value)) { '' } else { Get-SpectreEscapedText ([string]$PendingTextInput.Value) }
         $inputDisplay = if ([string]::IsNullOrWhiteSpace($inputValue)) { '[grey]<empty>[/]' } else { "[white]$inputValue[/]" }
-        return "[bold black on orange1] $title [/] [yellow]$prompt[/]`n$inputDisplay [grey](Enter submit | Esc cancel)[/]`n$lastRefreshLine`n$heartbeatLine"
+        return "[bold black on orange1] $title [/] [yellow]$prompt[/]`n$inputDisplay [grey](Enter submit | Esc cancel)[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine"
     }
 
     $prefetchRaw = [string](Get-XdrLiveAlertPrefetchIndicator -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId -AlertPreloadQueue $AlertPreloadQueue -PrefetchCompletedAt $PrefetchCompletedAt)
@@ -128,7 +157,29 @@ function Get-XdrLiveHelpPanelContent {
 
         $promptText = Get-SpectreEscapedText ([string]$PendingConfirmation.Prompt)
         $confirmLine = "[bold black on yellow] CONFIRM [/] [yellow]$promptText[/] [grey]Y confirm | N or Esc cancel[/]"
-        return "$statusLine`n$confirmLine`n$lastRefreshLine`n$heartbeatLine"
+        return "$statusLine`n$confirmLine`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine"
+    }
+
+    if ($ShowKeyboardHelpOverlay.IsPresent) {
+        $overlayLines = @(
+            '[bold black on deepskyblue1] Keyboard Shortcuts [/]',
+            '[white]F1[/] toggle keyboard help overlay',
+            '[white]F5[/] or [white]r[/] refresh incidents and alert cache',
+            '[white]Tab[/] / [white]Shift+Tab[/] or [white]PgUp/PgDn[/] switch active panel',
+            '[white]Up/Down[/] move selection in the active list',
+            '[white]Enter[/] load alerts, confirm, or run selected action',
+            '[white]Alt+Shift+L[/] force reload selected incident alerts',
+            '[white]Alt+A/U/O/I/R/K/C/L[/] incident actions',
+            '[white]Alt+N/P/M[/] alert status actions',
+            '[white]Alt+E[/] entities view | [white]Alt+D[/] incident details view',
+            '[white]q[/] or [white]Ctrl+Q[/] quit dashboard (requires confirmation)',
+            '[white]Esc[/] cancel current dialog | [white]Ctrl+C[/] force exit',
+            $lastRefreshLine,
+            $heartbeatLine,
+            $cacheStateLine
+        )
+
+        return ($overlayLines -join "`n")
     }
 
     if (-not [string]::IsNullOrWhiteSpace($statusText)) {
@@ -143,22 +194,22 @@ function Get-XdrLiveHelpPanelContent {
             }
 
             if ($hasPrefetchLine) {
-                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
             }
 
-            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine"
+            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
         }
 
         if ($hasPrefetchLine) {
-            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
         }
 
-        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine"
+        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
     }
 
     if ($hasPrefetchLine) {
-        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine"
+        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
     }
 
-    return "$lastRefreshLine`n$heartbeatLine"
+    return "$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
 }

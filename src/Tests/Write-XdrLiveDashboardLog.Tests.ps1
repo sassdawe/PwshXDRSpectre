@@ -72,18 +72,12 @@ Describe 'Write-XdrLiveDashboardLog' {
             $logFile = Join-Path $TestDrive 'abandoned.log'
             $mutexAbandonTimeoutMs = 3000
 
-            # Intentionally mirrors the implementation's mutex-naming algorithm so
-            # the helper thread abandons exactly the same mutex the function will try
-            # to acquire for $logFile.  If the naming algorithm changes in the
-            # implementation, this test will catch the regression.
             $hashBytes = [System.Security.Cryptography.SHA256]::HashData(
                 [System.Text.Encoding]::UTF8.GetBytes($logFile.ToLowerInvariant())
             )
             $hash = [Convert]::ToHexString($hashBytes).Substring(0, 24)
             $mutexName = "PwshXdrSpectreLog_$hash"
 
-            # Compile a pure C# helper so we can abandon the mutex from a native
-            # .NET thread without needing a PowerShell runspace in that thread.
             if (-not ([System.Management.Automation.PSTypeName]'PwshXdrTestMutexAbandoner').Type) {
                 Add-Type -TypeDefinition @"
 using System.Threading;
@@ -92,7 +86,6 @@ public static class PwshXdrTestMutexAbandoner {
         var t = new Thread(() => {
             var m = new Mutex(false, mutexName);
             m.WaitOne();
-            // Exit without releasing to trigger AbandonedMutexException for next waiter
         });
         t.IsBackground = true;
         t.Start();
@@ -104,7 +97,6 @@ public static class PwshXdrTestMutexAbandoner {
 
             [PwshXdrTestMutexAbandoner]::Abandon($mutexName, $mutexAbandonTimeoutMs)
 
-            # The function must handle AbandonedMutexException and still write successfully
             { Write-XdrLiveDashboardLog -LogPath $logFile -Message 'post-abandon' } | Should -Not -Throw
         }
     }
@@ -114,6 +106,111 @@ public static class PwshXdrTestMutexAbandoner {
             $logFile = Join-Path $TestDrive 'subdir' 'nested.log'
             { Write-XdrLiveDashboardLog -LogPath $logFile -Message 'nested' } | Should -Not -Throw
             $logFile | Should -Exist
+        }
+    }
+
+    It 'resolves relative log paths under local app data instead of the current directory' {
+        InModuleScope PwshXDRSpectre {
+            $relativeLogPath = '44'
+            $expectedLogFile = [System.IO.Path]::GetFullPath((Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre') $relativeLogPath))
+
+            if (Test-Path -LiteralPath $expectedLogFile) {
+                Remove-Item -LiteralPath $expectedLogFile -Force -ErrorAction SilentlyContinue
+            }
+
+            Write-XdrLiveDashboardLog -LogPath $relativeLogPath -Message 'relative-path test'
+
+            $expectedLogFile | Should -Exist
+            Join-Path (Get-Location) $relativeLogPath | Should -Not -Exist
+
+            Remove-Item -LiteralPath $expectedLogFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'tracks the absolute log path when a log entry is written' {
+        InModuleScope PwshXDRSpectre {
+            $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+            $trackedLogRegistryPath = Join-Path $defaultLogRoot 'tracked-log-paths.txt'
+            $trackedLogDirectory = Split-Path -Parent $trackedLogRegistryPath
+            $originalRegistryContent = if (Test-Path -LiteralPath $trackedLogRegistryPath) {
+                [System.IO.File]::ReadAllText($trackedLogRegistryPath)
+            }
+            else {
+                $null
+            }
+
+            try {
+                if (-not [string]::IsNullOrWhiteSpace($trackedLogDirectory)) {
+                    New-Item -ItemType Directory -Path $trackedLogDirectory -Force | Out-Null
+                }
+
+                $logFile = Join-Path $TestDrive 'tracked.log'
+                Write-XdrLiveDashboardLog -LogPath $logFile -Message 'track me'
+
+                $trackedEntries = @(Get-Content -LiteralPath $trackedLogRegistryPath -ErrorAction SilentlyContinue)
+                $trackedEntries | Should -Contain $logFile
+            }
+            finally {
+                if ($null -eq $originalRegistryContent) {
+                    Remove-Item -LiteralPath $trackedLogRegistryPath -Force -ErrorAction SilentlyContinue
+                }
+                else {
+                    [System.IO.File]::WriteAllText($trackedLogRegistryPath, $originalRegistryContent)
+                }
+            }
+        }
+    }
+
+    It 'does not duplicate a tracked log path across multiple writes' {
+        InModuleScope PwshXDRSpectre {
+            $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+            $trackedLogRegistryPath = Join-Path $defaultLogRoot 'tracked-log-paths.txt'
+            $trackedLogDirectory = Split-Path -Parent $trackedLogRegistryPath
+            $originalRegistryContent = if (Test-Path -LiteralPath $trackedLogRegistryPath) {
+                [System.IO.File]::ReadAllText($trackedLogRegistryPath)
+            }
+            else {
+                $null
+            }
+
+            try {
+                if (-not [string]::IsNullOrWhiteSpace($trackedLogDirectory)) {
+                    New-Item -ItemType Directory -Path $trackedLogDirectory -Force | Out-Null
+                }
+
+                $logFile = Join-Path $TestDrive 'tracked-once.log'
+                Write-XdrLiveDashboardLog -LogPath $logFile -Message 'first'
+                Write-XdrLiveDashboardLog -LogPath $logFile -Message 'second'
+
+                $trackedEntries = @(Get-Content -LiteralPath $trackedLogRegistryPath -ErrorAction SilentlyContinue | Where-Object { $_ -eq $logFile })
+                $trackedEntries.Count | Should -Be 1
+            }
+            finally {
+                if ($null -eq $originalRegistryContent) {
+                    Remove-Item -LiteralPath $trackedLogRegistryPath -Force -ErrorAction SilentlyContinue
+                }
+                else {
+                    [System.IO.File]::WriteAllText($trackedLogRegistryPath, $originalRegistryContent)
+                }
+            }
+        }
+    }
+
+    It 'does not allow relative path traversal outside local app data' {
+        InModuleScope PwshXDRSpectre {
+            $relativeLogPath = Join-Path '..' 'escape.log'
+            $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+            $escapedLogFile = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $relativeLogPath))
+
+            if (Test-Path -LiteralPath $escapedLogFile) {
+                Remove-Item -LiteralPath $escapedLogFile -Force -ErrorAction SilentlyContinue
+            }
+
+            Write-XdrLiveDashboardLog -LogPath $relativeLogPath -Message 'traversal test'
+
+            if (Test-Path -LiteralPath $escapedLogFile) {
+                throw "Traversal path was unexpectedly created: $escapedLogFile"
+            }
         }
     }
 }

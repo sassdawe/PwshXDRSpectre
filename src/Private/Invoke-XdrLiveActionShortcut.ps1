@@ -64,6 +64,12 @@ function Invoke-XdrLiveActionShortcut {
     .PARAMETER SelectedAlertIndex
     Selected alert index reference.
 
+    .PARAMETER VisibleAlerts
+    Alert collection currently shown in the dashboard alert panel.
+
+    .PARAMETER VisibleAlertIncidentId
+    Incident id associated with the current visible alert panel.
+
     .OUTPUTS
     None
 
@@ -133,7 +139,13 @@ function Invoke-XdrLiveActionShortcut {
         [hashtable]$SelectedAlertIdByIncidentId,
 
         [Parameter(Mandatory)]
-        [ref]$SelectedAlertIndex
+        [ref]$SelectedAlertIndex,
+
+        [Parameter()]
+        [ref]$VisibleAlerts,
+
+        [Parameter()]
+        [ref]$VisibleAlertIncidentId
     )
 
     switch ($Shortcut) {
@@ -145,16 +157,39 @@ function Invoke-XdrLiveActionShortcut {
 
             $incidentId = [string]$SelectedIncident.IncidentId
             if (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert ([ref]$SelectedAlert) -SelectedAlertIndex $SelectedAlertIndex) {
+                if ($PSBoundParameters.ContainsKey('VisibleAlerts')) {
+                    $VisibleAlerts.Value = @($Context.Data.Alerts)
+                }
+                if ($PSBoundParameters.ContainsKey('VisibleAlertIncidentId')) {
+                    $VisibleAlertIncidentId.Value = $incidentId
+                }
                 Set-LiveStatusMessage -Context $Context -Message 'Loaded alerts from cache.' -Level 'success'
             }
             elseif ($AlertLoadJobsByIncidentId.ContainsKey($incidentId)) {
                 Set-LiveStatusMessage -Context $Context -Message 'Alerts are already loading in background...' -Level 'info'
             }
-            elseif (Start-XdrLiveAlertLoadJob -Incident $SelectedIncident -ForceReload -ModulePath $ModulePath -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId) {
+            elseif (Start-XdrLiveAlertLoadJob -Incident $SelectedIncident -ForceReload -RestoreSelectionOnCompletion -ModulePath $ModulePath -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId) {
                 Set-LiveStatusMessage -Context $Context -Message 'Loading alerts in background...' -Level 'info'
             }
             else {
                 Set-LiveStatusMessage -Context $Context -Message 'Unable to start alert loading for this incident.' -Level 'warning'
+            }
+        }
+        'reload-alerts' {
+            if (-not $SelectedIncident) {
+                Set-LiveStatusMessage -Context $Context -Message 'No incident is selected for reloading alerts.' -Level 'warning'
+                break
+            }
+
+            $incidentId = [string]$SelectedIncident.IncidentId
+            if ($AlertLoadJobsByIncidentId.ContainsKey($incidentId)) {
+                Set-LiveStatusMessage -Context $Context -Message 'Alerts are already loading in background...' -Level 'info'
+            }
+            elseif (Start-XdrLiveAlertLoadJob -Incident $SelectedIncident -ForceReload -RestoreSelectionOnCompletion -ModulePath $ModulePath -Context $Context -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId) {
+                Set-LiveStatusMessage -Context $Context -Message 'Force reloading alerts in background...' -Level 'info'
+            }
+            else {
+                Set-LiveStatusMessage -Context $Context -Message 'Unable to start forced alert reload for this incident.' -Level 'warning'
             }
         }
         'a' {

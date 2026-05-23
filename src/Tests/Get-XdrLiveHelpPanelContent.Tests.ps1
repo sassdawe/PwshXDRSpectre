@@ -27,16 +27,54 @@ Describe 'Get-XdrLiveHelpPanelContent' {
     It 'renders status and prefetch line when available' {
         InModuleScope PwshXDRSpectre {
             $context = [pscustomobject]@{ Ui = [pscustomobject]@{ StatusMessage = 'OK done' } }
+            $selectedIncident = [pscustomobject]@{ IncidentId = 'inc-1' }
             $prefetchCompletedAt = $null
 
             Mock Get-XdrLiveAlertPrefetchIndicator { 'prefetch 1/2 ======...... active:0 queue:1' }
             Mock Get-SpectreEscapedText { $Text }
 
-            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt)
+            $content = Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -AlertsByIncidentId @{ 'inc-1' = @([pscustomobject]@{ AlertId = 'a-1' }) } -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt)
 
             $content | Should -Match 'OK done'
             $content | Should -Match 'prefetch 1/2'
+            $content | Should -Match 'Alert cache: warm \(1 alert\)'
             $content | Should -Match 'Last refresh:'
+            $content | Should -Match 'F1 Help'
+        }
+    }
+
+    It 'renders keyboard hint line in default status bar content' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{ Ui = [pscustomobject]@{ StatusMessage = '' } }
+            $prefetchCompletedAt = $null
+
+            Mock Get-XdrLiveAlertPrefetchIndicator { '' }
+            Mock Get-SpectreEscapedText { $Text }
+
+            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt)
+
+            $content | Should -Match 'Hint:'
+            $content | Should -Match 'F1 Help'
+            $content | Should -Match 'Tab/Shift\+Tab Switch'
+            $content | Should -Match 'q Quit'
+        }
+    }
+
+    It 'renders keyboard shortcut overlay when requested' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{ Ui = [pscustomobject]@{ StatusMessage = '' } }
+            $prefetchCompletedAt = $null
+
+            Mock Get-SpectreEscapedText { $Text }
+
+            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -ShowKeyboardHelpOverlay
+
+            $content | Should -Match 'Keyboard Shortcuts'
+            $content | Should -Match 'Alt\+Shift\+L'
+            $content | Should -Match 'F1'
+            $content | Should -Match 'F5'
+            $content | Should -Match 'q'
+            $content | Should -Match 'Ctrl\+Q'
         }
     }
 }

@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-04-25
+**Last updated**: 2026-05-23 (layout ratios aligned to current implementation)
 
 ---
 
@@ -21,23 +21,30 @@
 
 ### Workstream 1: Dedicated Layout Panes
 
-- [ ] **1.1** Design the final layout with the following panes:
+- [x] **1.1** Design the final layout with the following panes:
   - **Incidents** — incident list with status, severity, assignment
   - **Alerts** — alerts for selected incident
   - **Entities** — extracted users, devices, files from selected incident/alert
   - **Actions** — available triage and containment actions for current selection
-  - **Query Catalog** — available hunting queries filtered by current context
-  - **Query Results** — result table for last executed query
-  - **Activity Log** — recent action history and query runs
-  - **Status Bar** — connection status, analyst identity, last operation result
-- [ ] **1.2** Implement layout using PSSpectreConsole grid/panel primitives
-- [ ] **1.3** Ensure panes update reactively when context selection changes
+  - **Query Catalog** — available hunting queries filtered by current context *(reserved)*
+  - **Query Results** — result table for last executed query *(reserved)*
+  - **Activity Log** — recent action history and query runs *(reserved)*
+  - **Status Bar** — connection status, analyst identity, last operation result *(reserved)*
+- [x] **1.2** Restructure layout to maximize list width and improve panel proportions:
+  - Left lists column: `left_lists` ratio 2 with incidents and alerts stacked vertically at ratio 1 each
+  - Center details column: `center_details` ratio 3 with incident details and alert details stacked vertically at ratio 1 each
+  - Action status column: `action_status` ratio 2 for the right-side action panel
+- [x] **1.3** Implement tab-style container for incident details + entities:
+  - Tab switching via `Tab` key within incident_details panel
+  - Alt+E to jump to entities tab, Alt+D to jump to details tab
+  - Visual title indicators: "Incident Details" vs "Related Entities"
+  - Updated help text to advertise Tab key for switching tabs
 - [ ] **1.4** Apply consistent theming (color palette from `Context.Ui.ThemeColor`)
-- [ ] **1.5** Ensure all pane content is readable at 120-column terminal width minimum
+- [ ] ~~**1.5** Ensure all pane content is readable at 120-column terminal width minimum~~
 
 ### Workstream 2: Keyboard Navigation and Help
 
-- [ ] **2.1** Define a keyboard shortcut map:
+- [x] **2.1** Define a keyboard shortcut map:
   - `F1` — toggle keyboard help overlay
   - `F5` / `r` — refresh current data
   - `Tab` / `Shift+Tab` — cycle between panes
@@ -45,16 +52,16 @@
   - `Enter` — select/confirm
   - `Escape` — cancel / go back
   - `q` — quit (with confirmation)
-- [ ] **2.2** Implement a keyboard help overlay panel that displays the full shortcut map
-- [ ] **2.3** Show the shortcut map hint in the status bar (e.g., `F1 Help`)
-- [ ] **2.4** Ensure all confirmation prompts are keyboard-accessible
+- [x] **2.2** Implement a keyboard help overlay panel that displays the full shortcut map
+- [x] **2.3** Show the shortcut map hint in the status bar (e.g., `F1 Help`)
+- [x] **2.4** Ensure all confirmation prompts are keyboard-accessible
 
 ### Workstream 3: Non-Blocking Feedback
 
 - [ ] **3.1** Show a spinner or progress indicator in the status bar for all operations that take longer than 200ms
 - [ ] **3.2** Long-running operations (device isolation, query execution) must not block keyboard input
-- [ ] **3.3** Show operation result (success or error) in the status bar for at least 3 seconds after completion
-- [ ] **3.4** Distinguish transient status messages from persistent error states in the status bar
+- [x] **3.3** Show operation result (success or error) in the status bar for at least 3 seconds after completion
+- [x] **3.4** Distinguish transient status messages from persistent error states in the status bar
 
 ### Workstream 4: Expanded Pester Tests
 

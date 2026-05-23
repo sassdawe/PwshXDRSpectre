@@ -54,6 +54,29 @@ Import-Module ./src/PwshXDRSpectre.psm1;
 Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>' -UseDeviceCode
 ```
 
+Optional file logging:
+
+```powershell
+Import-Module ./src/PwshXDRSpectre.psm1;
+Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>' -WithLogs
+```
+
+When `-WithLogs` is used without `-LogPath`, the dashboard creates a timestamped
+`.log` file under `%LOCALAPPDATA%\PwshXDRSpectre`.
+
+Tracked log registry entries are stored in:
+
+```text
+%LOCALAPPDATA%\PwshXDRSpectre\tracked-log-paths.txt
+```
+
+You can inspect the currently tracked log files with:
+
+```powershell
+Get-XdrLogPaths
+Get-XdrLogPaths -IncludeMissing
+```
+
 Example UI:
 
 ![PwshXDRSpectre in usage](./images/PwshXDR-usage.png)
