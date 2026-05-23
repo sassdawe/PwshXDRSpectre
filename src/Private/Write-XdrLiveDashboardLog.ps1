@@ -39,7 +39,7 @@ function Write-XdrLiveDashboardLog {
         $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
         $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
         $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-        $pathComparison = if ($IsWindows) {
+        $pathComparison = if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
             [System.StringComparison]::OrdinalIgnoreCase
         }
         else {
@@ -59,7 +59,7 @@ function Write-XdrLiveDashboardLog {
                 $currentDirectory = Join-Path $currentDirectory $segment
                 if (Test-Path -LiteralPath $currentDirectory) {
                     $currentItem = Get-Item -LiteralPath $currentDirectory -Force -ErrorAction SilentlyContinue
-                    if ($null -ne $currentItem -and (($currentItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+                    if ($null -ne $currentItem -and $currentItem.Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
                         Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $LogPath"
                         return
                     }
