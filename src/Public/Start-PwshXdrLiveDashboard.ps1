@@ -149,7 +149,6 @@ function Start-PwshXdrLiveDashboard {
         $selectedEntity = $null
         $visibleAlerts = @()
         $visibleAlertIncidentId = $null
-        $selectedIncidentDetailsTab = 'details'  # 'details' or 'entities'
         $actionEntries = @()
         $pendingConfirmation = $null
         $pendingTextInput = $null
