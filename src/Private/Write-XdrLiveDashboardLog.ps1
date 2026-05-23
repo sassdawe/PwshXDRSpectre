@@ -39,10 +39,32 @@ function Write-XdrLiveDashboardLog {
         $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
         $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
         $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+        $pathComparison = if ($IsWindows) {
+            [System.StringComparison]::OrdinalIgnoreCase
+        }
+        else {
+            [System.StringComparison]::Ordinal
+        }
 
-        if (-not $resolvedLogPath.StartsWith($defaultLogRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (-not $resolvedLogPath.StartsWith($defaultLogRootPrefix, $pathComparison)) {
             Write-Warning -Message "Rejected relative log path outside the dashboard log root: $LogPath"
             return
+        }
+
+        $resolvedLogDirectory = Split-Path -Parent $resolvedLogPath
+        if (-not [string]::IsNullOrWhiteSpace($resolvedLogDirectory)) {
+            $relativeLogDirectory = [System.IO.Path]::GetRelativePath($defaultLogRoot, $resolvedLogDirectory)
+            $currentDirectory = $defaultLogRoot
+            foreach ($segment in ($relativeLogDirectory -split '[\\/]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and $_ -ne '.' })) {
+                $currentDirectory = Join-Path $currentDirectory $segment
+                if (Test-Path -LiteralPath $currentDirectory) {
+                    $currentItem = Get-Item -LiteralPath $currentDirectory -Force -ErrorAction SilentlyContinue
+                    if ($null -ne $currentItem -and (($currentItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0)) {
+                        Write-Warning -Message "Rejected relative log path that traverses through a reparse point: $LogPath"
+                        return
+                    }
+                }
+            }
         }
 
         $LogPath = $resolvedLogPath
