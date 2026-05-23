@@ -5,7 +5,10 @@ function Get-XdrLogPaths {
 
     .DESCRIPTION
     Reads the module's tracked log registry and returns unique absolute log file
-    paths that were previously written through Write-XdrLiveDashboardLog.
+    paths that were previously written through Write-XdrLiveDashboardLog. The
+    registry entries are stored in tracked-log-paths.txt under the module's
+    local application data root, typically:
+    %LOCALAPPDATA%\PwshXDRSpectre\tracked-log-paths.txt
 
     .PARAMETER IncludeMissing
     Includes tracked paths that no longer exist on disk.
@@ -18,6 +21,10 @@ function Get-XdrLogPaths {
 
     .EXAMPLE
     Get-XdrLogPaths -IncludeMissing
+
+    .NOTES
+    The tracked log registry file is stored at:
+    %LOCALAPPDATA%\PwshXDRSpectre\tracked-log-paths.txt
     #>
     [CmdletBinding()]
     param(
