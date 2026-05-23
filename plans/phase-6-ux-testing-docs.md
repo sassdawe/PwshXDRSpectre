@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-05-13 (workstream 2 complete)
+**Last updated**: 2026-05-23 (layout ratios aligned to current implementation)
 
 ---
 
@@ -31,8 +31,8 @@
   - **Activity Log** — recent action history and query runs *(reserved)*
   - **Status Bar** — connection status, analyst identity, last operation result *(reserved)*
 - [x] **1.2** Restructure layout to maximize list width and improve panel proportions:
-  - Left lists column: `left_lists` ratio 2 with incidents/alerts stacked at ratio 1 each
-  - Center details column: `center_details` ratio 3 with incident/alert details stacked at ratio 1 each
+  - Left lists column: `left_lists` ratio 2 with incidents and alerts stacked vertically at ratio 1 each
+  - Center details column: `center_details` ratio 3 with incident details and alert details stacked vertically at ratio 1 each
   - Action status column: `action_status` ratio 2 for the right-side action panel
 - [x] **1.3** Implement tab-style container for incident details + entities:
   - Tab switching via `Tab` key within incident_details panel
