@@ -74,6 +74,9 @@ function Write-XdrLiveDashboardLog {
 
     if (-not [System.IO.Path]::IsPathRooted($LogPath)) {
         $relativeLogPath = $LogPath
+        if (($relativeLogPath -split '[\\/]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -contains '..') {
+            return
+        }
         $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
         if (-not (& $testRelativeLogPath $resolvedLogPath $relativeLogPath)) {
             return
