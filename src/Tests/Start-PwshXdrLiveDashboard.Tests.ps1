@@ -139,6 +139,10 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('} $JobPayload.IncidentData @($JobPayload.AlertData)') | Should -BeTrue
         $content | Should -Not -Match '\}\s*\$JobPayload\.DashboardLogPath,\s*\$JobPayload\.IncidentId'
         $content.Contains("'Entity actions (preview)'") | Should -BeTrue
+        $content.Contains('$distinctEntityAlertIds = @($entityEntries | Where-Object {') | Should -BeTrue
+        $content.Contains('$shouldSeparateEntityAlertGroups = $distinctEntityAlertIds.Count -gt 1') | Should -BeTrue
+        $content.Contains('$entityAlertId -ne $previousEntityAlertId') | Should -BeTrue
+        $content.Contains("`$entityLines += ''") | Should -BeTrue
         $content.Contains("`$selectedEntityType = [string]`$selectedEntity.EntityType") | Should -BeTrue
         $content.Contains("'^(?i:user|account)$' { @('Revoke user sessions', 'Disable user account') }") | Should -BeTrue
         $content.Contains("'^(?i:device|machine)$' { @('Isolate device', 'Run antivirus scan', 'Collect investigation package') }") | Should -BeTrue

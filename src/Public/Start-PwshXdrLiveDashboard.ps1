@@ -1207,9 +1207,32 @@ function Start-PwshXdrLiveDashboard {
                     $selectedEntityIndex = [Math]::Min([Math]::Max($selectedEntityIndex, 0), $entityEntries.Count - 1)
                     $selectedEntity = $entityEntries[$selectedEntityIndex]
                     $context.Selection.Entity = $selectedEntity
+                    $distinctEntityAlertIds = @($entityEntries | Where-Object {
+                            -not [string]::IsNullOrWhiteSpace([string]$_.AlertId)
+                        } | ForEach-Object {
+                            [string]$_.AlertId
+                        } | Select-Object -Unique)
+                    $shouldSeparateEntityAlertGroups = $distinctEntityAlertIds.Count -gt 1
+                    $previousEntityAlertId = $null
 
                     for ($entityIdx = 0; $entityIdx -lt $entityEntries.Count; $entityIdx++) {
                         $entity = $entityEntries[$entityIdx]
+                        $entityAlertId = if ($entity.PSObject.Properties.Name -contains 'AlertId') {
+                            [string]$entity.AlertId
+                        }
+                        else {
+                            $null
+                        }
+
+                        if (
+                            $shouldSeparateEntityAlertGroups -and
+                            -not [string]::IsNullOrWhiteSpace($entityAlertId) -and
+                            -not [string]::IsNullOrWhiteSpace($previousEntityAlertId) -and
+                            $entityAlertId -ne $previousEntityAlertId
+                        ) {
+                            $entityLines += ''
+                        }
+
                         $entityType = if ($entity.PSObject.Properties.Name -contains 'EntityType' -and -not [string]::IsNullOrWhiteSpace([string]$entity.EntityType)) {
                             [string]$entity.EntityType
                         }
@@ -1250,6 +1273,10 @@ function Start-PwshXdrLiveDashboard {
                         $entityTypeMarkup = if ($isSelectedEntity) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText $entityType))[/]" } else { "[white]$([string](Get-SpectreEscapedText $entityType))[/]" }
                         $entityValueMarkup = if ($isSelectedEntity) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText $entityValue))[/]" } else { "[grey]$([string](Get-SpectreEscapedText $entityValue))[/]" }
                         $entityLines += "$entityPrefix ${entityTypeMarkup}: $entityValueMarkup"
+
+                        if (-not [string]::IsNullOrWhiteSpace($entityAlertId)) {
+                            $previousEntityAlertId = $entityAlertId
+                        }
                     }
                 }
                 else {
