@@ -134,4 +134,20 @@ public static class PwshXdrTestMutexAbandoner {
             Remove-Item -LiteralPath $expectedLogFile -Force -ErrorAction SilentlyContinue
         }
     }
+
+    It 'does not allow relative path traversal outside local app data' {
+        InModuleScope PwshXDRSpectre {
+            $relativeLogPath = Join-Path '..' 'escape.log'
+            $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+            $escapedLogFile = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $relativeLogPath))
+
+            if (Test-Path -LiteralPath $escapedLogFile) {
+                Remove-Item -LiteralPath $escapedLogFile -Force -ErrorAction SilentlyContinue
+            }
+
+            { Write-XdrLiveDashboardLog -LogPath $relativeLogPath -Message 'traversal test' } | Should -Not -Throw
+
+            $escapedLogFile | Should -Not -Exist
+        }
+    }
 }

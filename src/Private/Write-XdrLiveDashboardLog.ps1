@@ -36,8 +36,15 @@ function Write-XdrLiveDashboardLog {
     }
 
     if (-not [System.IO.Path]::IsPathRooted($LogPath)) {
-        $defaultLogRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'
-        $LogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
+        $defaultLogRoot = [System.IO.Path]::GetFullPath((Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'PwshXDRSpectre'))
+        $resolvedLogPath = [System.IO.Path]::GetFullPath((Join-Path $defaultLogRoot $LogPath))
+        $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+
+        if (-not $resolvedLogPath.StartsWith($defaultLogRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return
+        }
+
+        $LogPath = $resolvedLogPath
     }
 
     $directory = Split-Path -Parent $LogPath
