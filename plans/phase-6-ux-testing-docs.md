@@ -31,11 +31,9 @@
   - **Activity Log** — recent action history and query runs *(reserved)*
   - **Status Bar** — connection status, analyst identity, last operation result *(reserved)*
 - [x] **1.2** Restructure layout to maximize list width and improve panel proportions:
-  - Incidents list: Ratio 3 (was 2) for 64-character width target
-  - Alerts list: Ratio 4 (was 3) for 64-character width target
-  - Incident details: Ratio 2 (was 4) to match alert details height
-  - Alert details: Ratio 2 (was 4) to enable taller actions panel
-  - Action status: Ratio 4 (was 2) for twice the vertical space
+  - Left lists column: `left_lists` ratio 2 with incidents/alerts stacked at ratio 1 each
+  - Center details column: `center_details` ratio 3 with incident/alert details stacked at ratio 1 each
+  - Action status column: `action_status` ratio 2 for the right-side action panel
 - [x] **1.3** Implement tab-style container for incident details + entities:
   - Tab switching via `Tab` key within incident_details panel
   - Alt+E to jump to entities tab, Alt+D to jump to details tab
