@@ -41,6 +41,7 @@ function Write-XdrLiveDashboardLog {
         $defaultLogRootPrefix = $defaultLogRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 
         if (-not $resolvedLogPath.StartsWith($defaultLogRootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Write-Warning -Message "Rejected relative log path outside the dashboard log root: $LogPath"
             return
         }
 
