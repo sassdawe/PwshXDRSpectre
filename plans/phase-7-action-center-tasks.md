@@ -1,9 +1,13 @@
 # Phase 7 — Action Center Tasks
 
-**Status**: ⚪ Research Complete, Not Started  
-**Depends on**: [Phase 2 — Incident and Alert Operations](phase-2-incident-alert-ops.md), [Phase 3 — Entity Pivots and Containment Actions](phase-3-entity-containment.md), [Phase 5 — Agent Workflow Memory Store](phase-5-workflow-memory.md)  
-**Can overlap**: Late Phase 3 and Phase 6  
-**Blocks**: —  
+**Status**: ⚪ Research Complete, Not Started
+
+**Depends on**: [Phase 2 — Incident and Alert Operations](phase-2-incident-alert-ops.md), [Phase 3 — Entity Pivots and Containment Actions](phase-3-entity-containment.md), [Phase 5 — Agent Workflow Memory Store](phase-5-workflow-memory.md)
+
+**Can overlap**: Late Phase 3 and Phase 6
+
+**Blocks**: —
+
 **Last updated**: 2026-05-25
 
 ---
