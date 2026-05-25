@@ -1006,14 +1006,14 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay closed.' -Level 'info'
                     }
                 }
-                elseif ($isAltPressed -and $keyChar -eq 'k') {
+                elseif ($isAltPressed -and $isCtrlPressed -and $keyChar -eq 'k') {
                     $keyHandled = $true
                     $context.Diagnostics.InputDebugEnabled = -not $context.Diagnostics.InputDebugEnabled
                     if ($context.Diagnostics.InputDebugEnabled) {
-                        Set-LiveStatusMessage -Context $context -Message 'Input debug enabled. Check the help panel for last key and query state.' -Level 'info'
+                        Set-LiveStatusMessage -Context $context -Message 'Input debug enabled (Ctrl+Alt+K). Check the help panel for last key and query state.' -Level 'info'
                     }
                     else {
-                        Set-LiveStatusMessage -Context $context -Message 'Input debug disabled.' -Level 'info'
+                        Set-LiveStatusMessage -Context $context -Message 'Input debug disabled (Ctrl+Alt+K).' -Level 'info'
                     }
                 }
                 elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'q') -or ($isCtrlPressed -and -not $isAltPressed -and $keyChar -eq 'q')) {
