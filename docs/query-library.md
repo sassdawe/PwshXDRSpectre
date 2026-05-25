@@ -27,8 +27,8 @@ In short: the plan is show/hide by workflow mode, not permanently visible extra 
 
 - `Alt+H` toggles hunting mode.
 - `Up` and `Down` move through the Query Catalog when the catalog pane is active.
-- `Enter` on the Query Catalog moves focus to Query Preview.
-- `Alt+X` executes the selected query.
+- `Enter` on the Query Catalog executes the selected query.
+- `Alt+X` also executes the selected query.
 - `Tab`, `Shift+Tab`, `PgUp`, and `PgDn` continue to switch focus between the existing panel regions.
 
 ## Add a Query
