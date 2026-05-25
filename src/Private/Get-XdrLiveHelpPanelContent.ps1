@@ -110,7 +110,7 @@ function Get-XdrLiveHelpPanelContent {
     }
     $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
     $shortcutHintLine = if ($IsQueryMode.IsPresent) {
-        '[grey]Hint: Alt+H Hunting mode off | Alt+X Execute query | Alt+K Input debug | F1 Help | Tab/Shift+Tab Switch | q Quit[/]'
+        '[grey]Hint: Alt+H Hunting mode off | Alt+X Execute query | Ctrl+Alt+K Input debug | F1 Help | Tab/Shift+Tab Switch | q Quit[/]'
     }
     else {
         '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
@@ -218,7 +218,7 @@ function Get-XdrLiveHelpPanelContent {
             '[white]Tab[/] / [white]Shift+Tab[/] or [white]PgUp/PgDn[/] switch active panel',
             '[white]Up/Down[/] move selection in the active list',
             '[white]Enter[/] load alerts, confirm, run selected action, or execute selected hunting query',
-            '[white]Alt+K[/] toggle input debug overlay details',
+            '[white]Ctrl+Alt+K[/] toggle input debug overlay details',
             '[white]Alt+Shift+L[/] force reload selected incident alerts',
             '[white]Alt+H[/] toggle hunting mode | [white]Enter[/]/[white]Alt+X[/] execute selected query in hunting mode',
             '[white]Alt+A/U/O/I/R/K/C/L[/] incident actions',

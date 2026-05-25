@@ -198,7 +198,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
         $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
-        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'k')") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$isCtrlPressed -and `$keyChar -eq 'k')") | Should -BeTrue
         $content.Contains("`$context.Diagnostics.InputDebugEnabled = -not `$context.Diagnostics.InputDebugEnabled") | Should -BeTrue
         $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
