@@ -38,14 +38,12 @@ function Invoke-XdrLiveQueryJobProcessing {
     $QueryJob.Value = $null
 
     if ($job.State -ne 'Completed' -or $jobOutput.Count -eq 0) {
-        $SelectedQueryResult.Value = $null
         Set-LiveStatusMessage -Context $Context -Message 'Hunting query job did not complete successfully.' -Level 'warning'
         return
     }
 
     $payload = $jobOutput[0]
     if (-not $payload.Result) {
-        $SelectedQueryResult.Value = $null
         Set-LiveStatusMessage -Context $Context -Message 'Hunting query job returned no result payload.' -Level 'warning'
         return
     }
