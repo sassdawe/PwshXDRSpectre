@@ -40,8 +40,18 @@ function Start-XdrLiveQueryJob {
         AvailablePermissions          = @($Context.Session.PermissionHealth.AvailablePermissions)
         LastUpdatedAt                 = $Context.Session.PermissionHealth.LastUpdatedAt
     }
-    $jobContext.Selection.Incident = $Context.Selection.Incident
-    $jobContext.Selection.Entity = $Context.Selection.Entity
+    $jobContext.Selection.Incident = if ($null -ne $Context.Selection.Incident) {
+        [System.Management.Automation.PSSerializer]::Deserialize([System.Management.Automation.PSSerializer]::Serialize($Context.Selection.Incident))
+    }
+    else {
+        $null
+    }
+    $jobContext.Selection.Entity = if ($null -ne $Context.Selection.Entity) {
+        [System.Management.Automation.PSSerializer]::Deserialize([System.Management.Automation.PSSerializer]::Serialize($Context.Selection.Entity))
+    }
+    else {
+        $null
+    }
 
     $job = Start-ThreadJob -ArgumentList $ModulePath, $jobContext, $Query, $queryId, $LogPath -ScriptBlock {
         param($jobModulePath, $jobContext, $jobQuery, $jobQueryId, $jobLogPath)
