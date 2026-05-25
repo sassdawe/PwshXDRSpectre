@@ -53,7 +53,9 @@ Describe 'Start-XdrLiveQueryJob' {
 
             [object]::ReferenceEquals($script:capturedContext, $context) | Should -BeFalse
             [object]::ReferenceEquals($script:capturedContext.Selection.Incident, $context.Selection.Incident) | Should -BeFalse
+            [object]::ReferenceEquals($script:capturedContext.Selection.Incident.Metadata, $context.Selection.Incident.Metadata) | Should -BeFalse
             [object]::ReferenceEquals($script:capturedContext.Selection.Entity, $context.Selection.Entity) | Should -BeFalse
+            [object]::ReferenceEquals($script:capturedContext.Selection.Entity.Tags, $context.Selection.Entity.Tags) | Should -BeFalse
             $script:capturedContext.Selection.Incident.IncidentId | Should -Be 'inc-1'
             $script:capturedContext.Selection.Incident.Metadata.Source | Should -Be 'initial'
             $script:capturedContext.Selection.Entity.UserId | Should -Be 'user-1'
