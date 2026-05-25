@@ -20,6 +20,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 3, Phase 4 |
 | [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All phases |
+| [Phase 7](phase-7-action-center-tasks.md) | Action Center Tasks | ⚪ Research Complete, Not Started | Phase 2, Phase 3, Phase 5 |
 
 **Status key**: ⚪ Not Started · 🟡 In Progress · 🔴 Blocked · ✅ Completed
 
@@ -77,6 +78,14 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [ ] End-to-end test tenant validation
 - [ ] Documentation update
 
+### Phase 7 — Action Center Tasks
+- [x] API research completed and scoped to supported surfaces
+- [ ] MDE machine action task listing
+- [ ] MDE machine action cancellation workflow
+- [ ] Unsupported-provider model for unified approve/reject/undo workflows
+- [ ] Action Center TUI mode and filtering
+- [ ] Action Center permission-health model
+
 ---
 
 ## Decisions Captured
@@ -89,3 +98,4 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | Memory store | Local JSON, append-only |
 | v1 scope | Incident triage, alert triage, user/device/file containment |
 | Backwards compatibility | Not required |
+| Action Center API scope | Use documented MDE machineActions first; fail closed for unified approve/reject/undo until supported APIs are identified |
