@@ -185,7 +185,7 @@ function Start-PwshXdrLiveDashboard {
         $lastHeartbeat = Get-Date
         $heartbeatCounter = 0
         $queryExecutionJob = $null
-        $queryResultsByQueryId = @{}
+        $queryResultsByCacheKey = @{}
 
         try {
             $context.Data.QueryCatalog = @(Get-XdrQueryCatalog)
@@ -214,7 +214,14 @@ function Start-PwshXdrLiveDashboard {
 
             $selectedQueryIndex = [Math]::Min([Math]::Max($selectedQueryIndex, 0), $queryCatalog.Count - 1)
             $selectedQuery = $queryCatalog[$selectedQueryIndex]
-            $selectedQueryResult = if ($queryResultsByQueryId.ContainsKey([string]$selectedQuery.id)) { $queryResultsByQueryId[[string]$selectedQuery.id] } else { $null }
+
+            $selectedQueryCacheKey = $null
+            $parameterResolution = Resolve-XdrQueryParameters -Query $selectedQuery -Context $context
+            if (-not $parameterResolution.IsBlocked) {
+                $selectedQueryCacheKey = Get-XdrQueryResultCacheKey -QueryId ([string]$selectedQuery.id) -ContextSnapshot ([pscustomobject]$parameterResolution.Parameters)
+            }
+
+            $selectedQueryResult = if (-not [string]::IsNullOrWhiteSpace([string]$selectedQueryCacheKey) -and $queryResultsByCacheKey.ContainsKey([string]$selectedQueryCacheKey)) { $queryResultsByCacheKey[[string]$selectedQueryCacheKey] } else { $null }
         }
 
         $executeSelectedQuery = {
@@ -573,7 +580,7 @@ function Start-PwshXdrLiveDashboard {
             }
 
             Invoke-XdrLiveAlertLoadJobProcessing -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -SelectedIncident $selectedIncident -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
-            Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByQueryId $queryResultsByQueryId -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)
+            Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByCacheKey $queryResultsByCacheKey -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)
             Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -MaxAlertLoadJobs $maxAlertLoadJobs -AlertPreloadQueue $alertPreloadQueue -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -LogPath $dashboardLogPath
 
             foreach ($entityJobEntry in @($entityLoadJobsByIncidentId.GetEnumerator())) {

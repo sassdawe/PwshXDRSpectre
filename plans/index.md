@@ -17,7 +17,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | [Phase 1](phase-1-foundation.md) | Foundation and Architecture | 🟡 In Progress | — |
 | [Phase 2](phase-2-incident-alert-ops.md) | Incident and Alert Operations | 🟡 In Progress (implementation complete; manual validation pending) | Phase 1 |
 | [Phase 3](phase-3-entity-containment.md) | Entity Pivots and Containment | 🟡 In Progress | Phase 2 |
-| [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | ⚪ Not Started | Phase 1 |
+| [Phase 4](phase-4-hunting-query.md) | Hunting Query Engine | 🟡 In Progress | Phase 1 |
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 3, Phase 4 |
 | [Phase 6](phase-6-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All phases |
 
@@ -56,11 +56,12 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [~] Runtime action history (redaction-ready, Phase 5-compatible)
 
 ### Phase 4 — Hunting Query Engine
-- [ ] Query catalog JSON schema and folder
-- [ ] Startup loader and schema validation
-- [ ] Context binding for KQL parameter injection
-- [ ] TUI flow (select, preview, execute, navigate results)
-- [ ] Query run metadata recording
+- [x] Query catalog JSON schema and folder
+- [x] Startup loader and schema validation
+- [x] Context binding for KQL parameter injection
+- [~] TUI flow (select, preview, execute, navigate results)
+- [x] Query run metadata recording
+- [x] Async hunting query execution and context-aware result caching
 
 ### Phase 5 — Agent Workflow Memory Store
 - [ ] Local JSON persistence layer
@@ -71,7 +72,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 
 ### Phase 6 — UX Hardening, Testing, and Docs
 - [ ] Dedicated layout panes (Incidents, Alerts, Entities, Actions, Query Catalog, Results, Log)
-- [~] Keyboard help and non-blocking feedback (F1 overlay, q/Ctrl+Q quit confirmation, r refresh alias, transient/persistent status behavior)
+- [~] Keyboard help and non-blocking feedback (F1 overlay, q/Ctrl+Q quit confirmation, r refresh alias, transient/persistent status behavior, non-blocking hunting query execution)
 - [~] Pester test expansion
 - [x] Dedicated `Tests/<Function>.Tests.ps1` coverage layout for every `Private/` and `Public/` script
 - [ ] End-to-end test tenant validation

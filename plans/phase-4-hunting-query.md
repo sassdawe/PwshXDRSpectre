@@ -4,7 +4,7 @@
 **Depends on**: [Phase 1 — Foundation](phase-1-foundation.md)  
 **Can overlap**: Late Phase 3  
 **Blocks**: Phase 5 (query run metadata)  
-**Last updated**: 2026-05-23
+**Last updated**: 2026-05-25
 
 ---
 
@@ -86,6 +86,8 @@ This means the query catalog, query preview, and query results are expected to b
   - Allow navigation through result rows
 - [ ] **4.6** Add pivot-back action from result rows to entity context (select a device/user/file from results to update `Context.Selection.Entity`)
 - [x] **4.7** Show a blocked state with clear messaging when required context is missing for a selected query
+- [x] **4.8** Execute the selected query directly from the catalog with `Enter` as well as `Alt+X`
+- [x] **4.9** Cache query results by query id plus resolved context snapshot so switching incidents or entities only reuses results from the matching execution context
 
 **Planned interaction model:**
 
@@ -156,7 +158,9 @@ The current implementation uses the existing dashboard shell and adds a hunting 
 - In hunting mode, the `alerts` pane becomes the Activity Log for recent query runs.
 - In hunting mode, the `alert_details` pane becomes Query Results.
 - In hunting mode, the `action_status` pane becomes Query Actions.
-- `Alt+X` executes the selected query from hunting mode.
+- `Enter` or `Alt+X` executes the selected query from hunting mode.
+- Query execution runs in a background job so the dashboard heartbeat and keyboard navigation remain responsive while the query is in flight.
+- Query results are cached per query and per resolved context snapshot, so results for one incident or selected entity are not reused for a different incident/entity context.
 
 Result-row navigation and pivot-back are still pending.
 

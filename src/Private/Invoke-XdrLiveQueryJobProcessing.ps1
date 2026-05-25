@@ -5,7 +5,7 @@ function Invoke-XdrLiveQueryJobProcessing {
         [ref]$QueryJob,
 
         [Parameter(Mandatory)]
-        [hashtable]$QueryResultsByQueryId,
+        [hashtable]$QueryResultsByCacheKey,
 
         [Parameter(Mandatory)]
         [object]$Context,
@@ -54,13 +54,26 @@ function Invoke-XdrLiveQueryJobProcessing {
         $Context.Data.QueryRuns = @($Context.Data.QueryRuns + $payload.Result.Data.QueryRun)
     }
 
-    if ($payload.Result.Success -and -not [string]::IsNullOrWhiteSpace([string]$payload.QueryId) -and $payload.Result.Data) {
-        $QueryResultsByQueryId[[string]$payload.QueryId] = $payload.Result.Data
+    $payloadCacheKey = $null
+    if (-not [string]::IsNullOrWhiteSpace([string]$payload.QueryId) -and $payload.Result.Data -and $payload.Result.Data.PSObject.Properties.Name -contains 'ContextSnapshot') {
+        $payloadCacheKey = Get-XdrQueryResultCacheKey -QueryId ([string]$payload.QueryId) -ContextSnapshot $payload.Result.Data.ContextSnapshot
+    }
+
+    if ($payload.Result.Success -and -not [string]::IsNullOrWhiteSpace([string]$payloadCacheKey) -and $payload.Result.Data) {
+        $QueryResultsByCacheKey[[string]$payloadCacheKey] = $payload.Result.Data
     }
 
     $selectedQueryId = if ($SelectedQuery) { [string]$SelectedQuery.id } else { '' }
-    if (-not [string]::IsNullOrWhiteSpace([string]$payload.QueryId) -and [string]$payload.QueryId -eq $selectedQueryId -and $payload.Result.Success) {
-        $SelectedQueryResult.Value = $QueryResultsByQueryId[[string]$payload.QueryId]
+    $selectedQueryCacheKey = $null
+    if (-not [string]::IsNullOrWhiteSpace($selectedQueryId)) {
+        $parameterResolution = Resolve-XdrQueryParameters -Query $SelectedQuery -Context $Context
+        if (-not $parameterResolution.IsBlocked) {
+            $selectedQueryCacheKey = Get-XdrQueryResultCacheKey -QueryId $selectedQueryId -ContextSnapshot ([pscustomobject]$parameterResolution.Parameters)
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$payloadCacheKey) -and [string]$payloadCacheKey -eq $selectedQueryCacheKey -and $payload.Result.Success) {
+        $SelectedQueryResult.Value = $QueryResultsByCacheKey[[string]$payloadCacheKey]
     }
 
     Set-StatusFromResult -Context $Context -Result $payload.Result

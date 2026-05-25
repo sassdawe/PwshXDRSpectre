@@ -269,14 +269,16 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$isQueryMode = `$false") | Should -BeTrue
         $content.Contains("`$selectedQueryIndex = 0") | Should -BeTrue
         $content.Contains("`$selectedQueryResult = `$null") | Should -BeTrue
-        $content.Contains("`$queryResultsByQueryId = @{}") | Should -BeTrue
+        $content.Contains("`$queryResultsByCacheKey = @{}") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'h')") | Should -BeTrue
         $content.Contains("elseif (`$isQueryMode -and `$isAltPressed -and `$keyChar -eq 'x')") | Should -BeTrue
         $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'DownArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
         $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'UpArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
         $content.Contains('Start-XdrLiveQueryJob -Query $selectedQuery -ModulePath $modulePath -Context $context -ExistingJob $queryExecutionJob -LogPath $dashboardLogPath') | Should -BeTrue
-        $content.Contains('Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByQueryId $queryResultsByQueryId -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)') | Should -BeTrue
-        $content.Contains("`$selectedQueryResult = if (`$queryResultsByQueryId.ContainsKey([string]`$selectedQuery.id))") | Should -BeTrue
+        $content.Contains('Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByCacheKey $queryResultsByCacheKey -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)') | Should -BeTrue
+        $content.Contains('Resolve-XdrQueryParameters -Query $selectedQuery -Context $context') | Should -BeTrue
+        $content.Contains('Get-XdrQueryResultCacheKey -QueryId ([string]$selectedQuery.id) -ContextSnapshot ([pscustomobject]$parameterResolution.Parameters)') | Should -BeTrue
+        $content.Contains("`$selectedQueryResult = if (-not [string]::IsNullOrWhiteSpace([string]`$selectedQueryCacheKey) -and `$queryResultsByCacheKey.ContainsKey([string]`$selectedQueryCacheKey))") | Should -BeTrue
         $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'Enter' -and `$activePanel -eq 'incidents') {") | Should -BeTrue
         $content.Contains('. $executeSelectedQuery') | Should -BeTrue
         $content.Contains('-Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))"') | Should -BeTrue

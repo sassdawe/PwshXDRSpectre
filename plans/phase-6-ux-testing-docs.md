@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress  
 **Depends on**: All prior phases  
 **Blocks**: —  
-**Last updated**: 2026-05-23 (layout ratios aligned to current implementation)
+**Last updated**: 2026-05-25 (layout ratios aligned to current implementation; hunting query execution now runs off the UI loop)
 
 ---
 
@@ -69,7 +69,9 @@ The dashboard should be treated as a fixed shell with mode-specific content, not
 ### Workstream 3: Non-Blocking Feedback
 
 - [ ] **3.1** Show a spinner or progress indicator in the status bar for all operations that take longer than 200ms
-- [ ] **3.2** Long-running operations (device isolation, query execution) must not block keyboard input
+- [~] **3.2** Long-running operations (device isolation, query execution) must not block keyboard input
+  - Hunting query execution now runs in a background job and keeps heartbeat/input responsive.
+  - Other long-running containment operations still need the same treatment.
 - [x] **3.3** Show operation result (success or error) in the status bar for at least 3 seconds after completion
 - [x] **3.4** Distinguish transient status messages from persistent error states in the status bar
 
@@ -164,7 +166,7 @@ The dashboard should be treated as a fixed shell with mode-specific content, not
 
 - [ ] Full incident → alert → entity → hunt → action flow completes without errors
 - [ ] Keyboard help overlay opens and closes with `F1`
-- [ ] Query execution shows spinner while running; results appear after completion
+- [~] Query execution keeps the dashboard responsive while running; spinner/polish still needs refinement
 - [ ] Confirmation prompts appear for all disruptive actions
 - [ ] Context restore works after closing and reopening the TUI
 - [ ] `README.md` setup instructions successfully guide a fresh install to a running dashboard
