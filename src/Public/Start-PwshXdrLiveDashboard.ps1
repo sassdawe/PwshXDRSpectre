@@ -675,21 +675,11 @@ function Start-PwshXdrLiveDashboard {
                 if ($isShiftPressed) { $modifierLabels += 'Shift' }
                 $modifierSummary = if ($modifierLabels.Count -gt 0) { $modifierLabels -join '+' } else { 'None' }
                 $keyCharDisplay = if ([char]$key.KeyChar -eq [char]0) { '' } else { [string]$key.KeyChar }
-                $context.Diagnostics.LastInput = [pscustomobject][ordered]@{
-                    Timestamp          = $currentInputTime
-                    Key                = [string]$key.Key
-                    KeyChar            = $keyCharDisplay
-                    Modifiers          = $modifierSummary
-                    ActivePanel        = [string]$activePanel
-                    IsQueryMode        = [bool]$isQueryMode
-                    SelectedQueryIndex = [int]$selectedQueryIndex
-                    SelectedQueryId    = $(if ($selectedQuery) { [string]$selectedQuery.id } else { '' })
-                    SelectedEntity     = $(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })
-                }
                 if ($context.Diagnostics.InputDebugEnabled -and $isQueryMode) {
                     Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "InputDebug Key=$([string]$key.Key) Char=$keyCharDisplay Modifiers=$modifierSummary Panel=$activePanel QueryMode=$isQueryMode QueryIndex=$selectedQueryIndex QueryId=$(if ($selectedQuery) { [string]$selectedQuery.id } else { '' }) Entity=$(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })"
                 }
 
+                try {
                 if (
                     $key.Key -eq 'Enter' -and
                     $currentInputTime -lt $ignoreEnterUntil -and
@@ -1268,17 +1258,19 @@ function Start-PwshXdrLiveDashboard {
                     Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
                 }
 
-                $context.Diagnostics.LastInput = [pscustomobject][ordered]@{
-                    Timestamp          = $currentInputTime
-                    Key                = [string]$key.Key
-                    KeyChar            = $keyCharDisplay
-                    Modifiers          = $modifierSummary
-                    ActivePanel        = [string]$activePanel
-                    IsQueryMode        = [bool]$isQueryMode
-                    SelectedQueryIndex = [int]$selectedQueryIndex
-                    SelectedQueryId    = $(if ($selectedQuery) { [string]$selectedQuery.id } else { '' })
-                    SelectedEntity     = $(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })
-                    KeyHandled         = [bool]$keyHandled
+                } finally {
+                    $context.Diagnostics.LastInput = [pscustomobject][ordered]@{
+                        Timestamp          = $currentInputTime
+                        Key                = [string]$key.Key
+                        KeyChar            = $keyCharDisplay
+                        Modifiers          = $modifierSummary
+                        ActivePanel        = [string]$activePanel
+                        IsQueryMode        = [bool]$isQueryMode
+                        SelectedQueryIndex = [int]$selectedQueryIndex
+                        SelectedQueryId    = $(if ($selectedQuery) { [string]$selectedQuery.id } else { '' })
+                        SelectedEntity     = $(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })
+                        KeyHandled         = [bool]$keyHandled
+                    }
                 }
             }  # end foreach ($key in $keys)
 
