@@ -1,0 +1,16 @@
+{
+  "id": "incident-related-alerts",
+  "name": "Incident Related Alerts",
+  "description": "All alerts correlated to the selected incident.",
+  "requiredContext": ["IncidentId"],
+  "parameters": [
+    {
+      "name": "IncidentId",
+      "contextBinding": "IncidentId",
+      "description": "Incident identifier for the selected incident"
+    }
+  ],
+  "kql": "AlertInfo | where IncidentId == '{{IncidentId}}' | project Timestamp, Title, Severity, ServiceSource, Category, AlertId",
+  "displayColumns": ["Timestamp", "Title", "Severity", "ServiceSource", "Category", "AlertId"],
+  "tags": ["incident", "alerts"]
+}

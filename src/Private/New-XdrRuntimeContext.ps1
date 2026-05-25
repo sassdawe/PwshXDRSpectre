@@ -42,6 +42,7 @@ function New-XdrRuntimeContext {
             Alerts       = @()
             Entities     = @()
             QueryCatalog = @()
+            QueryRuns    = @()
             LastRefresh  = $null
         }
         Ui = [pscustomobject][ordered]@{
@@ -59,9 +60,11 @@ function New-XdrRuntimeContext {
             FileActions     = @()
         }
         Diagnostics = [pscustomobject][ordered]@{
-            LastError     = $null
-            LastOperation = $null
-            Warnings      = @()
+            LastError         = $null
+            LastOperation     = $null
+            Warnings          = @()
+            InputDebugEnabled = $false
+            LastInput         = $null
         }
     }
 }

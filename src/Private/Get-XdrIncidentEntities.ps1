@@ -32,15 +32,106 @@ function Get-XdrIncidentEntities {
 
     $entities = New-Object System.Collections.Generic.List[object]
 
+    $newEntityRecord = {
+        param(
+            [string]$EntityType,
+            [string]$DisplayName,
+            [string]$AlertId,
+            [string]$Source,
+            [object]$RawObject,
+            [object]$NormalizedEntity
+        )
+
+        $record = [ordered]@{
+            EntityType  = $(if ([string]::IsNullOrWhiteSpace($EntityType)) { 'Entity' } else { $EntityType })
+            DisplayName = $DisplayName
+            IncidentId  = $incidentId
+            AlertId     = $AlertId
+            Source      = $Source
+        }
+
+        if ($null -ne $RawObject) {
+            $record.RawObject = $RawObject
+        }
+
+        $sourceEntity = $NormalizedEntity
+        if (-not $sourceEntity) {
+            $sourceEntity = $RawObject
+        }
+
+        switch ($record.EntityType) {
+            'User' {
+                if ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'UserId') {
+                    $record.UserId = [string]$sourceEntity.UserId
+                }
+                elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'AzureAdUserId') {
+                    $record.UserId = [string]$sourceEntity.AzureAdUserId
+                }
+                elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'userAccount' -and $sourceEntity.userAccount) {
+                    $userAccount = $sourceEntity.userAccount
+                    if ($userAccount -is [System.Collections.IDictionary]) {
+                        if ($userAccount.Keys -contains 'azureAdUserId') {
+                            $record.UserId = [string]$userAccount['azureAdUserId']
+                        }
+                        if ($userAccount.Keys -contains 'userPrincipalName') {
+                            $record.UserPrincipalName = [string]$userAccount['userPrincipalName']
+                        }
+                    }
+                    else {
+                        if ($userAccount.PSObject.Properties.Name -contains 'azureAdUserId') {
+                            $record.UserId = [string]$userAccount.azureAdUserId
+                        }
+                        if ($userAccount.PSObject.Properties.Name -contains 'userPrincipalName') {
+                            $record.UserPrincipalName = [string]$userAccount.userPrincipalName
+                        }
+                    }
+                }
+
+                if (-not $record.Contains('UserPrincipalName')) {
+                    if ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'UserPrincipalName') {
+                        $record.UserPrincipalName = [string]$sourceEntity.UserPrincipalName
+                    }
+                    elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'DisplayName' -and [string]$sourceEntity.DisplayName -match '@') {
+                        $record.UserPrincipalName = [string]$sourceEntity.DisplayName
+                    }
+                }
+            }
+            'Device' {
+                if ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'DeviceId') {
+                    $record.DeviceId = [string]$sourceEntity.DeviceId
+                }
+                elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'MdeDeviceId') {
+                    $record.DeviceId = [string]$sourceEntity.MdeDeviceId
+                }
+                elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'mdeDeviceId') {
+                    $record.DeviceId = [string]$sourceEntity.mdeDeviceId
+                }
+            }
+            'File' {
+                if ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'Sha256') {
+                    $record.Sha256 = [string]$sourceEntity.Sha256
+                }
+                elseif ($sourceEntity -and $sourceEntity.PSObject.Properties.Name -contains 'fileDetails' -and $sourceEntity.fileDetails) {
+                    $fileDetails = $sourceEntity.fileDetails
+                    if ($fileDetails -is [System.Collections.IDictionary]) {
+                        if ($fileDetails.Keys -contains 'sha256') {
+                            $record.Sha256 = [string]$fileDetails['sha256']
+                        }
+                    }
+                    elseif ($fileDetails.PSObject.Properties.Name -contains 'sha256') {
+                        $record.Sha256 = [string]$fileDetails.sha256
+                    }
+                }
+            }
+        }
+
+        return [pscustomobject]$record
+    }
+
     if (-not [string]::IsNullOrWhiteSpace([string]$Incident.AssignedTo)) {
-        $entities.Add([pscustomobject]@{
-                EntityType = 'User'
-                DisplayName = [string]$Incident.AssignedTo
-                UserPrincipalName = [string]$Incident.AssignedTo
-                IncidentId = $incidentId
-                AlertId = $null
-                Source = 'Incident.AssignedTo'
-            })
+        $entities.Add((& $newEntityRecord -EntityType 'User' -DisplayName ([string]$Incident.AssignedTo) -AlertId $null -Source 'Incident.AssignedTo' -RawObject $null -NormalizedEntity ([pscustomobject]@{
+                        UserPrincipalName = [string]$Incident.AssignedTo
+                    })))
     }
 
     foreach ($alert in @($Alerts)) {
@@ -48,13 +139,7 @@ function Get-XdrIncidentEntities {
         $alertTitle = [string]$alert.Title
 
         if (-not [string]::IsNullOrWhiteSpace($alertTitle) -or -not [string]::IsNullOrWhiteSpace($alertId)) {
-            $entities.Add([pscustomobject]@{
-                    EntityType = 'Alert'
-                    DisplayName = $(if (-not [string]::IsNullOrWhiteSpace($alertTitle)) { $alertTitle } else { $alertId })
-                    AlertId = $alertId
-                    IncidentId = $incidentId
-                    Source = 'Alert'
-                })
+            $entities.Add((& $newEntityRecord -EntityType 'Alert' -DisplayName ($(if (-not [string]::IsNullOrWhiteSpace($alertTitle)) { $alertTitle } else { $alertId })) -AlertId $alertId -Source 'Alert' -RawObject $null -NormalizedEntity $null))
         }
 
         $rawAlert = $null
@@ -151,14 +236,7 @@ function Get-XdrIncidentEntities {
                                     continue
                                 }
 
-                                $entities.Add([pscustomobject]@{
-                                        EntityType = 'Url'
-                                        DisplayName = [string]$messageUrl
-                                        IncidentId = $incidentId
-                                        AlertId = $alertId
-                                        Source = 'AlertEvidence'
-                                        RawObject = $rawEntity
-                                    })
+                                $entities.Add((& $newEntityRecord -EntityType 'Url' -DisplayName ([string]$messageUrl) -AlertId $alertId -Source 'AlertEvidence' -RawObject $rawEntity -NormalizedEntity ([pscustomobject]@{ Url = [string]$messageUrl })))
                             }
                         }
                     }
@@ -199,14 +277,7 @@ function Get-XdrIncidentEntities {
                 continue
             }
 
-            $entities.Add([pscustomobject]@{
-                    EntityType = $(if ([string]::IsNullOrWhiteSpace($entityType)) { 'Entity' } else { $entityType })
-                    DisplayName = $displayName
-                    IncidentId = $incidentId
-                    AlertId = $alertId
-                    Source = 'AlertEvidence'
-                    RawObject = $rawEntity
-                })
+            $entities.Add((& $newEntityRecord -EntityType $entityType -DisplayName $displayName -AlertId $alertId -Source 'AlertEvidence' -RawObject $rawEntity -NormalizedEntity $normalizedEntity))
         }
     }
 

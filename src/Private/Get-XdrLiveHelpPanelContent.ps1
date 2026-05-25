@@ -85,6 +85,9 @@ function Get-XdrLiveHelpPanelContent {
         [int]$HeartbeatCounter = 0,
 
         [Parameter()]
+        [switch]$IsQueryMode,
+
+        [Parameter()]
         [switch]$ShowKeyboardHelpOverlay
     )
 
@@ -106,7 +109,54 @@ function Get-XdrLiveHelpPanelContent {
         'Heartbeat: initializing...'
     }
     $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
-    $shortcutHintLine = '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
+    $shortcutHintLine = if ($IsQueryMode.IsPresent) {
+        '[grey]Hint: Alt+H Hunting mode off | Alt+X Execute query | Alt+K Input debug | F1 Help | Tab/Shift+Tab Switch | q Quit[/]'
+    }
+    else {
+        '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
+    }
+
+    $getLogicalPanelName = {
+        param(
+            [string]$PanelName,
+            [bool]$QueryMode
+        )
+
+        if (-not $QueryMode) {
+            return $PanelName
+        }
+
+        switch ($PanelName) {
+            'incidents' { return 'queries' }
+            'incident_details' { return 'preview' }
+            'alerts' { return 'activity' }
+            'alert_details' { return 'results' }
+            'action_status' { return 'actions' }
+            default { return $PanelName }
+        }
+    }
+
+    $inputDebugLines = @()
+    if ($Context.PSObject.Properties.Name -contains 'Diagnostics' -and $Context.Diagnostics -and $Context.Diagnostics.PSObject.Properties.Name -contains 'InputDebugEnabled' -and $Context.Diagnostics.InputDebugEnabled) {
+        $inputDebugLines += '[bold black on grey70] Input Debug [/]'
+
+        $lastInput = $Context.Diagnostics.LastInput
+        if ($lastInput) {
+            $keyCharText = if ([string]::IsNullOrWhiteSpace([string]$lastInput.KeyChar)) { '<none>' } else { [string]$lastInput.KeyChar }
+            $logicalPanelName = [string](& $getLogicalPanelName ([string]$lastInput.ActivePanel) ([bool]$lastInput.IsQueryMode))
+            $inputDebugLines += "[grey]Last key: $([string](Get-SpectreEscapedText ([string]$lastInput.Key))) | Char: $([string](Get-SpectreEscapedText $keyCharText)) | Modifiers: $([string](Get-SpectreEscapedText ([string]$lastInput.Modifiers)))[/]"
+            $inputDebugLines += "[grey]Panel: $([string](Get-SpectreEscapedText $logicalPanelName)) | Query mode: $([string](Get-SpectreEscapedText ([string]$lastInput.IsQueryMode))) | Query index: $([string](Get-SpectreEscapedText ([string]$lastInput.SelectedQueryIndex)))[/]"
+            if (-not [string]::IsNullOrWhiteSpace([string]$lastInput.SelectedQueryId)) {
+                $inputDebugLines += "[grey]Query: $([string](Get-SpectreEscapedText ([string]$lastInput.SelectedQueryId)))[/]"
+            }
+            if (-not [string]::IsNullOrWhiteSpace([string]$lastInput.SelectedEntity)) {
+                $inputDebugLines += "[grey]Entity: $([string](Get-SpectreEscapedText ([string]$lastInput.SelectedEntity)))[/]"
+            }
+        }
+        else {
+            $inputDebugLines += '[grey]No key input captured yet.[/]'
+        }
+    }
 
     $selectedIncidentId = if ($SelectedIncident) { [string]$SelectedIncident.IncidentId } else { $null }
     $cacheStateLine = if ([string]::IsNullOrWhiteSpace($selectedIncidentId)) {
@@ -167,8 +217,10 @@ function Get-XdrLiveHelpPanelContent {
             '[white]F5[/] or [white]r[/] refresh incidents and alert cache',
             '[white]Tab[/] / [white]Shift+Tab[/] or [white]PgUp/PgDn[/] switch active panel',
             '[white]Up/Down[/] move selection in the active list',
-            '[white]Enter[/] load alerts, confirm, or run selected action',
+            '[white]Enter[/] load alerts, confirm, run selected action, or execute selected hunting query',
+            '[white]Alt+K[/] toggle input debug overlay details',
             '[white]Alt+Shift+L[/] force reload selected incident alerts',
+            '[white]Alt+H[/] toggle hunting mode | [white]Enter[/]/[white]Alt+X[/] execute selected query in hunting mode',
             '[white]Alt+A/U/O/I/R/K/C/L[/] incident actions',
             '[white]Alt+N/P/M[/] alert status actions',
             '[white]Alt+E[/] entities view | [white]Alt+D[/] incident details view',
@@ -194,22 +246,22 @@ function Get-XdrLiveHelpPanelContent {
             }
 
             if ($hasPrefetchLine) {
-                return "[bold $statusColor]$statusCode $statusMessageText[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+                return ((@("[bold $statusColor]$statusCode $statusMessageText[/]", "[grey]$prefetchLine[/]") + $inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
             }
 
-            return "[bold $statusColor]$statusCode $statusMessageText[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+            return ((@("[bold $statusColor]$statusCode $statusMessageText[/]") + $inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
         }
 
         if ($hasPrefetchLine) {
-            return "[white]$(Get-SpectreEscapedText $statusText)[/]`n[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+            return ((@("[white]$(Get-SpectreEscapedText $statusText)[/]", "[grey]$prefetchLine[/]") + $inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
         }
 
-        return "[white]$(Get-SpectreEscapedText $statusText)[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+        return ((@("[white]$(Get-SpectreEscapedText $statusText)[/]") + $inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
     }
 
     if ($hasPrefetchLine) {
-        return "[grey]$prefetchLine[/]`n$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+        return ((@("[grey]$prefetchLine[/]") + $inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
     }
 
-    return "$lastRefreshLine`n$heartbeatLine`n$cacheStateLine`n$shortcutHintLine"
+    return (($inputDebugLines + @($lastRefreshLine, $heartbeatLine, $cacheStateLine, $shortcutHintLine)) -join "`n")
 }

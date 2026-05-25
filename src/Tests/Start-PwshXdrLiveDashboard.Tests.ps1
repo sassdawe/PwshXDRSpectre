@@ -102,9 +102,10 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("-Title 'Incident Resolution Wizard'") | Should -BeTrue
     }
 
-    It 'uses buffered key capture for text-entry wizard steps' {
+    It 'uses buffered key capture for text-entry wizard steps and hunting mode' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
+        $content.Contains("`$isQueryMode -or") | Should -BeTrue
         $content.Contains("`$null -ne `$pendingTextInput -or") | Should -BeTrue
         $content.Contains("(`$null -ne `$pendingIncidentComment -and [string]`$pendingIncidentComment.Step -eq 'comment') -or") | Should -BeTrue
         $content.Contains("(`$null -ne `$pendingIncidentResolution -and [string]`$pendingIncidentResolution.Step -eq 'comment')") | Should -BeTrue
@@ -160,6 +161,16 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$context.Selection.Entity = `$null") | Should -BeTrue
     }
 
+    It 'switches from selected entity into hunting mode on Enter and shows selected entity in query actions' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("elseif (`$selectedIncidentDetailsTab -eq 'entities' -and `$key.Key -eq 'Enter' -and `$activePanel -eq 'incident_details' -and `$selectedEntity)") | Should -BeTrue
+        $content.Contains("`$isQueryMode = `$true") | Should -BeTrue
+        $content.Contains("`$selectedQueryResult = `$null") | Should -BeTrue
+        $content.Contains('Set-LiveStatusMessage -Context $context -Message "Hunting mode enabled for ${selectedEntityTypeLabel}: $selectedEntityLabel" -Level ''info''') | Should -BeTrue
+        $content.Contains('Selected entity: $([string]$selectedEntity.EntityType) | $([string]$selectedEntity.DisplayName)') | Should -BeTrue
+    }
+
     It 'auto-refreshes incidents every three minutes and passes last refresh to help content' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
@@ -187,10 +198,22 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
         $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'k')") | Should -BeTrue
+        $content.Contains("`$context.Diagnostics.InputDebugEnabled = -not `$context.Diagnostics.InputDebugEnabled") | Should -BeTrue
         $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$isShiftPressed -and `$key.Key -eq 'L')") | Should -BeTrue
         $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
+    }
+
+    It 'captures last input diagnostics for live troubleshooting' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$context.Diagnostics.LastInput = [pscustomobject][ordered]@{") | Should -BeTrue
+        $content.Contains("Key                = [string]`$key.Key") | Should -BeTrue
+        $content.Contains("SelectedQueryIndex = [int]`$selectedQueryIndex") | Should -BeTrue
+        $content.Contains("SelectedQueryId    = `$(if (`$selectedQuery) { [string]`$selectedQuery.id } else { '' })") | Should -BeTrue
+        $content.Contains("KeyHandled         = [bool]`$keyHandled") | Should -BeTrue
     }
 
     It 'keeps cached incidents visible while refresh is in progress' {
@@ -231,6 +254,42 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('-SelectedIncident $selectedIncident -PendingIncidentResolution') | Should -BeTrue
         $content.Contains("(Alt+Shift+L) Force reload alerts for selected incident") | Should -BeTrue
         $content.Contains("Shortcut = 'reload-alerts'") | Should -BeTrue
+    }
+
+    It 'loads query catalog during startup and surfaces catalog errors through the live status message' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains('$context.Data.QueryCatalog = @(Get-XdrQueryCatalog)') | Should -BeTrue
+        $content.Contains('Set-LiveStatusMessage -Context $context -Message $catalogErrorMessage -Level ''error''') | Should -BeTrue
+    }
+
+    It 'supports hunting mode with query catalog preview results and execution shortcuts' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("`$isQueryMode = `$false") | Should -BeTrue
+        $content.Contains("`$selectedQueryIndex = 0") | Should -BeTrue
+        $content.Contains("`$selectedQueryResult = `$null") | Should -BeTrue
+        $content.Contains("`$queryResultsByQueryId = @{}") | Should -BeTrue
+        $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'h')") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$isAltPressed -and `$keyChar -eq 'x')") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'DownArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'UpArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
+        $content.Contains('Start-XdrLiveQueryJob -Query $selectedQuery -ModulePath $modulePath -Context $context -ExistingJob $queryExecutionJob -LogPath $dashboardLogPath') | Should -BeTrue
+        $content.Contains('Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByQueryId $queryResultsByQueryId -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)') | Should -BeTrue
+        $content.Contains("`$selectedQueryResult = if (`$queryResultsByQueryId.ContainsKey([string]`$selectedQuery.id))") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'Enter' -and `$activePanel -eq 'incidents') {") | Should -BeTrue
+        $content.Contains('. $executeSelectedQuery') | Should -BeTrue
+        $content.Contains('-Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))"') | Should -BeTrue
+        $content.Contains("-Title 'Query Preview'") | Should -BeTrue
+        $content.Contains("-Title 'Query Results'") | Should -BeTrue
+        $content.Contains('-Title "Activity Log ($($queryRunHistory.Count))"') | Should -BeTrue
+        $content.Contains("-Title 'Query Actions'") | Should -BeTrue
+        $content.Contains("'(Alt+X) Execute selected query'") | Should -BeTrue
+        $content.Contains("'(Alt+H) Return to incident workflow'") | Should -BeTrue
+        $content.Contains('Query execution in progress') | Should -BeTrue
+        $content.Contains("elseif (-not `$selectedIncident -and -not `$isQueryMode) {") | Should -BeTrue
+        $content.Contains('Manual UserId entry is not implemented yet.') | Should -BeTrue
+        $content.Contains("`$queryCatalogLines += ''") | Should -BeTrue
     }
 
     It 'keeps confirmation prompts keyboard-accessible with Y/N/Esc/Enter' {

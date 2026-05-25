@@ -14,7 +14,10 @@ Describe 'New-XdrRuntimeContext' {
             $context.Session.PermissionHealth.DetectionSource | Should -Be 'default'
             $context.Ui.Mode | Should -Be 'menu'
             $context.Data.Incidents.GetType().FullName | Should -Be 'System.Object[]'
+            $context.Data.QueryRuns.GetType().FullName | Should -Be 'System.Object[]'
             $context.Diagnostics.LastError | Should -BeNullOrEmpty
+            $context.Diagnostics.InputDebugEnabled | Should -BeFalse
+            $context.Diagnostics.LastInput | Should -BeNullOrEmpty
         }
     }
 }

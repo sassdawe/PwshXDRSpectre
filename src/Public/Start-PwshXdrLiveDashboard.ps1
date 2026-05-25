@@ -149,6 +149,10 @@ function Start-PwshXdrLiveDashboard {
         $selectedIncident = $null
         $selectedAlert = $null
         $selectedEntity = $null
+        $isQueryMode = $false
+        $selectedQueryIndex = 0
+        $selectedQuery = $null
+        $selectedQueryResult = $null
         $visibleAlerts = @()
         $visibleAlertIncidentId = $null
         $actionEntries = @()
@@ -180,6 +184,71 @@ function Start-PwshXdrLiveDashboard {
         $pendingRefreshAlertId = $null
         $lastHeartbeat = Get-Date
         $heartbeatCounter = 0
+        $queryExecutionJob = $null
+        $queryResultsByQueryId = @{}
+
+        try {
+            $context.Data.QueryCatalog = @(Get-XdrQueryCatalog)
+        }
+        catch {
+            $catalogErrorMessage = "Query catalog load failed: $($_.Exception.Message)"
+            $context.Data.QueryCatalog = @()
+            $context.Diagnostics.LastError = $_
+            $context.Diagnostics.Warnings = @($context.Diagnostics.Warnings + $catalogErrorMessage)
+            Set-LiveStatusMessage -Context $context -Message $catalogErrorMessage -Level 'error'
+            Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message $catalogErrorMessage
+        }
+
+        if (@($context.Data.QueryCatalog).Count -gt 0) {
+            $selectedQuery = $context.Data.QueryCatalog[0]
+        }
+
+        $syncSelectedQuery = {
+            $queryCatalog = @($context.Data.QueryCatalog)
+            if ($queryCatalog.Count -eq 0) {
+                $selectedQueryIndex = 0
+                $selectedQuery = $null
+                $selectedQueryResult = $null
+                return
+            }
+
+            $selectedQueryIndex = [Math]::Min([Math]::Max($selectedQueryIndex, 0), $queryCatalog.Count - 1)
+            $selectedQuery = $queryCatalog[$selectedQueryIndex]
+            $selectedQueryResult = if ($queryResultsByQueryId.ContainsKey([string]$selectedQuery.id)) { $queryResultsByQueryId[[string]$selectedQuery.id] } else { $null }
+        }
+
+        $executeSelectedQuery = {
+            if (-not $selectedQuery) {
+                Set-LiveStatusMessage -Context $context -Message 'No hunting query is selected.' -Level 'warning'
+                return
+            }
+
+            if ($queryExecutionJob -and $queryExecutionJob.State -notin @('Completed', 'Failed', 'Stopped')) {
+                Set-LiveStatusMessage -Context $context -Message 'A hunting query is already running.' -Level 'warning'
+                return
+            }
+
+            $queryExecutionJob = Start-XdrLiveQueryJob -Query $selectedQuery -ModulePath $modulePath -Context $context -ExistingJob $queryExecutionJob -LogPath $dashboardLogPath
+            if ($queryExecutionJob) {
+                Set-LiveStatusMessage -Context $context -Message "Running hunting query: $([string]$selectedQuery.name)" -Level 'info'
+            }
+            else {
+                Set-LiveStatusMessage -Context $context -Message 'Unable to start hunting query job.' -Level 'warning'
+            }
+        }
+
+        $getQueryContextGuidance = {
+            param([string]$ContextKey)
+
+            switch ([string]$ContextKey) {
+                'IncidentId' { 'Select an incident in the incident list first.' }
+                'DeviceId' { 'Select a device in the incident entities tab first.' }
+                'UserId' { 'Select a user in the incident entities tab first. Manual UserId entry is not implemented yet.' }
+                'FileHash' { 'Select a file in the incident entities tab first.' }
+                default { "Provide required context: $ContextKey" }
+            }
+        }
+
         $getIncidentDetailsTabHeader = {
             param([string]$CurrentTab)
 
@@ -504,6 +573,7 @@ function Start-PwshXdrLiveDashboard {
             }
 
             Invoke-XdrLiveAlertLoadJobProcessing -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -SelectedIncident $selectedIncident -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+            Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByQueryId $queryResultsByQueryId -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)
             Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -MaxAlertLoadJobs $maxAlertLoadJobs -AlertPreloadQueue $alertPreloadQueue -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -LogPath $dashboardLogPath
 
             foreach ($entityJobEntry in @($entityLoadJobsByIncidentId.GetEnumerator())) {
@@ -569,9 +639,10 @@ function Start-PwshXdrLiveDashboard {
                 $context.Selection.Panel = $activePanel
             }
 
-            # For text input mode, capture all buffered keys to prevent character loss during rapid typing
-            # For other modes, capture only the last key (navigation, selections)
+            # Capture all buffered keys for text entry and hunting mode so rapid input
+            # does not collapse into a single last-read keypress.
             $keys = if (
+                $isQueryMode -or
                 $null -ne $pendingTextInput -or
                 ($null -ne $pendingIncidentComment -and [string]$pendingIncidentComment.Step -eq 'comment') -or
                 ($null -ne $pendingIncidentResolution -and [string]$pendingIncidentResolution.Step -eq 'comment')
@@ -591,6 +662,26 @@ function Start-PwshXdrLiveDashboard {
                 $isShiftPressed = (($key.Modifiers -band [ConsoleModifiers]::Shift) -ne 0)
                 $isCtrlPressed = (($key.Modifiers -band [ConsoleModifiers]::Control) -ne 0)
                 $isAltPressed = (($key.Modifiers -band [ConsoleModifiers]::Alt) -ne 0)
+                $modifierLabels = @()
+                if ($isCtrlPressed) { $modifierLabels += 'Ctrl' }
+                if ($isAltPressed) { $modifierLabels += 'Alt' }
+                if ($isShiftPressed) { $modifierLabels += 'Shift' }
+                $modifierSummary = if ($modifierLabels.Count -gt 0) { $modifierLabels -join '+' } else { 'None' }
+                $keyCharDisplay = if ([char]$key.KeyChar -eq [char]0) { '' } else { [string]$key.KeyChar }
+                $context.Diagnostics.LastInput = [pscustomobject][ordered]@{
+                    Timestamp          = $currentInputTime
+                    Key                = [string]$key.Key
+                    KeyChar            = $keyCharDisplay
+                    Modifiers          = $modifierSummary
+                    ActivePanel        = [string]$activePanel
+                    IsQueryMode        = [bool]$isQueryMode
+                    SelectedQueryIndex = [int]$selectedQueryIndex
+                    SelectedQueryId    = $(if ($selectedQuery) { [string]$selectedQuery.id } else { '' })
+                    SelectedEntity     = $(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })
+                }
+                if ($context.Diagnostics.InputDebugEnabled -and $isQueryMode) {
+                    Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "InputDebug Key=$([string]$key.Key) Char=$keyCharDisplay Modifiers=$modifierSummary Panel=$activePanel QueryMode=$isQueryMode QueryIndex=$selectedQueryIndex QueryId=$(if ($selectedQuery) { [string]$selectedQuery.id } else { '' }) Entity=$(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })"
+                }
 
                 if (
                     $key.Key -eq 'Enter' -and
@@ -908,6 +999,16 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay closed.' -Level 'info'
                     }
                 }
+                elseif ($isAltPressed -and $keyChar -eq 'k') {
+                    $keyHandled = $true
+                    $context.Diagnostics.InputDebugEnabled = -not $context.Diagnostics.InputDebugEnabled
+                    if ($context.Diagnostics.InputDebugEnabled) {
+                        Set-LiveStatusMessage -Context $context -Message 'Input debug enabled. Check the help panel for last key and query state.' -Level 'info'
+                    }
+                    else {
+                        Set-LiveStatusMessage -Context $context -Message 'Input debug disabled.' -Level 'info'
+                    }
+                }
                 elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'q') -or ($isCtrlPressed -and -not $isAltPressed -and $keyChar -eq 'q')) {
                     $keyHandled = $true
                     $pendingQuitConfirmation = $true
@@ -930,6 +1031,26 @@ function Start-PwshXdrLiveDashboard {
                         $context.Selection.Panel = $activePanel
                         Set-LiveStatusMessage -Context $context -Message 'Showing incident details panel. Use Tab to switch tabs.' -Level 'info'
                     }
+                }
+                elseif ($isAltPressed -and $keyChar -eq 'h') {
+                    $keyHandled = $true
+                    $isQueryMode = -not $isQueryMode
+                    $activePanel = 'incidents'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                    $context.Selection.Panel = $activePanel
+                    $selectedActionIndex = 0
+
+                    if ($isQueryMode) {
+                        . $syncSelectedQuery
+                        Set-LiveStatusMessage -Context $context -Message 'Hunting mode enabled. Use the query catalog on the left and Alt+X to execute.' -Level 'info'
+                    }
+                    else {
+                        Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
+                    }
+                }
+                elseif ($isQueryMode -and $isAltPressed -and $keyChar -eq 'x') {
+                    $keyHandled = $true
+                    . $executeSelectedQuery
                 }
                 elseif ($key.Key -eq 'PageUp') {
                     $activePanelIndex = ($activePanelIndex - 1 + $panelOrder.Count) % $panelOrder.Count
@@ -968,8 +1089,31 @@ function Start-PwshXdrLiveDashboard {
                     # normal panel actions later in the same loop iteration.
                 }
 
-                elseif (-not $selectedIncident) {
+                elseif (-not $selectedIncident -and -not $isQueryMode) {
                     continue
+                }
+
+                elseif ($isQueryMode -and $key.Key -eq 'DownArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'action_status') {
+                    $keyHandled = $true
+                    $activePanel = 'incidents'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                    $context.Selection.Panel = $activePanel
+                    $selectedQueryIndex = ($selectedQueryIndex + 1) % $context.Data.QueryCatalog.Count
+                    . $syncSelectedQuery
+                    Set-LiveStatusMessage -Context $context -Message "Selected hunting query: $([string]$selectedQuery.name)" -Level 'info'
+                }
+                elseif ($isQueryMode -and $key.Key -eq 'UpArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'action_status') {
+                    $keyHandled = $true
+                    $activePanel = 'incidents'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                    $context.Selection.Panel = $activePanel
+                    $selectedQueryIndex = ($selectedQueryIndex - 1 + $context.Data.QueryCatalog.Count) % $context.Data.QueryCatalog.Count
+                    . $syncSelectedQuery
+                    Set-LiveStatusMessage -Context $context -Message "Selected hunting query: $([string]$selectedQuery.name)" -Level 'info'
+                }
+                elseif ($isQueryMode -and $key.Key -eq 'Enter' -and $activePanel -eq 'incidents') {
+                    $keyHandled = $true
+                    . $executeSelectedQuery
                 }
 
                 elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'incidents') {
@@ -1050,6 +1194,19 @@ function Start-PwshXdrLiveDashboard {
                     $selectedEntity = $context.Data.Entities[$selectedEntityIndex]
                     $context.Selection.Entity = $selectedEntity
                 }
+                elseif ($selectedIncidentDetailsTab -eq 'entities' -and $key.Key -eq 'Enter' -and $activePanel -eq 'incident_details' -and $selectedEntity) {
+                    $keyHandled = $true
+                    $isQueryMode = $true
+                    $activePanel = 'incidents'
+                    $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                    $context.Selection.Panel = $activePanel
+                    $selectedActionIndex = 0
+                    . $syncSelectedQuery
+
+                    $selectedEntityTypeLabel = [string]$selectedEntity.EntityType
+                    $selectedEntityLabel = [string]$selectedEntity.DisplayName
+                    Set-LiveStatusMessage -Context $context -Message "Hunting mode enabled for ${selectedEntityTypeLabel}: $selectedEntityLabel" -Level 'info'
+                }
                 elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
                     $selectedActionIndex = ($selectedActionIndex + 1) % $actionEntries.Count
                 }
@@ -1077,7 +1234,21 @@ function Start-PwshXdrLiveDashboard {
                 elseif ($key.Key -eq 'Enter' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
                     $selectedAction = $actionEntries[$selectedActionIndex]
                     if ($selectedAction.IsEnabled) {
-                        Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                        if ($isQueryMode) {
+                            if ($selectedAction.Shortcut -eq 'x') {
+                                . $executeSelectedQuery
+                            }
+                            elseif ($selectedAction.Shortcut -eq 'h') {
+                                $isQueryMode = $false
+                                $activePanel = 'incidents'
+                                $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                                $context.Selection.Panel = $activePanel
+                                Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
+                            }
+                        }
+                        else {
+                            Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                        }
                     }
                     else {
                         Set-LiveStatusMessage -Context $context -Message "$($selectedAction.Label) is not available right now." -Level 'warning'
@@ -1088,6 +1259,19 @@ function Start-PwshXdrLiveDashboard {
                 }
                 elseif ($isAltPressed -and $keyChar -in @('a', 'u', 'o', 'i', 'r', 'k', 'c', 'l', 'n', 'p', 'm')) {
                     Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                }
+
+                $context.Diagnostics.LastInput = [pscustomobject][ordered]@{
+                    Timestamp          = $currentInputTime
+                    Key                = [string]$key.Key
+                    KeyChar            = $keyCharDisplay
+                    Modifiers          = $modifierSummary
+                    ActivePanel        = [string]$activePanel
+                    IsQueryMode        = [bool]$isQueryMode
+                    SelectedQueryIndex = [int]$selectedQueryIndex
+                    SelectedQueryId    = $(if ($selectedQuery) { [string]$selectedQuery.id } else { '' })
+                    SelectedEntity     = $(if ($selectedEntity) { [string]$selectedEntity.DisplayName } else { '' })
+                    KeyHandled         = [bool]$keyHandled
                 }
             }  # end foreach ($key in $keys)
 
@@ -1678,9 +1862,219 @@ function Start-PwshXdrLiveDashboard {
                 $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
             }
 
-            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
+            if ($isQueryMode) {
+                . $syncSelectedQuery
+
+                $queryCatalogLines = @()
+                $queryRunHistory = @($context.Data.QueryRuns | Sort-Object -Property ExecutedAt -Descending)
+                $selectedQueryResolution = $null
+                $selectedQueryPreview = $null
+                $selectedQueryPreviewError = $null
+
+                if ($selectedQuery) {
+                    $selectedQueryResolution = Resolve-XdrQueryParameters -Query $selectedQuery -Context $context
+                    if (-not $selectedQueryResolution.IsBlocked) {
+                        try {
+                            $selectedQueryPreview = (Invoke-XdrQueryInterpolation -Query $selectedQuery -Parameters $selectedQueryResolution.Parameters).Kql
+                        }
+                        catch {
+                            $selectedQueryPreviewError = [string]$_.Exception.Message
+                        }
+                    }
+                }
+
+                if (@($context.Data.QueryCatalog).Count -eq 0) {
+                    $queryCatalogLines += '[grey]No hunting queries were loaded from the repository catalog.[/]'
+                }
+                else {
+                    foreach ($queryCursor in 0..([Math]::Max(0, @($context.Data.QueryCatalog).Count - 1))) {
+                        if (@($context.Data.QueryCatalog).Count -eq 0) {
+                            break
+                        }
+
+                        $queryDefinition = $context.Data.QueryCatalog[$queryCursor]
+                        $queryResolution = Resolve-XdrQueryParameters -Query $queryDefinition -Context $context
+                        $isSelectedQuery = $selectedQuery -and ([string]$queryDefinition.id -eq [string]$selectedQuery.id)
+                        $queryPrefix = if ($isSelectedQuery -and $activePanel -eq 'incidents') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $queryNameMarkup = if ($isSelectedQuery) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText ([string]$queryDefinition.name)))[/]" } else { "[white]$([string](Get-SpectreEscapedText ([string]$queryDefinition.name)))[/]" }
+                        $queryStatusMarkup = if ($queryResolution.IsBlocked) { '[bold red]BLOCKED[/]' } else { '[bold green]READY[/]' }
+                        $queryCatalogLines += "$queryPrefix $queryNameMarkup $queryStatusMarkup"
+                        $queryCatalogLines += "  [grey]$([string](Get-SpectreEscapedText ([string]$queryDefinition.description)))[/]"
+
+                        if ($queryResolution.IsBlocked) {
+                            $queryCatalogLines += "  [darkred]Missing: $([string](Get-SpectreEscapedText (($queryResolution.MissingContext -join ', '))))[/]"
+                            $queryCatalogLines += "  [grey]Hint: $([string](Get-SpectreEscapedText ([string](& $getQueryContextGuidance $queryResolution.MissingContext[0]))))[/]"
+                        }
+                        elseif (@($queryDefinition.tags).Count -gt 0) {
+                            $queryCatalogLines += "  [grey]Tags: $([string](Get-SpectreEscapedText ((@($queryDefinition.tags) -join ', '))))[/]"
+                        }
+
+                        $queryCatalogLines += ''
+                    }
+                }
+
+                $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryCatalogLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incidents' -ActivePanel $activePanel) -Expand
+
+                if (-not $selectedQuery) {
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No hunting query selected.' -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                }
+                elseif ($selectedQueryResolution.IsBlocked) {
+                    $blockedPreviewLines = @(
+                        "[bold]$([string](Get-SpectreEscapedText ([string]$selectedQuery.name)))[/]",
+                        "[grey]$([string](Get-SpectreEscapedText ([string]$selectedQuery.description)))[/]",
+                        '',
+                        "[darkred]Missing required context: $([string](Get-SpectreEscapedText (($selectedQueryResolution.MissingContext -join ', '))))[/]",
+                        "[grey]Hint: $([string](Get-SpectreEscapedText ([string](& $getQueryContextGuidance $selectedQueryResolution.MissingContext[0]))))[/]"
+                    )
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($blockedPreviewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                }
+                elseif (-not [string]::IsNullOrWhiteSpace($selectedQueryPreviewError)) {
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data $selectedQueryPreviewError -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                }
+                else {
+                    $previewLines = @(
+                        "[bold]$([string](Get-SpectreEscapedText ([string]$selectedQuery.name)))[/]",
+                        "[grey]$([string](Get-SpectreEscapedText ([string]$selectedQuery.description)))[/]",
+                        ''
+                    )
+                    if (@($selectedQuery.tags).Count -gt 0) {
+                        $previewLines += "[grey]Tags: $([string](Get-SpectreEscapedText ((@($selectedQuery.tags) -join ', '))))[/]"
+                        $previewLines += ''
+                    }
+                    $previewLines += "[white]$([string](Get-SpectreEscapedText ($selectedQueryPreview -replace "`r?`n", ' ')))[/]"
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($previewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                }
+
+                $activityLines = @()
+                if ($queryRunHistory.Count -eq 0) {
+                    $activityLines += '[grey]No query runs recorded yet.[/]'
+                }
+                else {
+                    foreach ($queryRun in @($queryRunHistory | Select-Object -First 6)) {
+                        $statusColor = switch ([string]$queryRun.Status) {
+                            'Success' { 'green' }
+                            'NoResults' { 'yellow' }
+                            default { 'red' }
+                        }
+                        $activityLines += "[bold $statusColor]$([string](Get-SpectreEscapedText ([string]$queryRun.Status)))[/] $([string](Get-SpectreEscapedText ([string]$queryRun.QueryName))) [grey]rows=$([int]$queryRun.RowCount) dur=$([int]$queryRun.DurationMs)ms[/]"
+                    }
+                }
+
+                $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title "Activity Log ($($queryRunHistory.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($activityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'alerts' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alerts' -ActivePanel $activePanel) -Expand
+
+                $resultLines = @()
+                if (-not $selectedQueryResult -or [string]$selectedQueryResult.QueryId -ne [string]$selectedQuery.id) {
+                    $resultLines += '[grey]No results for the selected query yet. Use Alt+X to run it.[/]'
+                }
+                elseif ($selectedQueryResult.QueryRun.Status -eq 'NoResults') {
+                    $resultLines += '[yellow]The last run completed successfully but returned no rows.[/]'
+                }
+                else {
+                    $resultLines += "[grey]Rows: $([int]$selectedQueryResult.RowCount) | Duration: $([int]$selectedQueryResult.QueryRun.DurationMs)ms[/]"
+                    $resultLines += ''
+                    $resultColumns = @($selectedQuery.displayColumns)
+                    if ($resultColumns.Count -gt 0) {
+                        $resultLines += "[bold]$([string](Get-SpectreEscapedText (($resultColumns -join ' | '))))[/]"
+                        foreach ($resultRow in @($selectedQueryResult.Results | Select-Object -First 8)) {
+                            $resultValues = foreach ($resultColumn in $resultColumns) {
+                                [string]$resultRow.$resultColumn
+                            }
+                            $resultLines += "[white]$([string](Get-SpectreEscapedText (($resultValues -join ' | '))))[/]"
+                        }
+                    }
+                }
+
+                $alertDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Query Results' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resultLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alert_details' -ActivePanel $activePanel) -Expand
+
+                $queryExecuteReasons = @()
+                $isQueryExecutionRunning = $queryExecutionJob -and $queryExecutionJob.State -notin @('Completed', 'Failed', 'Stopped')
+                if (-not $selectedQuery) {
+                    $queryExecuteReasons = @('No query selected')
+                }
+                elseif ($isQueryExecutionRunning) {
+                    $queryExecuteReasons = @('Query execution in progress')
+                }
+                elseif ($selectedQueryResolution.IsBlocked) {
+                    $queryExecuteReasons = @($selectedQueryResolution.MissingContext | ForEach-Object { "Missing $_" })
+                }
+                elseif (-not [string]::IsNullOrWhiteSpace($selectedQueryPreviewError)) {
+                    $queryExecuteReasons = @($selectedQueryPreviewError)
+                }
+
+                $actionEntries = @(
+                    [pscustomobject]@{ Shortcut = 'x'; Label = 'Execute selected query'; IsEnabled = ($queryExecuteReasons.Count -eq 0); Reasons = $queryExecuteReasons },
+                    [pscustomobject]@{ Shortcut = 'h'; Label = 'Return to incident workflow'; IsEnabled = $true; Reasons = @() }
+                )
+                $selectedActionIndex = [Math]::Min([Math]::Max($selectedActionIndex, 0), $actionEntries.Count - 1)
+                $queryActionLines = @(
+                    'Query actions',
+                    (New-ActionStateLine -Label '(Alt+X) Execute selected query' -Reasons $queryExecuteReasons),
+                    '(Alt+H) Return to incident workflow'
+                )
+
+                if ($selectedEntity) {
+                    $queryActionLines += ''
+                    $queryActionLines += "Selected entity: $([string]$selectedEntity.EntityType) | $([string]$selectedEntity.DisplayName)"
+                }
+
+                if ($selectedQuery -and $selectedQueryResolution.IsBlocked) {
+                    $queryActionLines += ''
+                    $queryActionLines += "Missing context: $($selectedQueryResolution.MissingContext -join ', ')"
+                    $queryActionLines += "Hint: $([string](& $getQueryContextGuidance $selectedQueryResolution.MissingContext[0]))"
+                }
+
+                if ($isQueryExecutionRunning) {
+                    $queryActionLines += ''
+                    $queryActionLines += 'Query execution is running in the background.'
+                }
+
+                $queryActionCursor = 0
+                $queryActionDisplayLines = @($queryActionLines | ForEach-Object {
+                    $line = [string]$_
+
+                    if ([string]::IsNullOrWhiteSpace($line)) {
+                        return ''
+                    }
+
+                    if ($line -eq 'Query actions') {
+                        return "[bold grey]$(Get-SpectreEscapedText $line)[/]"
+                    }
+
+                    if ($line -match '^\(((?:Alt\+[A-Z])|ⓧ)\)\s+(.+)$') {
+                        $shortcutSymbol = [string]$Matches[1]
+                        $labelText = [string]$Matches[2]
+                        $isEnabled = $shortcutSymbol -ne 'ⓧ'
+                        $isSelected = ($activePanel -eq 'action_status' -and $queryActionCursor -eq $selectedActionIndex)
+                        $queryActionCursor++
+
+                        $prefix = if ($isSelected) { "[bold $($context.Ui.ThemeColor)]>[/] " } else { '  ' }
+                        $shortcutMarkup = if ($isEnabled) {
+                            if ($isSelected) { "[bold $($context.Ui.ThemeColor)]($shortcutSymbol)[/]" } else { "[bold deepskyblue1]($shortcutSymbol)[/]" }
+                        }
+                        else {
+                            '[grey]([/][darkred]ⓧ[/][grey])[/]'
+                        }
+
+                        $escapedLabel = Get-SpectreEscapedText $labelText
+                        $labelMarkup = if ($isEnabled) {
+                            if ($isSelected) { "[bold $($context.Ui.ThemeColor)]$escapedLabel[/]" } else { "[white]$escapedLabel[/]" }
+                        }
+                        else {
+                            if ($isSelected) { "[bold grey]$escapedLabel[/]" } else { "[grey]$escapedLabel[/]" }
+                        }
+
+                        return "$prefix$shortcutMarkup $labelMarkup"
+                    }
+
+                    return "  [grey]$(Get-SpectreEscapedText $line)[/]"
+                })
+
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Query Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryActionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+            }
+
+            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -IsQueryMode:$isQueryMode -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
             $helpHeaderText = if ($showKeyboardHelpOverlay) { 'Help (F1 close)' } else { "Help | $contextHelpLine" }
-            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
+            $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode:$isQueryMode -ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
 
             $layout['header'].Update((Get-XdrLiveHeaderPanel -Context $context -ScriptRoot $PSScriptRoot)) | Out-Null
             $layout['incidents'].Update($incidentPanel) | Out-Null

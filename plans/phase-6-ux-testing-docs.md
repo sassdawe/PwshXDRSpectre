@@ -15,6 +15,16 @@
 4. Validate the full analyst workflow end-to-end in a test tenant.
 5. Update all documentation to reflect the final architecture, permissions, and usage.
 
+## Layout Clarification
+
+The dashboard should be treated as a fixed shell with mode-specific content, not as a screen that attempts to show every workflow pane at the same time.
+
+- The outer shell remains header, main content, and help.
+- The main content area remains three columns: left lists, center details, right actions/status.
+- Query Catalog, Query Results, Activity Log, and Status Bar are logical workflow panes that may replace or repurpose content within those regions.
+- The implementation goal is to show or hide pane content by workflow mode and focus state so the UI stays readable at normal terminal widths.
+- "Dedicated pane" in this plan means the user gets a distinct focused surface for that workflow, not necessarily a permanently reserved panel that is always on screen.
+
 ---
 
 ## Tasks
@@ -26,10 +36,10 @@
   - **Alerts** — alerts for selected incident
   - **Entities** — extracted users, devices, files from selected incident/alert
   - **Actions** — available triage and containment actions for current selection
-  - **Query Catalog** — available hunting queries filtered by current context *(reserved)*
-  - **Query Results** — result table for last executed query *(reserved)*
-  - **Activity Log** — recent action history and query runs *(reserved)*
-  - **Status Bar** — connection status, analyst identity, last operation result *(reserved)*
+  - **Query Catalog** — available hunting queries filtered by current context *(logical pane shown in hunting mode)*
+  - **Query Results** — result table for last executed query *(logical pane shown after preview/execute)*
+  - **Activity Log** — recent action history and query runs *(logical pane to be surfaced within existing shell)*
+  - **Status Bar** — connection status, analyst identity, last operation result *(implemented through header/help/status messaging rather than a separate always-visible row)*
 - [x] **1.2** Restructure layout to maximize list width and improve panel proportions:
   - Left lists column: `left_lists` ratio 2 with incidents and alerts stacked vertically at ratio 1 each
   - Center details column: `center_details` ratio 3 with incident details and alert details stacked vertically at ratio 1 each
@@ -125,6 +135,7 @@
   - Setup instructions for the new module layout
   - Configuration file reference (`config/triage-policy.json`, `config/memory-store-policy.json`)
   - Query catalog folder structure and JSON schema reference
+  - Query-mode panel visibility strategy and show/hide behavior inside the live dashboard
   - Memory store location and cleanup instructions
   - Known limitations and current v1 scope
 - [ ] **6.2** Add `CONTRIBUTING.md` with:

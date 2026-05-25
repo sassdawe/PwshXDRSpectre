@@ -77,4 +77,38 @@ Describe 'Get-XdrLiveHelpPanelContent' {
             $content | Should -Match 'Ctrl\+Q'
         }
     }
+
+    It 'renders input debug details when enabled' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{
+                Ui = [pscustomobject]@{ StatusMessage = '' }
+                Diagnostics = [pscustomobject]@{
+                    InputDebugEnabled = $true
+                    LastInput = [pscustomobject]@{
+                        Key = 'DownArrow'
+                        KeyChar = ''
+                        Modifiers = 'None'
+                        ActivePanel = 'incidents'
+                        IsQueryMode = $true
+                        SelectedQueryIndex = 1
+                        SelectedQueryId = 'incident-related-alerts'
+                        SelectedEntity = 'user@contoso.com'
+                    }
+                }
+            }
+            $prefetchCompletedAt = $null
+
+            Mock Get-XdrLiveAlertPrefetchIndicator { '' }
+            Mock Get-SpectreEscapedText { $Text }
+
+            $content = Get-XdrLiveHelpPanelContent -Context $context -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -AlertPreloadQueue ([System.Collections.Queue]::new()) -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -IsQueryMode
+
+            $content | Should -Match 'Input Debug'
+            $content | Should -Match 'Last key: DownArrow'
+            $content | Should -Match 'Panel: queries'
+            $content | Should -Match 'Query index: 1'
+            $content | Should -Match 'incident-related-alerts'
+            $content | Should -Match 'user@contoso.com'
+        }
+    }
 }
