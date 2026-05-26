@@ -16,6 +16,7 @@ function ConvertTo-XdrAlertViewModel {
         CreatedDateTime  = $Alert.CreatedDateTime
         AlertWebUrl      = $Alert.AlertWebUrl
         IncidentId       = $IncidentId
-        RawObject        = $Alert
+        Evidence         = @($Alert.Evidence)
+        Entities         = @($Alert.Entities)
     }
 }

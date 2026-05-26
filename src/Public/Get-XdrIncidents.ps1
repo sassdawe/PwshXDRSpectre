@@ -40,10 +40,10 @@ function Get-XdrIncidents {
 
     $operationResult = Invoke-XdrOperation -Operation 'Get-XdrIncidents' -Context $Context -ScriptBlock {
         if ($Limit -gt 0) {
-            Get-MgSecurityIncident -ExpandProperty Alerts | Select-Object -First $Limit
+            Get-MgSecurityIncident | Select-Object -First $Limit
         }
         else {
-            Get-MgSecurityIncident -ExpandProperty Alerts
+            Get-MgSecurityIncident
         }
     } -SuccessMessage 'Retrieved incidents successfully.' -FailureMessage 'Failed to retrieve incidents.'
 

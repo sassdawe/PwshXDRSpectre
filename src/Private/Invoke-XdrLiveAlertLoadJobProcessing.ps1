@@ -5,7 +5,7 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
 
     .DESCRIPTION
     Receives completed background job output, updates the alert cache, and
-    refreshes current selection when the loaded incident is selected.
+    refreshes the visible alert panel when the loaded incident is selected.
 
     .PARAMETER AlertLoadJobsByIncidentId
     Running jobs map keyed by incident id.
@@ -100,12 +100,7 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         $loadedAlerts = @($payload.Result.Data)
         $AlertsByIncidentId[$incidentId] = $loadedAlerts
 
-        $restoreSelectionOnCompletion = $false
-        if ($payload.PSObject.Properties['RestoreSelectionOnCompletion']) {
-            $restoreSelectionOnCompletion = [bool]$payload.RestoreSelectionOnCompletion
-        }
-
-        if ($restoreSelectionOnCompletion -and $SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
+        if ($SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
             Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex | Out-Null
             $VisibleAlerts.Value = @($Context.Data.Alerts)
             $VisibleAlertIncidentId.Value = $incidentId
