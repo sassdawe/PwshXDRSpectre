@@ -1,0 +1,22 @@
+{
+  "id": "device-process-tree",
+  "name": "Device Process Tree",
+  "description": "Recent process execution activity for the selected device.",
+  "requiredContext": ["DeviceId"],
+  "parameters": [
+    {
+      "name": "DeviceId",
+      "contextBinding": "DeviceId",
+      "description": "Defender device identifier for the selected device"
+    },
+    {
+      "name": "LookbackHours",
+      "contextBinding": null,
+      "defaultValue": "24",
+      "description": "Number of hours to inspect"
+    }
+  ],
+  "kql": "DeviceProcessEvents | where DeviceId == '{{DeviceId}}' | where Timestamp > ago({{LookbackHours}}h) | project Timestamp, DeviceName, InitiatingProcessFileName, ProcessCommandLine, FileName, SHA1",
+  "displayColumns": ["Timestamp", "DeviceName", "InitiatingProcessFileName", "ProcessCommandLine", "FileName", "SHA1"],
+  "tags": ["device", "execution"]
+}

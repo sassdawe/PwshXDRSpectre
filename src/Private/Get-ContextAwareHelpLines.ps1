@@ -43,6 +43,9 @@ function Get-ContextAwareHelpLines {
         [string]$ActivePanel,
 
         [Parameter()]
+        [switch]$IsQueryMode,
+
+        [Parameter()]
         [object]$SelectedIncident,
 
         [Parameter()]
@@ -78,6 +81,18 @@ function Get-ContextAwareHelpLines {
 
     if ($null -ne $PendingTextInput) {
         return @('Comment input mode | Type text | Enter submit | Backspace edit | Esc cancel | Shortcuts disabled | Ctrl+C exit')
+    }
+
+    if ($IsQueryMode.IsPresent) {
+        switch ($ActivePanel) {
+            'incidents' { return @('↑/↓ query catalog | Enter execute selected query | Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+            'incident_details' { return @('Query preview | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | Tab or PgUp/PgDn switch | F1 help | Ctrl+C exit') }
+            'alerts' { return @('Recent query runs | Ctrl+Alt+K toggle input debug | Tab or PgUp/PgDn switch | Alt+H return to incident workflow | F1 help | Ctrl+C exit') }
+            'alert_details' { return @('Query results for selected catalog entry | Alt+X rerun selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Ctrl+C exit') }
+            'action_status' { return @('↑/↓ select query action | Enter execute selected action | Alt+X run selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        }
+
+        return @('Hunting mode | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit')
     }
 
     $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+Shift+L force reload alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | F1 help | F5/r refresh | q quit | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'

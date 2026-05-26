@@ -196,7 +196,11 @@ Describe 'Get-XdrIncidentEntities' {
             )
 
             $result = @(Get-XdrIncidentEntities -Incident $incident -Alerts $alerts)
-            (@($result | Where-Object { $_.EntityType -eq 'User' -and $_.DisplayName -eq 'graph.user@contoso.com' }).Count) | Should -Be 1
+            $match = @($result | Where-Object { $_.EntityType -eq 'User' -and $_.DisplayName -eq 'graph.user@contoso.com' })
+
+            $match.Count | Should -Be 1
+            $match[0].UserId | Should -Be '11111111-2222-3333-4444-555555555555'
+            $match[0].UserPrincipalName | Should -Be 'graph.user@contoso.com'
         }
     }
 
@@ -229,8 +233,13 @@ Describe 'Get-XdrIncidentEntities' {
             )
 
             $result = @(Get-XdrIncidentEntities -Incident $incident -Alerts $alerts)
-            (@($result | Where-Object { $_.EntityType -eq 'Device' -and $_.DisplayName -eq 'host-graph.contoso.com' }).Count) | Should -Be 1
-            (@($result | Where-Object { $_.EntityType -eq 'File' -and $_.DisplayName -eq 'abc123' }).Count) | Should -Be 1
+            $deviceMatch = @($result | Where-Object { $_.EntityType -eq 'Device' -and $_.DisplayName -eq 'host-graph.contoso.com' })
+            $fileMatch = @($result | Where-Object { $_.EntityType -eq 'File' -and $_.DisplayName -eq 'abc123' })
+
+            $deviceMatch.Count | Should -Be 1
+            $deviceMatch[0].DeviceId | Should -Be 'mde-device-123'
+            $fileMatch.Count | Should -Be 1
+            $fileMatch[0].Sha256 | Should -Be 'abc123'
         }
     }
 

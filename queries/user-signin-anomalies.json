@@ -1,0 +1,22 @@
+{
+  "id": "user-signin-anomalies",
+  "name": "User Sign-In Anomalies",
+  "description": "Risk sign-in events for the selected user in the last 7 days.",
+  "requiredContext": ["UserId"],
+  "parameters": [
+    {
+      "name": "UserId",
+      "contextBinding": "UserId",
+      "description": "AAD object ID of the selected user"
+    },
+    {
+      "name": "LookbackDays",
+      "contextBinding": null,
+      "defaultValue": "7",
+      "description": "Number of days to look back"
+    }
+  ],
+  "kql": "AADSignInEventsBeta | where AccountObjectId == '{{UserId}}' | where Timestamp > ago({{LookbackDays}}d) | where RiskLevelDuringSignIn != 'none' | project Timestamp, AccountUpn, RiskLevelDuringSignIn, IPAddress, City, Country",
+  "displayColumns": ["Timestamp", "AccountUpn", "RiskLevelDuringSignIn", "IPAddress", "City", "Country"],
+  "tags": ["identity", "risk"]
+}

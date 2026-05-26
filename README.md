@@ -81,12 +81,32 @@ Example UI:
 
 ![PwshXDRSpectre in usage](./images/PwshXDR-usage.png)
 
+## Query Library
+
+Repository-backed hunting queries live in `queries/` and are loaded into the runtime catalog at startup.
+
+To add a new query to the library, follow the instructions in [docs/query-library.md](docs/query-library.md).
+
+Query UI is planned as a mode inside the existing dashboard shell. The current design does not add permanently visible query columns; instead, the query catalog, preview, and results views will show by swapping content within the existing left, center, and right panels while hunting mode is active.
+
+Current hunting-mode controls:
+
+- `Alt+H` toggles hunting mode.
+- `Alt+X` executes the selected catalog query.
+- Recent query runs are shown in the activity panel while hunting mode is active.
+
 ## Tests
 
 Run baseline Phase 1 tests:
 
 ```powershell
 Invoke-Pester -Path ./src/Tests -Output Detailed
+```
+
+Focused query-library tests:
+
+```powershell
+Invoke-Pester -Path "./src/Tests/Get-XdrQueryCatalog.Tests.ps1","./src/Tests/Test-XdrQuerySchema.Tests.ps1","./src/Tests/Resolve-XdrQueryParameters.Tests.ps1","./src/Tests/Invoke-XdrQueryInterpolation.Tests.ps1","./src/Tests/Invoke-XdrHuntingQuery.Tests.ps1","./src/Tests/Add-XdrQueryRun.Tests.ps1"
 ```
 
 ## Module Manifest

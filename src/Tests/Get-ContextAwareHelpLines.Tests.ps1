@@ -41,4 +41,23 @@ Describe 'Get-ContextAwareHelpLines' {
             $lines | Should -Match 'Alt\+D show incident details'
         }
     }
+
+    It 'returns hunting-mode guidance when query mode is active' {
+        InModuleScope PwshXDRSpectre {
+            $lines = Get-ContextAwareHelpLines -ActivePanel action_status -IsQueryMode
+
+            $lines | Should -Match 'Alt\+X run selected query'
+            $lines | Should -Match 'Alt\+H return to incident workflow'
+            $lines | Should -Match 'Alt\+K toggle input debug'
+        }
+    }
+
+    It 'returns query-catalog guidance that Enter executes the selected hunting query' {
+        InModuleScope PwshXDRSpectre {
+            $lines = Get-ContextAwareHelpLines -ActivePanel incidents -IsQueryMode
+
+            $lines | Should -Match 'Enter execute selected query'
+            $lines | Should -Match 'Alt\+X execute selected query'
+        }
+    }
 }
