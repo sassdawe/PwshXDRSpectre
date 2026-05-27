@@ -46,6 +46,21 @@ function Get-XdrAlerts {
     $incidentId = if ($Incident.IncidentId) { $Incident.IncidentId } else { $Incident.Id }
     $alertRefs = if ($Incident.AlertRefs) { @($Incident.AlertRefs) } elseif ($Incident.Alerts) { @($Incident.Alerts) } else { @() }
 
+    if (-not $alertRefs -and -not [string]::IsNullOrWhiteSpace([string]$incidentId)) {
+        $expandedIncidentResult = Invoke-XdrOperation -Operation 'Get-XdrAlertReferences' -Context $Context -TargetObject $incidentId -ScriptBlock {
+            Get-MgSecurityIncident -IncidentId $incidentId -ExpandProperty 'alerts'
+        } -SuccessMessage 'Retrieved incident alert references.' -FailureMessage 'Failed to retrieve incident alert references.'
+
+        if (-not $expandedIncidentResult.Success) {
+            return $expandedIncidentResult
+        }
+
+        $expandedIncident = @($expandedIncidentResult.Data) | Select-Object -First 1
+        if ($expandedIncident -and $expandedIncident.Alerts) {
+            $alertRefs = @($expandedIncident.Alerts)
+        }
+    }
+
     if (-not $alertRefs) {
         if (-not $SkipContextUpdate) {
             $Context.Data.Alerts = @()

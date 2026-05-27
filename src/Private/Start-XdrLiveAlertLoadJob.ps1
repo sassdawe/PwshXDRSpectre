@@ -111,15 +111,19 @@ function Start-XdrLiveAlertLoadJob {
 
         if (-not [string]::IsNullOrWhiteSpace($jobLogPath)) {
             $resultStatus = if ($result -and $result.Success) { 'success' } else { 'failure' }
+            $resultAlertCount = if ($result -and $result.Data) { @($result.Data).Count } else { 0 }
+            $resultMessage = if ($result -and $result.Message) { [regex]::Replace([string]$result.Message, '\s+', ' ').Trim() } else { '' }
             & (Get-Module PwshXDRSpectre) {
                 param(
                     [string]$InnerJobLogPath,
                     [string]$InnerJobIncidentId,
-                    [string]$InnerResultStatus
+                    [string]$InnerResultStatus,
+                    [int]$InnerResultAlertCount,
+                    [string]$InnerResultMessage
                 )
 
-                Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus"
-            } $jobLogPath $jobIncidentId $resultStatus
+                Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus AlertCount=$InnerResultAlertCount Message=$InnerResultMessage"
+            } $jobLogPath $jobIncidentId $resultStatus $resultAlertCount $resultMessage
         }
 
         [pscustomobject]@{
