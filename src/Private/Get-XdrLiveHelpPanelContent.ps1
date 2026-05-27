@@ -122,16 +122,17 @@ function Get-XdrLiveHelpPanelContent {
             [bool]$QueryMode
         )
 
-        if (-not $QueryMode) {
-            return $PanelName
-        }
-
         switch ($PanelName) {
-            'incidents' { return 'queries' }
-            'incident_details' { return 'preview' }
-            'alerts' { return 'activity' }
-            'alert_details' { return 'results' }
-            'action_status' { return 'actions' }
+            'incident_list' { return 'incidents' }
+            'incident_details' { return 'incident details' }
+            'alert_list' { return 'alerts' }
+            'alert_details' { return 'alert details' }
+            'incident_actions' { return 'incident actions' }
+            'query_catalog' { return 'query catalog' }
+            'query_preview' { return 'query preview' }
+            'query_activity' { return 'query activity' }
+            'query_results' { return 'query results' }
+            'query_actions' { return 'query actions' }
             default { return $PanelName }
         }
     }

@@ -8,7 +8,7 @@ function Set-XdrLiveActiveTab {
         [string[]]$TabOrder,
 
         [Parameter(Mandatory)]
-        [string[]]$PanelOrder,
+        [ref]$PanelOrder,
 
         [Parameter(Mandatory)]
         [object]$Context,
@@ -53,12 +53,17 @@ function Set-XdrLiveActiveTab {
     $ActiveTab.Value = $TabOrder[$ActiveTabIndex.Value]
     $Context.Selection.Tab = $ActiveTab.Value
     $IsQueryMode.Value = ($ActiveTab.Value -eq 'hunting')
+    $PanelOrder.Value = @(Get-XdrLivePanelOrder -TabName $ActiveTab.Value)
+
+    if ($PanelOrder.Value.Count -gt 0) {
+        $ActivePanelIndex.Value = 0
+        $ActivePanel.Value = $PanelOrder.Value[$ActivePanelIndex.Value]
+        $Context.Selection.Panel = $ActivePanel.Value
+    }
+
+    $SelectedActionIndex.Value = 0
 
     if ($IsQueryMode.Value) {
-        $ActivePanel.Value = 'incidents'
-        $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'incidents')
-        $Context.Selection.Panel = $ActivePanel.Value
-        $SelectedActionIndex.Value = 0
         Sync-XdrSelectedQuery -Context $Context -SelectedQueryIndex $SelectedQueryIndex -SelectedQuery $SelectedQuery -SelectedQueryResult $SelectedQueryResult -QueryResultsByCacheKey $QueryResultsByCacheKey
     }
 }

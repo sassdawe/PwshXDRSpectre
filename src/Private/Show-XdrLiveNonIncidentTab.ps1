@@ -75,9 +75,19 @@ function Show-XdrLiveNonIncidentTab {
     $lowerCenterData = 'No item selected.'
     $actionsTitle = 'Actions'
     $actionsData = 'No actions available on this tab.'
+    $leftPanelName = 'placeholder_overview'
+    $centerPanelName = 'placeholder_details'
+    $lowerLeftPanelName = 'placeholder_activity'
+    $lowerCenterPanelName = 'placeholder_preview'
+    $actionsPanelName = 'placeholder_actions'
 
     switch ($ActiveTab) {
         'welcome' {
+            $leftPanelName = 'welcome_overview'
+            $centerPanelName = 'welcome_info'
+            $lowerLeftPanelName = 'welcome_announcements'
+            $lowerCenterPanelName = 'welcome_session'
+            $actionsPanelName = 'welcome_actions'
             $leftTitle = 'Welcome'
             $leftData = @(
                 '[white on #003366]  PwshXDRSpectre  [/]',
@@ -92,6 +102,11 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterData = "Tenant: $TenantId`nClient: $ClientId"
         }
         'hunting' {
+            $leftPanelName = 'query_catalog'
+            $centerPanelName = 'query_preview'
+            $lowerLeftPanelName = 'query_activity'
+            $lowerCenterPanelName = 'query_results'
+            $actionsPanelName = 'query_actions'
             $leftTitle = 'Hunting - Query Catalog'
             $leftData = 'Use the query catalog to select hunting queries.'
             $centerTitle = 'Query Preview'
@@ -103,6 +118,11 @@ function Show-XdrLiveNonIncidentTab {
             $actionsData = 'Alt+X executes the selected query when hunting mode is active.'
         }
         'query_library' {
+            $leftPanelName = 'query_library_list'
+            $centerPanelName = 'query_library_settings'
+            $lowerLeftPanelName = 'query_library_versions'
+            $lowerCenterPanelName = 'query_library_preview'
+            $actionsPanelName = 'query_library_actions'
             $leftTitle = 'Query Library'
             $leftData = 'Manage saved queries and settings.'
             $centerTitle = 'Query Settings'
@@ -113,6 +133,11 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterData = 'Preview selected query.'
         }
         'quarantine' {
+            $leftPanelName = 'quarantine_items'
+            $centerPanelName = 'quarantine_status'
+            $lowerLeftPanelName = 'quarantine_info'
+            $lowerCenterPanelName = 'quarantine_details'
+            $actionsPanelName = 'quarantine_actions'
             $leftTitle = 'Quarantine'
             $leftData = 'Under construction.'
             $centerTitle = 'Status'
@@ -124,6 +149,11 @@ function Show-XdrLiveNonIncidentTab {
             $actionsData = 'Under construction.'
         }
         'action_center' {
+            $leftPanelName = 'action_center_items'
+            $centerPanelName = 'action_center_status'
+            $lowerLeftPanelName = 'action_center_info'
+            $lowerCenterPanelName = 'action_center_details'
+            $actionsPanelName = 'action_center_actions'
             $leftTitle = 'Action Center'
             $leftData = 'Under construction.'
             $centerTitle = 'Status'
@@ -135,6 +165,11 @@ function Show-XdrLiveNonIncidentTab {
             $actionsData = 'Under construction.'
         }
         'settings' {
+            $leftPanelName = 'settings_overview'
+            $centerPanelName = 'settings_debug'
+            $lowerLeftPanelName = 'settings_logs'
+            $lowerCenterPanelName = 'settings_files'
+            $actionsPanelName = 'settings_actions'
             $leftTitle = 'Settings'
             $leftData = @(
                 "Input debug (Ctrl+Alt+K): $($Context.Diagnostics.InputDebugEnabled)",
@@ -149,6 +184,11 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterData = 'List of recent log files.'
         }
         'help' {
+            $leftPanelName = 'help_topics'
+            $centerPanelName = 'help_tips'
+            $lowerLeftPanelName = 'help_faq'
+            $lowerCenterPanelName = 'help_support'
+            $actionsPanelName = 'help_actions'
             $leftTitle = 'Help'
             $leftData = Get-XdrLiveHelpPanelContent -Context $Context -SelectedIncident $SelectedIncident -PendingIncidentResolution $PendingIncidentResolution -PendingTextInput $PendingTextInput -PendingConfirmation $PendingConfirmation -AlertsByIncidentId $AlertsByIncidentId -AlertLoadJobsByIncidentId $AlertLoadJobsByIncidentId -AlertPreloadQueue $AlertPreloadQueue -PrefetchCompletedAt $PrefetchCompletedAt -LastRefreshAt $LastRefreshAt -HeartbeatAt $HeartbeatAt -HeartbeatCounter $HeartbeatCounter -IsQueryMode:$IsQueryMode -ShowKeyboardHelpOverlay:$ShowKeyboardHelpOverlay
             $centerTitle = 'Tips'
@@ -160,11 +200,11 @@ function Show-XdrLiveNonIncidentTab {
         }
     }
 
-    $Layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title $leftTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $leftData -Expand)) | Out-Null
-    $Layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title $centerTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $centerData -Expand)) | Out-Null
-    $Layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title $lowerLeftTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerLeftData -Expand)) | Out-Null
-    $Layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title $lowerCenterTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerCenterData -Expand)) | Out-Null
-    $Layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title $actionsTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $actionsData -Expand)) | Out-Null
+    $Layout[(Resolve-XdrLivePanelSlot -PanelName $leftPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $leftPanelName -Title $leftTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $leftData -Expand)) | Out-Null
+    $Layout[(Resolve-XdrLivePanelSlot -PanelName $centerPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $centerPanelName -Title $centerTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $centerData -Expand)) | Out-Null
+    $Layout[(Resolve-XdrLivePanelSlot -PanelName $lowerLeftPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $lowerLeftPanelName -Title $lowerLeftTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerLeftData -Expand)) | Out-Null
+    $Layout[(Resolve-XdrLivePanelSlot -PanelName $lowerCenterPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $lowerCenterPanelName -Title $lowerCenterTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerCenterData -Expand)) | Out-Null
+    $Layout[(Resolve-XdrLivePanelSlot -PanelName $actionsPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $actionsPanelName -Title $actionsTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $actionsData -Expand)) | Out-Null
 
     if ($CurrentHelpPanel) {
         $Layout['help'].Update($CurrentHelpPanel) | Out-Null

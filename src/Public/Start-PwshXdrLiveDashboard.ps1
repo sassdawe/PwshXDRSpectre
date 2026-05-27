@@ -111,18 +111,18 @@ function Start-PwshXdrLiveDashboard {
     # Keep the global tab strip compact as the title of one bordered dashboard frame.
     $layout = New-SpectreLayout -Name 'root' -Rows @(
         (New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns @(
-            # Left column: incidents and alerts stacked
+            # Left column: two workflow-owned list/activity slots stacked.
             (New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows @(
-                (New-SpectreLayout -Name 'incidents' -Ratio 1 -Data 'empty'),
-                (New-SpectreLayout -Name 'alerts' -Ratio 1 -Data 'empty')
+                (New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty'),
+                (New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')
             )),
-            # Middle column: incident details and alert details stacked
+            # Middle column: two workflow-owned detail/preview slots stacked.
             (New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows @(
-                (New-SpectreLayout -Name 'incident_details' -Ratio 1 -Data 'empty'),
-                (New-SpectreLayout -Name 'alert_details' -Ratio 1 -Data 'empty')
+                (New-SpectreLayout -Name 'center_top' -Ratio 1 -Data 'empty'),
+                (New-SpectreLayout -Name 'center_bottom' -Ratio 1 -Data 'empty')
             )),
-            # Right column: actions (full height)
-            (New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')
+            # Right column: workflow actions (full height).
+            (New-SpectreLayout -Name 'right_actions' -Ratio 2 -Data 'empty')
         )),
         (New-SpectreLayout -Name 'help' -MinimumSize 3 -Ratio 1 -Data 'empty')
     )
@@ -147,69 +147,6 @@ function Start-PwshXdrLiveDashboard {
         # Render global tab header
         Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
 
-        # When a non-incidents tab is active, render simple placeholders into the main panes
-        if ($activeTab -ne 'incidents') {
-            switch ($activeTab) {
-                'welcome' {
-                    $welcomeData = @()
-                    $welcomeData += "[white on #003366]  PwshXDRSpectre  [/]"
-                    $welcomeData += "\nWelcome to PwshXDRSpectre. Use Alt+1..8 to switch tabs. Navigate with Tab/PgUp/PgDn."
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Welcome' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($welcomeData -join "`n") -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Info' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'General instructions and quick links will appear here.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Announcements' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No announcements.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Session' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data "Tenant: $TenantId`nClient: $ClientId" -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions available on Welcome tab.' -Expand)) | Out-Null
-                }
-                'hunting' {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Hunting - Query Catalog' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Use the query catalog to select hunting queries.' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Selected query preview and parameters.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Query Results' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Query results will appear here.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Result Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Details for selected result.' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Alt+X to execute selected query.' -Expand)) | Out-Null
-                }
-                'query_library' {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Query Library' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Manage saved queries and settings (coming soon).' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Settings' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Query settings and metadata.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Versions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Version history and owners.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preview selected query.' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions.' -Expand)) | Out-Null
-                }
-                'quarantine' {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Quarantine' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Work in progress.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Info' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                }
-                'action_center' {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Action Center' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Work in progress.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Info' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Under construction' -Expand)) | Out-Null
-                }
-                'settings' {
-                    $settingsData = @()
-                    $settingsData += "Input debug (Ctrl+Alt+K): $($context.Diagnostics.InputDebugEnabled)"
-                    $settingsData += "LogPath: $dashboardLogPath"
-                    $settingsData += "ThemeColor: $($context.Ui.ThemeColor)"
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Settings' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($settingsData -join "`n") -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Debug' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Log files and debug flags.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Logs' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Log browsing coming soon.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Files' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'List of recent log files.' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions.' -Expand)) | Out-Null
-                }
-                'help' {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Help' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Tips' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Keyboard shortcuts and guidance.' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'FAQ' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Frequently asked questions.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Support' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Contact and support links.' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions.' -Expand)) | Out-Null
-                }
-            }
-
-            $LiveContext.Refresh()
-        }
         # Authentication and data-loading flags gate the early render states before the
         # normal incident/action panels can be built.
         $authAttempted = $false
@@ -217,7 +154,7 @@ function Start-PwshXdrLiveDashboard {
         $dataLoaded = $false
         $fatalErrorMessage = $null
 
-        $panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')
+        $panelOrder = @(Get-XdrLivePanelOrder -TabName $activeTab)
         $selectedIncidentDetailsTab = 'details'  # 'details' or 'entities'
         $activePanelIndex = 0
         $activePanel = $panelOrder[$activePanelIndex]
@@ -396,7 +333,7 @@ function Start-PwshXdrLiveDashboard {
                     $earlyKeyHandled = $true
                     $tabIndex = [int]::Parse($earlyKeyChar) - 1
                     if ($tabIndex -ge 0 -and $tabIndex -lt $tabOrder.Count) {
-                        Set-XdrLiveActiveTab -TabName $tabOrder[$tabIndex] -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                        Set-XdrLiveActiveTab -TabName $tabOrder[$tabIndex] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                         Set-LiveStatusMessage -Context $context -Message "Switched to tab: $activeTab" -Level 'info'
                     }
                 }
@@ -417,6 +354,7 @@ function Start-PwshXdrLiveDashboard {
 
             $incidentDetailsHeader = Get-XdrIncidentDetailsTabHeader -CurrentTab $selectedIncidentDetailsTab
 
+            #region authentication
             # Authentication is performed once from inside the live loop so the operator
             # sees progress and can still receive a rendered failure screen.
             if (-not $authAttempted) {
@@ -424,11 +362,11 @@ function Start-PwshXdrLiveDashboard {
                 Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
 
                 if ($activeTab -eq 'incidents') {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Preparing authentication...' -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
                 }
 
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
@@ -436,9 +374,9 @@ function Start-PwshXdrLiveDashboard {
 
                 $authAttempted = $true
                 if ($activeTab -eq 'incidents') {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
+                    $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
+                    $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
+                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
                 }
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -457,11 +395,11 @@ function Start-PwshXdrLiveDashboard {
             }
 
             if (-not $authSucceeded) {
-                $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
-                $layout['incident_details'].Update((Format-SpectrePanel -Header '[red]Authentication Failed[/]' -Data $fatalErrorMessage -Expand)) | Out-Null
-                $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
-                $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
-                $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions available.' -Expand)) | Out-Null
+                $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
+                $layout['center_top'].Update((Format-SpectrePanel -Header '[red]Authentication Failed[/]' -Data $fatalErrorMessage -Expand)) | Out-Null
+                $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
+                $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
+                $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions available.' -Expand)) | Out-Null
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 $LiveContext.Refresh()
 
@@ -473,6 +411,7 @@ function Start-PwshXdrLiveDashboard {
                 Start-Sleep -Milliseconds $context.Ui.RefreshIntervalMs
                 continue
             }
+            #endregion authentication
 
             # Incident loading is asynchronous; while it runs, keep refreshing help and
             # non-incident tabs instead of blocking on Microsoft Graph.
@@ -530,11 +469,11 @@ function Start-PwshXdrLiveDashboard {
                     if ($activeTab -eq 'incidents') {
                         if (-not $hasVisibleIncidentData) {
                             $loadingMessage = "Loading incidents... heartbeat $heartbeatCounter"
-                            $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading incidents...' -Expand)) | Out-Null
-                            $layout['incident_details'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $loadingMessage -Expand)) | Out-Null
-                            $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
-                            $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
-                            $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading capabilities...' -Expand)) | Out-Null
+                            $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading incidents...' -Expand)) | Out-Null
+                            $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $loadingMessage -Expand)) | Out-Null
+                            $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
+                            $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
+                            $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading capabilities...' -Expand)) | Out-Null
                         }
                         $layout['help'].Update($helpPanel) | Out-Null
                     }
@@ -684,23 +623,25 @@ function Start-PwshXdrLiveDashboard {
                 }
             }
 
+            #region wizard focus pinning
             # Wizard-style workflows pin focus to the action panel until they complete or
             # cancel, even if the user was previously navigating another panel.
             if ($null -ne $pendingIncidentResolution) {
-                $activePanel = 'action_status'
-                $activePanelIndex = [array]::IndexOf($panelOrder, 'action_status')
+                $activePanel = 'incident_actions'
+                $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_actions')
                 $context.Selection.Panel = $activePanel
             }
             elseif ($null -ne $pendingIncidentClassification) {
-                $activePanel = 'action_status'
-                $activePanelIndex = [array]::IndexOf($panelOrder, 'action_status')
+                $activePanel = 'incident_actions'
+                $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_actions')
                 $context.Selection.Panel = $activePanel
             }
             elseif ($null -ne $pendingIncidentComment) {
-                $activePanel = 'action_status'
-                $activePanelIndex = [array]::IndexOf($panelOrder, 'action_status')
+                $activePanel = 'incident_actions'
+                $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_actions')
                 $context.Selection.Panel = $activePanel
             }
+            #endregion wizard focus pinning
 
             # Main input handler: modal workflows get first chance, then global navigation,
             # then mode-specific movement/actions for incidents or hunting.
@@ -1059,7 +1000,7 @@ function Start-PwshXdrLiveDashboard {
                         $keyHandled = $true
                         $index = [int]::Parse($keyChar) - 1
                         if ($index -ge 0 -and $index -lt $tabOrder.Count) {
-                            Set-XdrLiveActiveTab -TabName $tabOrder[$index] -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName $tabOrder[$index] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                             Set-LiveStatusMessage -Context $context -Message "Switched to tab: $activeTab" -Level 'info'
                         }
                     }
@@ -1085,11 +1026,11 @@ function Start-PwshXdrLiveDashboard {
                     elseif ($isAltPressed -and $keyChar -eq 'h') {
                         $keyHandled = $true
                         if ($activeTab -eq 'hunting') {
-                            Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                             Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
                         }
                         else {
-                            Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                             Set-LiveStatusMessage -Context $context -Message 'Switched to Hunting tab. Use the query catalog on the left and Alt+X to execute.' -Level 'info'
                         }
                     }
@@ -1139,30 +1080,30 @@ function Start-PwshXdrLiveDashboard {
                         continue
                     }
 
-                    elseif ($isQueryMode -and $key.Key -eq 'DownArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'action_status') {
+                    elseif ($isQueryMode -and $key.Key -eq 'DownArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'query_actions') {
                         $keyHandled = $true
-                        $activePanel = 'incidents'
-                        $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                        $activePanel = 'query_catalog'
+                        $activePanelIndex = [array]::IndexOf($panelOrder, 'query_catalog')
                         $context.Selection.Panel = $activePanel
                         $selectedQueryIndex = ($selectedQueryIndex + 1) % $context.Data.QueryCatalog.Count
                         Sync-XdrSelectedQuery -Context $context -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                         Set-LiveStatusMessage -Context $context -Message "Selected hunting query: $([string]$selectedQuery.name)" -Level 'info'
                     }
-                    elseif ($isQueryMode -and $key.Key -eq 'UpArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'action_status') {
+                    elseif ($isQueryMode -and $key.Key -eq 'UpArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'query_actions') {
                         $keyHandled = $true
-                        $activePanel = 'incidents'
-                        $activePanelIndex = [array]::IndexOf($panelOrder, 'incidents')
+                        $activePanel = 'query_catalog'
+                        $activePanelIndex = [array]::IndexOf($panelOrder, 'query_catalog')
                         $context.Selection.Panel = $activePanel
                         $selectedQueryIndex = ($selectedQueryIndex - 1 + $context.Data.QueryCatalog.Count) % $context.Data.QueryCatalog.Count
                         Sync-XdrSelectedQuery -Context $context -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                         Set-LiveStatusMessage -Context $context -Message "Selected hunting query: $([string]$selectedQuery.name)" -Level 'info'
                     }
-                    elseif ($isQueryMode -and $key.Key -eq 'Enter' -and $activePanel -eq 'incidents') {
+                    elseif ($isQueryMode -and $key.Key -eq 'Enter' -and $activePanel -eq 'query_catalog') {
                         $keyHandled = $true
                         Invoke-XdrLiveSelectedQueryExecution -SelectedQuery $selectedQuery -QueryExecutionJob ([ref]$queryExecutionJob) -ModulePath $modulePath -Context $context -LogPath $dashboardLogPath
                     }
 
-                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'incidents') {
+                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'incident_list') {
                         $selectedIndex = ($selectedIndex + 1) % $context.Data.Incidents.Count
                         $selectedIncident = $context.Data.Incidents[$selectedIndex]
                         $context.Selection.Incident = $selectedIncident
@@ -1190,7 +1131,7 @@ function Start-PwshXdrLiveDashboard {
                         }
                         if ($selectedIncidentDetailsTab -eq 'entities' -and $selectedIncident) { Start-XdrLiveEntityExtraction -Incident $selectedIncident -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -ModulePath $modulePath -DashboardLogPath $dashboardLogPath }
                     }
-                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'incidents') {
+                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'incident_list') {
                         $selectedIndex = ($selectedIndex - 1 + $context.Data.Incidents.Count) % $context.Data.Incidents.Count
                         $selectedIncident = $context.Data.Incidents[$selectedIndex]
                         $context.Selection.Incident = $selectedIncident
@@ -1218,13 +1159,13 @@ function Start-PwshXdrLiveDashboard {
                         }
                         if ($selectedIncidentDetailsTab -eq 'entities' -and $selectedIncident) { Start-XdrLiveEntityExtraction -Incident $selectedIncident -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -ModulePath $modulePath -DashboardLogPath $dashboardLogPath }
                     }
-                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'alerts' -and $visibleAlerts.Count -gt 0) {
+                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'alert_list' -and $visibleAlerts.Count -gt 0) {
                         $selectedAlertIndex = ($selectedAlertIndex + 1) % $visibleAlerts.Count
                         $selectedAlert = $visibleAlerts[$selectedAlertIndex]
                         $context.Selection.Alert = $selectedAlert
                         $selectedAlertIdByIncidentId[[string]$selectedIncident.IncidentId] = [string]$selectedAlert.AlertId
                     }
-                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'alerts' -and $visibleAlerts.Count -gt 0) {
+                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'alert_list' -and $visibleAlerts.Count -gt 0) {
                         $selectedAlertIndex = ($selectedAlertIndex - 1 + $visibleAlerts.Count) % $visibleAlerts.Count
                         $selectedAlert = $visibleAlerts[$selectedAlertIndex]
                         $context.Selection.Alert = $selectedAlert
@@ -1242,19 +1183,19 @@ function Start-PwshXdrLiveDashboard {
                     }
                     elseif ($selectedIncidentDetailsTab -eq 'entities' -and $key.Key -eq 'Enter' -and $activePanel -eq 'incident_details' -and $selectedEntity) {
                         $keyHandled = $true
-                        Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                        Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
 
                         $selectedEntityTypeLabel = [string]$selectedEntity.EntityType
                         $selectedEntityLabel = [string]$selectedEntity.DisplayName
                         Set-LiveStatusMessage -Context $context -Message "Switched to Hunting tab for ${selectedEntityTypeLabel}: $selectedEntityLabel" -Level 'info'
                     }
-                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
+                    elseif ($key.Key -eq 'DownArrow' -and $activePanel -in @('incident_actions', 'query_actions') -and $actionEntries.Count -gt 0) {
                         $selectedActionIndex = ($selectedActionIndex + 1) % $actionEntries.Count
                     }
-                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
+                    elseif ($key.Key -eq 'UpArrow' -and $activePanel -in @('incident_actions', 'query_actions') -and $actionEntries.Count -gt 0) {
                         $selectedActionIndex = ($selectedActionIndex - 1 + $actionEntries.Count) % $actionEntries.Count
                     }
-                    elseif ($key.Key -eq 'Enter' -and $activePanel -in @('incidents', 'incident_details')) {
+                    elseif ($key.Key -eq 'Enter' -and $activePanel -in @('incident_list', 'incident_details')) {
                         if ($selectedIncident) {
                             $incidentId = [string]$selectedIncident.IncidentId
                             if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
@@ -1267,12 +1208,12 @@ function Start-PwshXdrLiveDashboard {
                             }
                         }
                         if ($visibleAlerts.Count -gt 0) {
-                            $activePanel = 'alerts'
-                            $activePanelIndex = [array]::IndexOf($panelOrder, 'alerts')
+                            $activePanel = 'alert_list'
+                            $activePanelIndex = [array]::IndexOf($panelOrder, 'alert_list')
                             $context.Selection.Panel = $activePanel
                         }
                     }
-                    elseif ($key.Key -eq 'Enter' -and $activePanel -eq 'action_status' -and $actionEntries.Count -gt 0) {
+                    elseif ($key.Key -eq 'Enter' -and $activePanel -in @('incident_actions', 'query_actions') -and $actionEntries.Count -gt 0) {
                         $selectedAction = $actionEntries[$selectedActionIndex]
                         if ($selectedAction.IsEnabled) {
                             if ($isQueryMode) {
@@ -1280,7 +1221,7 @@ function Start-PwshXdrLiveDashboard {
                                     Invoke-XdrLiveSelectedQueryExecution -SelectedQuery $selectedQuery -QueryExecutionJob ([ref]$queryExecutionJob) -ModulePath $modulePath -Context $context -LogPath $dashboardLogPath
                                 }
                                 elseif ($selectedAction.Shortcut -eq 'h') {
-                                    Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder $panelOrder -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                                    Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
                                     Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
                                 }
                             }
@@ -1305,17 +1246,18 @@ function Start-PwshXdrLiveDashboard {
                 }
             }  # end foreach ($key in @($keysForMainHandler))
 
-            if (-not $context.Data.Incidents) {
+            # If there are no incidents, ensure selection is cleared and panels show appropriate messaging instead of stale data from previous incidents
+            if (-not $context.Data.Incidents -and $activeTab -ne 'hunting') {
                 $selectedEntity = $null
                 $context.Selection.Entity = $null
                 Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
                 if ($activeTab -eq 'incidents') {
-                    $layout['incidents'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
+                    $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incidents found. Press Ctrl+C to exit.' -Expand)) | Out-Null
                     $emptyIncidentDetailsData = if ($selectedIncidentDetailsTab -eq 'entities') { 'No incident selected. Press Alt+E for entities view.' } else { 'No incident selected.' }
-                    $layout['incident_details'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $emptyIncidentDetailsData -Expand)) | Out-Null
-                    $layout['alerts'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
-                    $layout['alert_details'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand)) | Out-Null
-                    $layout['action_status'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
+                    $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $emptyIncidentDetailsData -Expand)) | Out-Null
+                    $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
+                    $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand)) | Out-Null
+                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
                 }
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 if ($activeTab -ne 'incidents') {
@@ -1326,6 +1268,7 @@ function Start-PwshXdrLiveDashboard {
                 continue
             }
 
+            #region Build renderables from settled state
             # From here to the final Refresh(), build renderables from the settled state
             # rather than mutating Graph/job data. Spectre layout updates happen only after
             # every panel has been prepared.
@@ -1353,6 +1296,7 @@ function Start-PwshXdrLiveDashboard {
                     }
                     $severityColumn = $severityGlyph.PadRight(3)
 
+                    # the use of regex here allows for some flexibility in status text while still mapping to the right colors, e.g. "In Progress" vs "InProgress"
                     $statusColor = switch -Regex ($statusKey) {
                         '^active$|^new$' { 'deepskyblue1' }
                         '^in ?progress$' { 'yellow' }
@@ -1381,8 +1325,9 @@ function Start-PwshXdrLiveDashboard {
                         "$rowPrefix$rowStatus"
                     }
                 })
+            #endregion Build renderables from settled state
 
-            $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incidents' -ActivePanel $activePanel) -Expand
+            $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title "Incident List ($($context.Data.Incidents.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($incidentLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'incident_list' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_list' -ActivePanel $activePanel) -Expand
 
             $incidentDetails = if ($selectedIncidentDetailsTab -eq 'entities') {
                 # Entities come from the extractor cache when available, with lightweight
@@ -1516,8 +1461,7 @@ function Start-PwshXdrLiveDashboard {
                 $entityLines += '[grey]Tab to switch to Details • Use ↑↓ to navigate[/]'
 
                 Format-SpectrePanel -Header $incidentDetailsHeader -Data ($entityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
-            }
-            else {
+            } else {
                 [pscustomobject]@{
                     IncidentId     = $selectedIncident.IncidentId
                     DisplayName    = $selectedIncident.DisplayName
@@ -1580,12 +1524,11 @@ function Start-PwshXdrLiveDashboard {
                             "[bold $severityColor]$severityColumn[/] $titleColumn [bold $statusColor]$statusColumn[/]"
                         }
                     })
-            }
-            else {
+            } else {
                 @('Press Enter on an incident to load alerts.')
             }
 
-            $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title "Alert List ($($visibleAlerts.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($alertLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'alerts' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alerts' -ActivePanel $activePanel) -Expand
+            $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title "Alert List ($($visibleAlerts.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data (($alertLines | Out-String)) -Color (Get-PanelBorderColor -PanelName 'alert_list' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alert_list' -ActivePanel $activePanel) -Expand
 
             $alertDetails = if ($selectedAlert) {
                 [pscustomobject]@{
@@ -1596,8 +1539,7 @@ function Start-PwshXdrLiveDashboard {
                     Created     = $selectedAlert.CreatedDateTime
                     AlertWebUrl = $selectedAlert.AlertWebUrl
                 } | Format-SpectreJson | Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alert_details' -ActivePanel $activePanel) -Expand
-            }
-            else {
+            } else {
                 Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alert_details' -ActivePanel $activePanel) -Expand
             }
 
@@ -1738,7 +1680,7 @@ function Start-PwshXdrLiveDashboard {
                         $shortcutSymbol = [string]$Matches[1]
                         $labelText = [string]$Matches[2]
                         $isEnabled = $shortcutSymbol -ne 'ⓧ'
-                        $isSelected = ($activePanel -eq 'action_status' -and $actionCursor -eq $selectedActionIndex)
+                        $isSelected = ($activePanel -eq 'incident_actions' -and $actionCursor -eq $selectedActionIndex)
                         $actionCursor++
 
                         $prefix = if ($isSelected) { "[bold $($context.Ui.ThemeColor)]>[/] " } else { '  ' }
@@ -1832,7 +1774,7 @@ function Start-PwshXdrLiveDashboard {
                     }
                 }
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Resolution Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resolutionLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Incident Resolution Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resolutionLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_actions' -ActivePanel $activePanel) -Expand
             }
             elseif ($null -ne $pendingIncidentClassification) {
                 $classificationLines = @()
@@ -1870,7 +1812,7 @@ function Start-PwshXdrLiveDashboard {
                     $classificationLines += '[grey][orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]Up[/]/[orange1]Down[/] select | [orange1]Esc[/] cancel[/]'
                 }
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Classification Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($classificationLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Incident Classification Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($classificationLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_actions' -ActivePanel $activePanel) -Expand
             }
             elseif ($null -ne $pendingIncidentComment) {
                 $commentLines = @()
@@ -1902,10 +1844,10 @@ function Start-PwshXdrLiveDashboard {
                     $commentLines += '[grey]Type comment | [orange1]Enter[/] or [orange1]PgDn[/] next | [orange1]Backspace[/] edit | [orange1]Esc[/] cancel[/]'
                 }
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Incident Comment Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($commentLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Incident Comment Wizard' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($commentLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_actions' -ActivePanel $activePanel) -Expand
             }
             else {
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($actionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_actions' -ActivePanel $activePanel) -Expand
             }
 
             # Hunting reuses the same physical panels but swaps their meaning to query
@@ -1946,7 +1888,7 @@ function Start-PwshXdrLiveDashboard {
                         $queryDefinition = $context.Data.QueryCatalog[$queryCursor]
                         $queryResolution = Resolve-XdrQueryParameters -Query $queryDefinition -Context $context
                         $isSelectedQuery = $selectedQuery -and ([string]$queryDefinition.id -eq [string]$selectedQuery.id)
-                        $queryPrefix = if ($isSelectedQuery -and $activePanel -eq 'incidents') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $queryPrefix = if ($isSelectedQuery -and $activePanel -eq 'query_catalog') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
                         $queryNameMarkup = if ($isSelectedQuery) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText ([string]$queryDefinition.name)))[/]" } else { "[white]$([string](Get-SpectreEscapedText ([string]$queryDefinition.name)))[/]" }
                         $queryStatusMarkup = if ($queryResolution.IsBlocked) { '[bold red]BLOCKED[/]' } else { '[bold green]READY[/]' }
                         $queryCatalogLines += "$queryPrefix $queryNameMarkup $queryStatusMarkup"
@@ -1964,10 +1906,10 @@ function Start-PwshXdrLiveDashboard {
                     }
                 }
 
-                $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incidents' -Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryCatalogLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incidents' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incidents' -ActivePanel $activePanel) -Expand
+                $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_catalog' -Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryCatalogLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_catalog' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_catalog' -ActivePanel $activePanel) -Expand
 
                 if (-not $selectedQuery) {
-                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No hunting query selected.' -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_preview' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No hunting query selected.' -Color (Get-PanelBorderColor -PanelName 'query_preview' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_preview' -ActivePanel $activePanel) -Expand
                 }
                 elseif ($selectedQueryResolution.IsBlocked) {
                     $blockedPreviewLines = @(
@@ -1977,10 +1919,10 @@ function Start-PwshXdrLiveDashboard {
                         "[darkred]Missing required context: $([string](Get-SpectreEscapedText (($selectedQueryResolution.MissingContext -join ', '))))[/]",
                         "[grey]Hint: $([string](Get-SpectreEscapedText ([string](Get-XdrQueryContextGuidance -ContextKey $selectedQueryResolution.MissingContext[0]))))[/]"
                     )
-                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($blockedPreviewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_preview' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($blockedPreviewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_preview' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_preview' -ActivePanel $activePanel) -Expand
                 }
                 elseif (-not [string]::IsNullOrWhiteSpace($selectedQueryPreviewError)) {
-                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data $selectedQueryPreviewError -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_preview' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data $selectedQueryPreviewError -Color (Get-PanelBorderColor -PanelName 'query_preview' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_preview' -ActivePanel $activePanel) -Expand
                 }
                 else {
                     $previewLines = @(
@@ -1993,7 +1935,7 @@ function Start-PwshXdrLiveDashboard {
                         $previewLines += ''
                     }
                     $previewLines += "[white]$([string](Get-SpectreEscapedText ($selectedQueryPreview -replace "`r?`n", ' ')))[/]"
-                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_details' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($previewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'incident_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'incident_details' -ActivePanel $activePanel) -Expand
+                    $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_preview' -Title 'Query Preview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($previewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_preview' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_preview' -ActivePanel $activePanel) -Expand
                 }
 
                 $activityLines = @()
@@ -2011,7 +1953,7 @@ function Start-PwshXdrLiveDashboard {
                     }
                 }
 
-                $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alerts' -Title "Activity Log ($($queryRunHistory.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($activityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'alerts' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alerts' -ActivePanel $activePanel) -Expand
+                $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_activity' -Title "Activity Log ($($queryRunHistory.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($activityLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_activity' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_activity' -ActivePanel $activePanel) -Expand
 
                 $resultLines = @()
                 if (-not $selectedQueryResult -or [string]$selectedQueryResult.QueryId -ne [string]$selectedQuery.id) {
@@ -2035,7 +1977,7 @@ function Start-PwshXdrLiveDashboard {
                     }
                 }
 
-                $alertDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Query Results' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resultLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'alert_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'alert_details' -ActivePanel $activePanel) -Expand
+                $alertDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_results' -Title 'Query Results' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($resultLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_results' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_results' -ActivePanel $activePanel) -Expand
 
                 # Query execution is disabled while a job is running or required context
                 # is missing; the same reasons are rendered in the action panel.
@@ -2097,7 +2039,7 @@ function Start-PwshXdrLiveDashboard {
                             $shortcutSymbol = [string]$Matches[1]
                             $labelText = [string]$Matches[2]
                             $isEnabled = $shortcutSymbol -ne 'ⓧ'
-                            $isSelected = ($activePanel -eq 'action_status' -and $queryActionCursor -eq $selectedActionIndex)
+                            $isSelected = ($activePanel -eq 'query_actions' -and $queryActionCursor -eq $selectedActionIndex)
                             $queryActionCursor++
 
                             $prefix = if ($isSelected) { "[bold $($context.Ui.ThemeColor)]>[/] " } else { '  ' }
@@ -2122,7 +2064,7 @@ function Start-PwshXdrLiveDashboard {
                         return "  [grey]$(Get-SpectreEscapedText $line)[/]"
                     })
 
-                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'action_status' -Title 'Query Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryActionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'action_status' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'action_status' -ActivePanel $activePanel) -Expand
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_actions' -Title 'Query Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryActionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_actions' -ActivePanel $activePanel) -Expand
             }
 
             # Help is rebuilt last so it can reflect any key handling, job completion, or
@@ -2136,11 +2078,11 @@ function Start-PwshXdrLiveDashboard {
             # Only incidents and hunting own the full dynamic panel set. Other tabs render
             # through a shared placeholder helper while background jobs keep running.
             if ($activeTab -in @('incidents', 'hunting')) {
-                $layout['incidents'].Update($incidentPanel) | Out-Null
-                $layout['incident_details'].Update($incidentDetails) | Out-Null
-                $layout['alerts'].Update($alertsPanel) | Out-Null
-                $layout['alert_details'].Update($alertDetails) | Out-Null
-                $layout['action_status'].Update($actionStatusPanel) | Out-Null
+                $layout['left_top'].Update($incidentPanel) | Out-Null
+                $layout['center_top'].Update($incidentDetails) | Out-Null
+                $layout['left_bottom'].Update($alertsPanel) | Out-Null
+                $layout['center_bottom'].Update($alertDetails) | Out-Null
+                $layout['right_actions'].Update($actionStatusPanel) | Out-Null
                 $layout['help'].Update($helpPanel) | Out-Null
             }
             else {

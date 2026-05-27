@@ -252,9 +252,10 @@ function Invoke-XdrLiveActionShortcut {
                 }
             }
 
+            $ActionPanelName = if ($PanelOrder -contains 'incident_actions') { 'incident_actions' } else { $PanelOrder[-1] }
             $ActivePanelBeforeResolution.Value = $ActivePanel.Value
-            $ActivePanel.Value = 'action_status'
-            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+            $ActivePanel.Value = $ActionPanelName
+            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, $ActionPanelName)
             $Context.Selection.Panel = $ActivePanel.Value
 
             $PendingTextInput.Value = $null
@@ -299,8 +300,9 @@ function Invoke-XdrLiveActionShortcut {
                     $ActivePanelBeforeClassification.Value = $ActivePanel.Value
                 }
 
-                $ActivePanel.Value = 'action_status'
-                $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+                $ActionPanelName = if ($PanelOrder -contains 'incident_actions') { 'incident_actions' } else { $PanelOrder[-1] }
+                $ActivePanel.Value = $ActionPanelName
+                $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, $ActionPanelName)
                 $Context.Selection.Panel = $ActivePanel.Value
 
                 $PendingTextInput.Value = $null
@@ -335,8 +337,9 @@ function Invoke-XdrLiveActionShortcut {
                 $ActivePanelBeforeComment.Value = $ActivePanel.Value
             }
 
-            $ActivePanel.Value = 'action_status'
-            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, 'action_status')
+            $ActionPanelName = if ($PanelOrder -contains 'incident_actions') { 'incident_actions' } else { $PanelOrder[-1] }
+            $ActivePanel.Value = $ActionPanelName
+            $ActivePanelIndex.Value = [array]::IndexOf($PanelOrder, $ActionPanelName)
             $Context.Selection.Panel = $ActivePanel.Value
 
             $PendingTextInput.Value = $null
