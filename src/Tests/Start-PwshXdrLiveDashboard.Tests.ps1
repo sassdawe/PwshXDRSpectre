@@ -47,7 +47,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
         $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
         $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'alerts' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
     }
 
@@ -64,9 +64,11 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $outerTabsContent.Contains('$DashboardFrame.Header = [Spectre.Console.PanelHeader]::new($outerTabsHeader, [Spectre.Console.Justify]::Left)') | Should -BeTrue
         $outerTabsContent.Contains("`$ScreenLayout['dashboard_frame'].Update(`$DashboardFrame) | Out-Null") | Should -BeTrue
         $content.Contains('Invoke-SpectreLive -Data $screenLayout -ScriptBlock') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'incidents' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'alert_details' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'action_status' -Ratio 2 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'center_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'center_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $content.Contains("(New-SpectreLayout -Name 'right_actions' -Ratio 2 -Data 'empty')") | Should -BeTrue
         $content | Should -Not -Match "New-SpectreLayout -Name 'outer_tabs'"
         $content | Should -Not -Match "\['outer_tabs'\]"
         $content | Should -Not -Match "New-SpectreLayout -Name 'header'"
@@ -102,7 +104,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('if ($null -ne $pendingIncidentResolution) {') | Should -BeTrue
         $content.Contains('$keyHandled = $true') | Should -BeTrue
         $content.Contains('if ($keyHandled) {') | Should -BeTrue
-        $content.Contains("elseif (`$key.Key -eq 'Enter' -and `$activePanel -eq 'action_status' -and `$actionEntries.Count -gt 0) {") | Should -BeTrue
+        $content.Contains("elseif (`$key.Key -eq 'Enter' -and `$activePanel -in @('incident_actions', 'query_actions') -and `$actionEntries.Count -gt 0) {") | Should -BeTrue
     }
 
     It 'renders incident resolution as a per-step wizard page' {
@@ -133,7 +135,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'e')") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
         $content.Contains("`$activePanel = 'incident_details'") | Should -BeTrue
-        $content.Contains("`$panelOrder = @('incidents', 'incident_details', 'alerts', 'action_status')") | Should -BeTrue
+        $content.Contains("`$panelOrder = @(Get-XdrLivePanelOrder -TabName `$activeTab)") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
         $content.Contains('Get-XdrIncidentDetailsTabHeader -CurrentTab $selectedIncidentDetailsTab') | Should -BeTrue
@@ -212,13 +214,14 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
 
     It 'supports keyboard help overlay, quick quit confirmation, and r refresh alias' {
         $content = Get-Content -Path $script:dashboardPath -Raw
+        $nonIncidentTabContent = Get-Content -Path (Join-Path $script:privateRoot 'Show-XdrLiveNonIncidentTab.ps1') -Raw
 
         $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
         $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$isCtrlPressed -and `$keyChar -eq 'k')") | Should -BeTrue
         $content.Contains("`$context.Diagnostics.InputDebugEnabled = -not `$context.Diagnostics.InputDebugEnabled") | Should -BeTrue
-        $content.Contains('Input debug (Ctrl+Alt+K): $($context.Diagnostics.InputDebugEnabled)') | Should -BeTrue
+        $nonIncidentTabContent.Contains('Input debug (Ctrl+Alt+K): $($Context.Diagnostics.InputDebugEnabled)') | Should -BeTrue
         $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$isShiftPressed -and `$key.Key -eq 'L')") | Should -BeTrue
@@ -377,14 +380,14 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$isQueryMode -and `$isAltPressed -and `$keyChar -eq 'x')") | Should -BeTrue
         $content.Contains("Set-XdrLiveActiveTab -TabName 'hunting'") | Should -BeTrue
         $content.Contains("Set-XdrLiveActiveTab -TabName 'incidents'") | Should -BeTrue
-        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'DownArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
-        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'UpArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'action_status')") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'DownArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'query_actions')") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'UpArrow' -and `$context.Data.QueryCatalog.Count -gt 0 -and `$activePanel -ne 'query_actions')") | Should -BeTrue
         (Get-Content -Path (Join-Path $script:privateRoot 'Invoke-XdrLiveSelectedQueryExecution.ps1') -Raw).Contains('Start-XdrLiveQueryJob -Query $SelectedQuery -ModulePath $ModulePath -Context $Context -ExistingJob $QueryExecutionJob.Value -LogPath $LogPath') | Should -BeTrue
         $content.Contains('Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryExecutionJob) -QueryResultsByCacheKey $queryResultsByCacheKey -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)') | Should -BeTrue
         (Get-Content -Path (Join-Path $script:privateRoot 'Sync-XdrSelectedQuery.ps1') -Raw).Contains('Resolve-XdrQueryParameters -Query $SelectedQuery.Value -Context $Context') | Should -BeTrue
         (Get-Content -Path (Join-Path $script:privateRoot 'Sync-XdrSelectedQuery.ps1') -Raw).Contains('Get-XdrQueryResultCacheKey -QueryId ([string]$SelectedQuery.Value.id) -ContextSnapshot ([pscustomobject]$parameterResolution.Parameters)') | Should -BeTrue
         (Get-Content -Path (Join-Path $script:privateRoot 'Sync-XdrSelectedQuery.ps1') -Raw).Contains('$SelectedQueryResult.Value = if (-not [string]::IsNullOrWhiteSpace([string]$selectedQueryCacheKey) -and $QueryResultsByCacheKey.ContainsKey([string]$selectedQueryCacheKey))') | Should -BeTrue
-        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'Enter' -and `$activePanel -eq 'incidents') {") | Should -BeTrue
+        $content.Contains("elseif (`$isQueryMode -and `$key.Key -eq 'Enter' -and `$activePanel -eq 'query_catalog') {") | Should -BeTrue
         $content.Contains('Invoke-XdrLiveSelectedQueryExecution -SelectedQuery $selectedQuery') | Should -BeTrue
         $content.Contains('-Title "Query Catalog ($(@($context.Data.QueryCatalog).Count))"') | Should -BeTrue
         $content.Contains("-Title 'Query Preview'") | Should -BeTrue

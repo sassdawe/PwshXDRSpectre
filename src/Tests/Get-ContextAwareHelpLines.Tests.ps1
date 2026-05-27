@@ -5,7 +5,7 @@ BeforeAll {
 Describe 'Get-ContextAwareHelpLines' {
     It 'returns resolution-mode guidance when pending resolution exists' {
         InModuleScope PwshXDRSpectre {
-            $lines = Get-ContextAwareHelpLines -ActivePanel incidents -PendingIncidentResolution ([pscustomobject]@{ Step = 'determination' })
+            $lines = Get-ContextAwareHelpLines -ActivePanel incident_list -PendingIncidentResolution ([pscustomobject]@{ Step = 'determination' })
 
             $lines | Should -Match 'Incident resolution wizard active'
         }
@@ -13,7 +13,7 @@ Describe 'Get-ContextAwareHelpLines' {
 
     It 'returns panel-specific help for alerts panel' {
         InModuleScope PwshXDRSpectre {
-            $lines = Get-ContextAwareHelpLines -ActivePanel alerts
+            $lines = Get-ContextAwareHelpLines -ActivePanel alert_list
 
             $lines | Should -Match 'Alt\+Shift\+L force reloads selected incident alerts'
             $lines | Should -Match 'Alt\+N/P/M selected alert'
@@ -26,7 +26,7 @@ Describe 'Get-ContextAwareHelpLines' {
 
     It 'returns incident comment wizard guidance when pending incident comment exists' {
         InModuleScope PwshXDRSpectre {
-            $lines = Get-ContextAwareHelpLines -ActivePanel action_status -PendingIncidentComment ([pscustomobject]@{ Step = 'comment' })
+            $lines = Get-ContextAwareHelpLines -ActivePanel incident_actions -PendingIncidentComment ([pscustomobject]@{ Step = 'comment' })
 
             $lines | Should -Match 'Incident comment wizard active'
             $lines | Should -Match 'Ctrl\+C exit'
@@ -44,7 +44,7 @@ Describe 'Get-ContextAwareHelpLines' {
 
     It 'returns hunting-mode guidance when query mode is active' {
         InModuleScope PwshXDRSpectre {
-            $lines = Get-ContextAwareHelpLines -ActivePanel action_status -IsQueryMode
+            $lines = Get-ContextAwareHelpLines -ActivePanel query_actions -IsQueryMode
 
             $lines | Should -Match 'Alt\+X run selected query'
             $lines | Should -Match 'Alt\+H return to incident workflow'
@@ -54,7 +54,7 @@ Describe 'Get-ContextAwareHelpLines' {
 
     It 'returns query-catalog guidance that Enter executes the selected hunting query' {
         InModuleScope PwshXDRSpectre {
-            $lines = Get-ContextAwareHelpLines -ActivePanel incidents -IsQueryMode
+            $lines = Get-ContextAwareHelpLines -ActivePanel query_catalog -IsQueryMode
 
             $lines | Should -Match 'Enter execute selected query'
             $lines | Should -Match 'Alt\+X execute selected query'

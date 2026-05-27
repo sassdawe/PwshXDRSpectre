@@ -10,10 +10,10 @@ Describe 'Invoke-XdrLiveActionShortcut' {
                     StatusMessage = ''
                     LastNotification = $null
                 }
-                Selection = [pscustomobject]@{ Panel = 'incidents' }
+                Selection = [pscustomobject]@{ Panel = 'incident_list' }
             }
 
-            $activePanel = 'incidents'
+            $activePanel = 'incident_list'
             $activePanelIndex = 0
             $activePanelBeforeResolution = $null
             $pendingConfirmation = $null
@@ -21,7 +21,7 @@ Describe 'Invoke-XdrLiveActionShortcut' {
             $pendingIncidentResolution = $null
             $selectedAlertIndex = 0
 
-            Invoke-XdrLiveActionShortcut -Shortcut 'l' -Context $context -SelectedIncident $null -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incidents','incident_details','alerts','alert_details','action_status') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex)
+            Invoke-XdrLiveActionShortcut -Shortcut 'l' -Context $context -SelectedIncident $null -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incident_list','incident_details','alert_list','incident_actions') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex)
 
             $context.Ui.StatusMessage | Should -Be 'WARN No incident is selected for loading alerts.'
         }
@@ -34,11 +34,11 @@ Describe 'Invoke-XdrLiveActionShortcut' {
                     StatusMessage = ''
                     LastNotification = $null
                 }
-                Selection = [pscustomobject]@{ Panel = 'incidents' }
+                Selection = [pscustomobject]@{ Panel = 'incident_list' }
                 Data = [pscustomobject]@{ Alerts = @([pscustomobject]@{ AlertId = 'a-1' }) }
             }
 
-            $activePanel = 'incidents'
+            $activePanel = 'incident_list'
             $activePanelIndex = 0
             $activePanelBeforeResolution = $null
             $pendingConfirmation = $null
@@ -51,7 +51,7 @@ Describe 'Invoke-XdrLiveActionShortcut' {
 
             Mock Restore-XdrLiveCachedAlertsForIncident { $true }
 
-            Invoke-XdrLiveActionShortcut -Shortcut 'l' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incidents','incident_details','alerts','alert_details','action_status') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+            Invoke-XdrLiveActionShortcut -Shortcut 'l' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incident_list','incident_details','alert_list','incident_actions') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
 
             @($visibleAlerts).Count | Should -Be 1
             $visibleAlerts[0].AlertId | Should -Be 'a-1'
@@ -66,10 +66,10 @@ Describe 'Invoke-XdrLiveActionShortcut' {
                     StatusMessage = ''
                     LastNotification = $null
                 }
-                Selection = [pscustomobject]@{ Panel = 'incidents' }
+                Selection = [pscustomobject]@{ Panel = 'incident_list' }
             }
 
-            $activePanel = 'incidents'
+            $activePanel = 'incident_list'
             $activePanelIndex = 0
             $activePanelBeforeResolution = $null
             $pendingConfirmation = $null
@@ -81,7 +81,7 @@ Describe 'Invoke-XdrLiveActionShortcut' {
             Mock Restore-XdrLiveCachedAlertsForIncident { throw 'cache should not be consulted' }
             Mock Start-XdrLiveAlertLoadJob { $true }
 
-            Invoke-XdrLiveActionShortcut -Shortcut 'reload-alerts' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incidents','incident_details','alerts','alert_details','action_status') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex)
+            Invoke-XdrLiveActionShortcut -Shortcut 'reload-alerts' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $null -TriageOptions ([pscustomobject]@{ IncidentDeterminations = @('TruePositive') }) -PanelOrder @('incident_list','incident_details','alert_list','incident_actions') -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ModulePath 'module.psm1' -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{} -SelectedAlertIdByIncidentId @{} -SelectedAlertIndex ([ref]$selectedAlertIndex)
 
             $context.Ui.StatusMessage | Should -Be 'INFO Force reloading alerts in background...'
             Should -Invoke Restore-XdrLiveCachedAlertsForIncident -Times 0

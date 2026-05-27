@@ -11,7 +11,7 @@ Describe 'Get-PanelBorderColor' {
 
     It 'returns base color for inactive panel' {
         InModuleScope PwshXDRSpectre {
-            Get-PanelBorderColor -PanelName 'help' -ActivePanel 'incidents' -AccentColor 'orange1' | Should -Be 'deepskyblue1'
+            Get-PanelBorderColor -PanelName 'help' -ActivePanel 'incident_list' -AccentColor 'orange1' | Should -Be 'deepskyblue1'
         }
     }
 }
