@@ -36,7 +36,14 @@ I used your decisions: Graph + direct REST, single active tenant UX, repo-based 
 3. Provide store APIs: checkpoint save/load, history append, query run append, retention cleanup.
 4. Restore last analyst context on startup (tenant, incident, recent actions, recent query runs).
 
-6. Phase 6: UX hardening, testing, and docs (depends on all prior phases)
+6. Phase 6: Outer panel tabs and placeholder workflows (depends on Phases 1, 2, and 4)
+1. Use the outer dashboard frame and top tab strip as the primary navigation shell.
+2. Keep physical layout slots separate from workflow-specific logical panel names.
+3. Promote Incidents and Hunting to full top-level workflows inside the shared shell.
+4. Keep placeholder tabs stable while future Query Library, Quarantine, Action Center, Settings, and Help workflows are built.
+5. Document placeholder graduation rules and any debugging disablement restore paths.
+
+7. Phase 7: UX hardening, testing, and docs (depends on all prior phases)
 1. Expand layout to dedicated panes for Incidents, Alerts, Entities, Actions, Query Catalog, Query Results, and Activity Log.
 2. Add keyboard help/status indicators and non-blocking feedback for long-running operations.
 3. Add Pester tests for JSON schema validation, context interpolation, memory store behavior, and action payload builders.
