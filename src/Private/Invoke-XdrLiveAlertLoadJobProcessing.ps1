@@ -34,6 +34,9 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
     .PARAMETER VisibleAlertIncidentId
     Incident id associated with the current visible alert panel.
 
+    .PARAMETER LogPath
+    Optional dashboard log path for cache restore diagnostics.
+
     .OUTPUTS
     None
 
@@ -67,7 +70,10 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         [ref]$VisibleAlerts,
 
         [Parameter(Mandatory)]
-        [ref]$VisibleAlertIncidentId
+        [ref]$VisibleAlertIncidentId,
+
+        [Parameter()]
+        [string]$LogPath
     )
 
     foreach ($jobEntry in @($AlertLoadJobsByIncidentId.GetEnumerator())) {
@@ -101,7 +107,7 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         $AlertsByIncidentId[$incidentId] = $loadedAlerts
 
         if ($SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
-            Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex | Out-Null
+            Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex -LogPath $LogPath | Out-Null
             $VisibleAlerts.Value = @($Context.Data.Alerts)
             $VisibleAlertIncidentId.Value = $incidentId
         }

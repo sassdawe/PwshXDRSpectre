@@ -500,7 +500,7 @@ function Start-PwshXdrLiveDashboard {
                 if (-not [string]::IsNullOrWhiteSpace([string]$pendingRefreshAlertId)) {
                     $selectedAlertIdByIncidentId[[string]$selectedIncident.IncidentId] = [string]$pendingRefreshAlertId
                 }
-                if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId ([string]$selectedIncident.IncidentId) -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
+                if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId ([string]$selectedIncident.IncidentId) -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath)) {
                     $selectedAlert = $null
                     $selectedAlertIndex = 0
                     $context.Selection.Alert = $null
@@ -553,7 +553,7 @@ function Start-PwshXdrLiveDashboard {
 
             # Fold completed alert/query/entity jobs back into the single-threaded render
             # state. This keeps all Spectre updates on the live loop.
-            Invoke-XdrLiveAlertLoadJobProcessing -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -SelectedIncident $selectedIncident -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+            Invoke-XdrLiveAlertLoadJobProcessing -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -SelectedIncident $selectedIncident -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -LogPath $dashboardLogPath
             if ($dataLoaded) {
                 Start-XdrLiveQueuedAlertPreloads -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -MaxAlertLoadJobs $maxAlertLoadJobs -AlertPreloadQueue $alertPreloadQueue -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -LogPath $dashboardLogPath
             }
@@ -568,7 +568,7 @@ function Start-PwshXdrLiveDashboard {
                     $visibleAlertSignature = Get-XdrAlertListSignature -Alerts @($visibleAlerts)
                     $cachedAlertSignature = Get-XdrAlertListSignature -Alerts $cachedAlertsForSelectedIncident
                     if ([string]$visibleAlertIncidentId -ne $selectedIncidentId -or @($visibleAlerts).Count -ne $cachedAlertsForSelectedIncident.Count -or $visibleAlertSignature -ne $cachedAlertSignature) {
-                        Restore-XdrLiveCachedAlertsForIncident -IncidentId $selectedIncidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) | Out-Null
+                        Restore-XdrLiveCachedAlertsForIncident -IncidentId $selectedIncidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath | Out-Null
                         Sync-XdrLiveVisibleAlertsFromContext -Context $context -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -Incident $selectedIncident
                     }
                 }
@@ -1111,7 +1111,7 @@ function Start-PwshXdrLiveDashboard {
                         $selectedEntity = $null
                         $context.Selection.Entity = $null
                         $incidentId = [string]$selectedIncident.IncidentId
-                        if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
+                        if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath)) {
                             $selectedAlert = $null
                             $selectedAlertIndex = 0
                             $context.Selection.Alert = $null
@@ -1139,7 +1139,7 @@ function Start-PwshXdrLiveDashboard {
                         $selectedEntity = $null
                         $context.Selection.Entity = $null
                         $incidentId = [string]$selectedIncident.IncidentId
-                        if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
+                        if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath)) {
                             $selectedAlert = $null
                             $selectedAlertIndex = 0
                             $context.Selection.Alert = $null
@@ -1198,7 +1198,7 @@ function Start-PwshXdrLiveDashboard {
                     elseif ($key.Key -eq 'Enter' -and $activePanel -in @('incident_list', 'incident_details')) {
                         if ($selectedIncident) {
                             $incidentId = [string]$selectedIncident.IncidentId
-                            if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex))) {
+                            if (-not (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath)) {
                                 if (Start-XdrLiveAlertLoadJob -Incident $selectedIncident -RestoreSelectionOnCompletion -ModulePath $modulePath -Context $context -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId) {
                                     Set-LiveStatusMessage -Context $context -Message 'Loading alerts in background...' -Level 'info'
                                 }
@@ -1226,7 +1226,7 @@ function Start-PwshXdrLiveDashboard {
                                 }
                             }
                             else {
-                                Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                                Invoke-XdrLiveActionShortcut -Shortcut $selectedAction.Shortcut -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -LogPath $dashboardLogPath
                             }
                         }
                         else {
@@ -1234,10 +1234,10 @@ function Start-PwshXdrLiveDashboard {
                         }
                     }
                     elseif ($isAltPressed -and $isShiftPressed -and $key.Key -eq 'L') {
-                        Invoke-XdrLiveActionShortcut -Shortcut 'reload-alerts' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                        Invoke-XdrLiveActionShortcut -Shortcut 'reload-alerts' -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -LogPath $dashboardLogPath
                     }
                     elseif ($isAltPressed -and $keyChar -in @('a', 'u', 'o', 'i', 'r', 'k', 'c', 'l', 'n', 'p', 'm')) {
-                        Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId)
+                        Invoke-XdrLiveActionShortcut -Shortcut $keyChar -Context $context -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -TriageOptions $triageOptions -PanelOrder $panelOrder -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -ActivePanelBeforeResolution ([ref]$activePanelBeforeResolution) -PendingConfirmation ([ref]$pendingConfirmation) -PendingTextInput ([ref]$pendingTextInput) -PendingIncidentResolution ([ref]$pendingIncidentResolution) -ActivePanelBeforeClassification ([ref]$activePanelBeforeClassification) -PendingIncidentClassification ([ref]$pendingIncidentClassification) -ActivePanelBeforeComment ([ref]$activePanelBeforeComment) -PendingIncidentComment ([ref]$pendingIncidentComment) -ModulePath $modulePath -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlertIndex ([ref]$selectedAlertIndex) -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -LogPath $dashboardLogPath
                     }
 
                 }

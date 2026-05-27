@@ -70,6 +70,9 @@ function Invoke-XdrLiveActionShortcut {
     .PARAMETER VisibleAlertIncidentId
     Incident id associated with the current visible alert panel.
 
+    .PARAMETER LogPath
+    Optional dashboard log path for cache restore diagnostics.
+
     .OUTPUTS
     None
 
@@ -145,7 +148,10 @@ function Invoke-XdrLiveActionShortcut {
         [ref]$VisibleAlerts,
 
         [Parameter()]
-        [ref]$VisibleAlertIncidentId
+        [ref]$VisibleAlertIncidentId,
+
+        [Parameter()]
+        [string]$LogPath
     )
 
     switch ($Shortcut) {
@@ -156,7 +162,7 @@ function Invoke-XdrLiveActionShortcut {
             }
 
             $incidentId = [string]$SelectedIncident.IncidentId
-            if (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert ([ref]$SelectedAlert) -SelectedAlertIndex $SelectedAlertIndex) {
+            if (Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert ([ref]$SelectedAlert) -SelectedAlertIndex $SelectedAlertIndex -LogPath $LogPath) {
                 if ($PSBoundParameters.ContainsKey('VisibleAlerts')) {
                     $VisibleAlerts.Value = @($Context.Data.Alerts)
                 }

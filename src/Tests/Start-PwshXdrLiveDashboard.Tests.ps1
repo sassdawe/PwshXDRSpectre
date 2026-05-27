@@ -332,7 +332,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$visibleAlertSignature = Get-XdrAlertListSignature -Alerts @($visibleAlerts)') | Should -BeTrue
         $content.Contains('$cachedAlertSignature = Get-XdrAlertListSignature -Alerts $cachedAlertsForSelectedIncident') | Should -BeTrue
         $content.Contains('if ([string]$visibleAlertIncidentId -ne $selectedIncidentId -or @($visibleAlerts).Count -ne $cachedAlertsForSelectedIncident.Count -or $visibleAlertSignature -ne $cachedAlertSignature) {') | Should -BeTrue
-        $content.Contains('Restore-XdrLiveCachedAlertsForIncident -IncidentId $selectedIncidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) | Out-Null') | Should -BeTrue
+        $content.Contains('Restore-XdrLiveCachedAlertsForIncident -IncidentId $selectedIncidentId -AlertsByIncidentId $alertsByIncidentId -Context $context -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $dashboardLogPath | Out-Null') | Should -BeTrue
         $content.Contains('Sync-XdrLiveVisibleAlertsFromContext -Context $context -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -Incident $selectedIncident') | Should -BeTrue
     }
 
