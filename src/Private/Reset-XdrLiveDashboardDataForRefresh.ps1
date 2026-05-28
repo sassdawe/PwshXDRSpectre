@@ -16,11 +16,17 @@ function Reset-XdrLiveDashboardDataForRefresh {
         [Parameter()]
         [object]$SelectedAlert,
 
+        [Parameter()]
+        [object]$SelectedEntity,
+
         [Parameter(Mandatory)]
         [ref]$PendingRefreshIncidentId,
 
         [Parameter(Mandatory)]
         [ref]$PendingRefreshAlertId,
+
+        [Parameter(Mandatory)]
+        [ref]$PendingRefreshEntityKey,
 
         [Parameter(Mandatory)]
         [ref]$DataLoaded,
@@ -79,8 +85,9 @@ function Reset-XdrLiveDashboardDataForRefresh {
 
     $PendingRefreshIncidentId.Value = if ($PreserveSelection -and $SelectedIncident) { [string]$SelectedIncident.IncidentId } else { $null }
     $PendingRefreshAlertId.Value = if ($PreserveSelection -and $SelectedAlert) { [string]$SelectedAlert.AlertId } else { $null }
+    $PendingRefreshEntityKey.Value = if ($PreserveSelection -and $SelectedEntity) { Get-XdrEntitySelectionKey -Entity $SelectedEntity } else { $null }
 
-    Write-XdrLiveDashboardLog -LogPath $LogPath -Message "Resetting dashboard data for refresh. PreserveSelection=$PreserveSelection"
+    Write-XdrLiveDashboardLog -LogPath $LogPath -Message "Resetting dashboard data for refresh. PreserveSelection=$PreserveSelection IncidentId=$($PendingRefreshIncidentId.Value) AlertId=$($PendingRefreshAlertId.Value) EntityKey=$($PendingRefreshEntityKey.Value)"
 
     $DataLoaded.Value = $false
     if ($IncidentLoadJob.Value -and $IncidentLoadJob.Value.State -notin @('Completed', 'Failed', 'Stopped')) {

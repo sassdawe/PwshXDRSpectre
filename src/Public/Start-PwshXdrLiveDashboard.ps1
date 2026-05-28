@@ -208,6 +208,7 @@ function Start-PwshXdrLiveDashboard {
         $lastDataRefreshAt = $null
         $pendingRefreshIncidentId = $null
         $pendingRefreshAlertId = $null
+        $pendingRefreshEntityKey = $null
         $lastHeartbeat = Get-Date
         $heartbeatCounter = 0
         $incidentLoadJob = $null
@@ -339,7 +340,7 @@ function Start-PwshXdrLiveDashboard {
                 }
                 elseif (($earlyKey.Key -eq 'F5' -or (-not $earlyAltPressed -and -not $earlyCtrlPressed -and $earlyKeyChar -eq 'r')) -and $authSucceeded) {
                     $earlyKeyHandled = $true
-                    Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Refreshing incidents and alert cache...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
+                    Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Refreshing incidents and alert cache...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -SelectedEntity $selectedEntity -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -PendingRefreshEntityKey ([ref]$pendingRefreshEntityKey) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
                 }
 
                 if ($earlyKeyHandled) {
@@ -452,14 +453,17 @@ function Start-PwshXdrLiveDashboard {
                     Add-XdrLiveAlertPreloads -Incidents $context.Data.Incidents -AlertPreloadQueue $alertPreloadQueue -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId
                     Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "Initial incident load completed. IncidentCount=$(@($context.Data.Incidents).Count)"
                     if ($context.Data.Incidents.Count -gt 0) {
-                        $selectedIndex = 0
+                        $selectedIndex = [Math]::Min([Math]::Max($selectedIndex, 0), $context.Data.Incidents.Count - 1)
                         if (-not [string]::IsNullOrWhiteSpace([string]$pendingRefreshIncidentId)) {
+                            $pendingIncidentRestored = $false
                             for ($incidentCursor = 0; $incidentCursor -lt $context.Data.Incidents.Count; $incidentCursor++) {
                                 if ([string]$context.Data.Incidents[$incidentCursor].IncidentId -eq [string]$pendingRefreshIncidentId) {
                                     $selectedIndex = $incidentCursor
+                                    $pendingIncidentRestored = $true
                                     break
                                 }
                             }
+                            Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "Refresh incident selection restore. IncidentId=$pendingRefreshIncidentId Restored=$pendingIncidentRestored SelectedIndex=$selectedIndex"
                         }
                     }
                 }
@@ -488,14 +492,20 @@ function Start-PwshXdrLiveDashboard {
                 # state matches the selected incident before the first full render.
                 $selectedIncident = $context.Data.Incidents[$selectedIndex]
                 $context.Selection.Incident = $selectedIncident
-                $selectedEntityIndex = 0
-                $selectedEntity = $null
-                $context.Selection.Entity = $null
                 if ($entitiesByIncidentId.ContainsKey([string]$selectedIncident.IncidentId)) {
                     $context.Data.Entities = @($entitiesByIncidentId[[string]$selectedIncident.IncidentId])
                 }
                 else {
                     $context.Data.Entities = @()
+                }
+                if (-not [string]::IsNullOrWhiteSpace([string]$pendingRefreshEntityKey) -and $context.Data.Entities.Count -gt 0) {
+                    Restore-XdrLiveEntitySelection -Context $context -EntitySelectionKey $pendingRefreshEntityKey -SelectedEntity ([ref]$selectedEntity) -SelectedEntityIndex ([ref]$selectedEntityIndex) | Out-Null
+                    $pendingRefreshEntityKey = $null
+                }
+                else {
+                    $selectedEntityIndex = 0
+                    $selectedEntity = $null
+                    $context.Selection.Entity = $null
                 }
                 if (-not [string]::IsNullOrWhiteSpace([string]$pendingRefreshAlertId)) {
                     $selectedAlertIdByIncidentId[[string]$selectedIncident.IncidentId] = [string]$pendingRefreshAlertId
@@ -547,7 +557,7 @@ function Start-PwshXdrLiveDashboard {
 
             if (-not $autoRefreshBlocked -and $null -ne $lastDataRefreshAt -and (Get-Date) -ge $lastDataRefreshAt.Add($autoRefreshInterval)) {
                 Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message "Auto-refresh triggered after $autoRefreshInterval. IncidentCount=$(@($context.Data.Incidents).Count)"
-                Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Auto-refreshing incidents and alerts (every 3 minutes)...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
+                Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Auto-refreshing incidents and alerts (every 3 minutes)...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -SelectedEntity $selectedEntity -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -PendingRefreshEntityKey ([ref]$pendingRefreshEntityKey) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
                 continue
             }
 
@@ -615,6 +625,11 @@ function Start-PwshXdrLiveDashboard {
                 }
                 else {
                     $context.Data.Entities = @()
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace([string]$pendingRefreshEntityKey) -and $context.Data.Entities.Count -gt 0) {
+                    Restore-XdrLiveEntitySelection -Context $context -EntitySelectionKey $pendingRefreshEntityKey -SelectedEntity ([ref]$selectedEntity) -SelectedEntityIndex ([ref]$selectedEntityIndex) | Out-Null
+                    $pendingRefreshEntityKey = $null
                 }
 
                 $cachedAlertCount = if ($entityAlertCountByIncidentId.ContainsKey($selectedIncidentId)) { [int]$entityAlertCountByIncidentId[$selectedIncidentId] } else { -1 }
@@ -1067,7 +1082,7 @@ function Start-PwshXdrLiveDashboard {
                         }
                     }
                     elseif ($key.Key -eq 'F5' -or (-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'r')) {
-                        Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Refreshing incidents and alert cache...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
+                        Reset-XdrLiveDashboardDataForRefresh -Context $context -ReasonMessage 'Refreshing incidents and alert cache...' -PreserveSelection $true -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -SelectedEntity $selectedEntity -PendingRefreshIncidentId ([ref]$pendingRefreshIncidentId) -PendingRefreshAlertId ([ref]$pendingRefreshAlertId) -PendingRefreshEntityKey ([ref]$pendingRefreshEntityKey) -DataLoaded ([ref]$dataLoaded) -IncidentLoadJob ([ref]$incidentLoadJob) -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -VisibleAlerts ([ref]$visibleAlerts) -VisibleAlertIncidentId ([ref]$visibleAlertIncidentId) -SelectedIndex ([ref]$selectedIndex) -SelectedAlertIndex ([ref]$selectedAlertIndex) -SelectedEntityIndex ([ref]$selectedEntityIndex) -SelectedIncidentRef ([ref]$selectedIncident) -SelectedAlertRef ([ref]$selectedAlert) -SelectedEntityRef ([ref]$selectedEntity) -AlertsByIncidentId $alertsByIncidentId -EntitiesByIncidentId $entitiesByIncidentId -EntityAlertCountByIncidentId $entityAlertCountByIncidentId -SelectedAlertIdByIncidentId $selectedAlertIdByIncidentId -LogPath $dashboardLogPath
                         continue
                     }
 
