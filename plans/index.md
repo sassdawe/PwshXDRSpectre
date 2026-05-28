@@ -82,6 +82,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [x] Neutral physical layout slots separated from workflow-specific logical panel names
 - [x] Incidents and Hunting rendered as top-level tab workflows
 - [x] Placeholder tabs for Welcome, Query Library, Quarantine, Action Center, Settings, and Help
+- [x] Compact 50-50 layout toggle for smaller terminals with `Ctrl+Alt+A`
 - [ ] Placeholder tab graduation paths and tests
 - [ ] Manual validation for tab switching while background jobs are active
 

@@ -48,7 +48,8 @@ Describe 'Get-ContextAwareHelpLines' {
 
             $lines | Should -Match 'Alt\+X run selected query'
             $lines | Should -Match 'Alt\+H return to incident workflow'
-            $lines | Should -Match 'Alt\+K toggle input debug'
+            $lines | Should -Match 'Ctrl\+Alt\+A action panel'
+            $lines | Should -Match 'Ctrl\+Alt\+K input debug'
         }
     }
 

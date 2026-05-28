@@ -88,7 +88,7 @@ Describe 'Get-XdrLiveHelpPanelContent' {
                         Key = 'DownArrow'
                         KeyChar = ''
                         Modifiers = 'None'
-                        ActivePanel = 'incidents'
+                        ActivePanel = 'query_catalog'
                         IsQueryMode = $true
                         SelectedQueryIndex = 1
                         SelectedQueryId = 'incident-related-alerts'
@@ -105,7 +105,7 @@ Describe 'Get-XdrLiveHelpPanelContent' {
 
             $content | Should -Match 'Input Debug'
             $content | Should -Match 'Last key: DownArrow'
-            $content | Should -Match 'Panel: queries'
+            $content | Should -Match 'Panel: query catalog'
             $content | Should -Match 'Query index: 1'
             $content | Should -Match 'incident-related-alerts'
             $content | Should -Match 'user@contoso.com'

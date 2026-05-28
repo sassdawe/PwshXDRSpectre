@@ -47,28 +47,33 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
         $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
         $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $layoutContent = Get-Content -Path (Join-Path $script:privateRoot 'New-XdrLiveDashboardLayout.ps1') -Raw
+        $layoutContent.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
     }
 
-    It 'uses nested layout structure with left lists, center details, and right actions columns' {
+    It 'uses nested layout structure with toggleable right actions column' {
         $content = Get-Content -Path $script:dashboardPath -Raw
+        $layoutContent = Get-Content -Path (Join-Path $script:privateRoot 'New-XdrLiveDashboardLayout.ps1') -Raw
         $outerTabsContent = Get-Content -Path (Join-Path $script:privateRoot 'Update-XdrLiveOuterTabs.ps1') -Raw
 
-        $content.Contains("New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns") | Should -BeTrue
-        $content.Contains("New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows") | Should -BeTrue
-        $content.Contains("New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows") | Should -BeTrue
+        $content.Contains('$layout = New-XdrLiveDashboardLayout -ActionPanelVisible') | Should -BeTrue
+        $layoutContent.Contains("New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns `$mainColumns") | Should -BeTrue
+        $layoutContent.Contains("New-SpectreLayout -Name 'left_lists' -Ratio `$leftRatio -Rows") | Should -BeTrue
+        $layoutContent.Contains("New-SpectreLayout -Name 'center_details' -Ratio `$centerRatio -Rows") | Should -BeTrue
         $content.Contains("`$dashboardFrame = Format-SpectrePanel -Data `$layout -Header ' ' -Color 'deepskyblue1' -Border 'Rounded' -Expand") | Should -BeTrue
         $content.Contains("New-SpectreLayout -Name 'dashboard_frame' -Ratio 1 -Data `$dashboardFrame") | Should -BeTrue
         $content.Contains('Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout') | Should -BeTrue
         $outerTabsContent.Contains('$DashboardFrame.Header = [Spectre.Console.PanelHeader]::new($outerTabsHeader, [Spectre.Console.Justify]::Left)') | Should -BeTrue
         $outerTabsContent.Contains("`$ScreenLayout['dashboard_frame'].Update(`$DashboardFrame) | Out-Null") | Should -BeTrue
         $content.Contains('Invoke-SpectreLive -Data $screenLayout -ScriptBlock') | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'center_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'center_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
-        $content.Contains("(New-SpectreLayout -Name 'right_actions' -Ratio 2 -Data 'empty')") | Should -BeTrue
+        $layoutContent.Contains("(New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $layoutContent.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $layoutContent.Contains("(New-SpectreLayout -Name 'center_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $layoutContent.Contains("(New-SpectreLayout -Name 'center_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
+        $layoutContent.Contains("New-SpectreLayout -Name 'right_actions' -Ratio 2 -Data 'empty'") | Should -BeTrue
+        $layoutContent.Contains('$leftRatio = if ($ActionPanelVisible.IsPresent) { 2 } else { 1 }') | Should -BeTrue
+        $layoutContent.Contains('$centerRatio = if ($ActionPanelVisible.IsPresent) { 3 } else { 1 }') | Should -BeTrue
         $content | Should -Not -Match "New-SpectreLayout -Name 'outer_tabs'"
         $content | Should -Not -Match "\['outer_tabs'\]"
         $content | Should -Not -Match "New-SpectreLayout -Name 'header'"
@@ -135,7 +140,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'e')") | Should -BeTrue
         $content.Contains("elseif (`$isAltPressed -and `$keyChar -eq 'd')") | Should -BeTrue
         $content.Contains("`$activePanel = 'incident_details'") | Should -BeTrue
-        $content.Contains("`$panelOrder = @(Get-XdrLivePanelOrder -TabName `$activeTab)") | Should -BeTrue
+        $content.Contains("`$panelOrder = @(Get-XdrLivePanelOrder -TabName `$activeTab -HideActionPanel:(-not `$actionStatusPanelVisible))") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
         $content.Contains('Get-XdrIncidentDetailsTabHeader -CurrentTab $selectedIncidentDetailsTab') | Should -BeTrue
@@ -219,8 +224,14 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$pendingQuitConfirmation = `$false") | Should -BeTrue
         $content.Contains("`$showKeyboardHelpOverlay = `$false") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F1')") | Should -BeTrue
-        $content.Contains("elseif (`$isAltPressed -and `$isCtrlPressed -and `$keyChar -eq 'k')") | Should -BeTrue
+        $content.Contains("elseif (Test-XdrConsoleShortcut -Key `$key -KeyName 'k' -Alt -Control)") | Should -BeTrue
         $content.Contains("`$context.Diagnostics.InputDebugEnabled = -not `$context.Diagnostics.InputDebugEnabled") | Should -BeTrue
+        $content.Contains("elseif (Test-XdrConsoleShortcut -Key `$earlyKey -KeyName 'k' -Alt -Control)") | Should -BeTrue
+        $content.Contains("elseif (Test-XdrConsoleShortcut -Key `$earlyKey -KeyName 'a' -Alt -Control)") | Should -BeTrue
+        $content.Contains("elseif (Test-XdrConsoleShortcut -Key `$key -KeyName 'a' -Alt -Control)") | Should -BeTrue
+        $content.Contains('$actionStatusPanelVisible = -not $actionStatusPanelVisible') | Should -BeTrue
+        $content.Contains('Set-XdrLiveActionPanelVisibility -Visible $actionStatusPanelVisible') | Should -BeTrue
+        $content.Contains('Action Status panel hidden. Switched to 50-50 compact layout.') | Should -BeTrue
         $nonIncidentTabContent.Contains('Input debug (Ctrl+Alt+K): $($Context.Diagnostics.InputDebugEnabled)') | Should -BeTrue
         $content.Contains("elseif ((-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'q') -or (`$isCtrlPressed -and -not `$isAltPressed -and `$keyChar -eq 'q'))") | Should -BeTrue
         $content.Contains("elseif (`$key.Key -eq 'F5' -or (-not `$isAltPressed -and -not `$isCtrlPressed -and `$keyChar -eq 'r'))") | Should -BeTrue
@@ -310,6 +321,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $activeTabCheckIndex | Should -BeGreaterThan $startLoadIndex
         $content.Substring($startLoadIndex, $activeTabCheckIndex - $startLoadIndex) | Should -Not -Match "activeTab -eq 'incidents'"
         $content.Contains('Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab') | Should -BeTrue
+        $content.Contains('-ActionPanelVisible $actionStatusPanelVisible') | Should -BeTrue
     }
 
     It 'updates visible alert panel state by reference when incidents change or cached alerts are restored' {

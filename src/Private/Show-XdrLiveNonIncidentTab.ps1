@@ -62,7 +62,10 @@ function Show-XdrLiveNonIncidentTab {
         [bool]$IsQueryMode,
 
         [Parameter()]
-        [bool]$ShowKeyboardHelpOverlay
+        [bool]$ShowKeyboardHelpOverlay,
+
+        [Parameter()]
+        [bool]$ActionPanelVisible = $true
     )
 
     $leftTitle = 'Coming Soon'
@@ -204,7 +207,9 @@ function Show-XdrLiveNonIncidentTab {
     $Layout[(Resolve-XdrLivePanelSlot -PanelName $centerPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $centerPanelName -Title $centerTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $centerData -Expand)) | Out-Null
     $Layout[(Resolve-XdrLivePanelSlot -PanelName $lowerLeftPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $lowerLeftPanelName -Title $lowerLeftTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerLeftData -Expand)) | Out-Null
     $Layout[(Resolve-XdrLivePanelSlot -PanelName $lowerCenterPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $lowerCenterPanelName -Title $lowerCenterTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $lowerCenterData -Expand)) | Out-Null
-    $Layout[(Resolve-XdrLivePanelSlot -PanelName $actionsPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $actionsPanelName -Title $actionsTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $actionsData -Expand)) | Out-Null
+    if ($ActionPanelVisible) {
+        $Layout[(Resolve-XdrLivePanelSlot -PanelName $actionsPanelName)].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName $actionsPanelName -Title $actionsTitle -ActivePanel $ActivePanel -Color $Context.Ui.ThemeColor) -Data $actionsData -Expand)) | Out-Null
+    }
 
     if ($CurrentHelpPanel) {
         $Layout['help'].Update($CurrentHelpPanel) | Out-Null

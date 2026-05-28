@@ -3,7 +3,7 @@
 **Status**: 🟡 In Progress
 **Depends on**: Phase 1, Phase 2, Phase 4
 **Blocks**: Phase 7 UX hardening, testing, and docs
-**Last updated**: 2026-05-27
+**Last updated**: 2026-05-28
 
 ## Goals
 
@@ -28,6 +28,8 @@ The dashboard uses one outer `dashboard_frame` panel. Its header contains the to
 
 Logical panel names describe workflow meaning. `Resolve-XdrLivePanelSlot` maps logical panels onto physical slots. `Get-XdrLivePanelOrder` defines which logical panels can receive keyboard focus for the active workflow.
 
+The `Ctrl+Alt+A` shortcut toggles the Action Status panel. The default layout remains the three-column shell with `right_actions`; compact layout hides that physical slot and gives the left and center columns equal width. Compact layout also removes logical `*_actions` panels from focus order so keyboard navigation cannot land on a hidden panel. Modal incident workflows automatically restore the Action Status panel when they need it.
+
 ## Current Top-Level Tabs
 
 | Tab | Shortcut | Current state | Future plan |
@@ -48,6 +50,8 @@ Logical panel names describe workflow meaning. `Resolve-XdrLivePanelSlot` maps l
 - Incidents and Hunting use their own logical panel names.
 - Placeholder tabs render tab-specific logical panel names so future workflows do not inherit incident-specific focus or help text.
 - Top-level tab activation resets focus order through `Set-XdrLiveActiveTab`.
+- `Ctrl+Alt+A` toggles between the normal three-column layout and compact 50-50 left/center layout.
+- Console shortcut matching checks the physical key as well as `KeyChar` so `Ctrl+Alt+A` still works when terminals report a control character instead of printable `a`.
 - `Alt+H` toggles between the Incidents and Hunting workflows.
 - The help panel continues to refresh while placeholder tabs are selected.
 - Incident, alert, entity, and query background jobs continue to be processed while placeholder tabs are selected.
@@ -76,6 +80,7 @@ If a placeholder or workflow behavior is temporarily disabled for debugging, doc
 - [x] **1.3** Preserve vertical space by removing the separate tab/header row.
 - [x] **1.4** Add top-level tab activation through keyboard shortcuts.
 - [x] **1.5** Keep tab switching independent from background job processing.
+- [x] **1.6** Add compact layout toggle for smaller terminals by hiding or restoring the Action Status panel.
 
 ### Workstream 2: Logical Panel Identity
 
@@ -105,7 +110,7 @@ If a placeholder or workflow behavior is temporarily disabled for debugging, doc
 
 - [x] **5.1** Document physical slots, logical panels, and tab behavior in `docs/tabs-and-panels.md`.
 - [x] **5.2** Document alert loading and cache diagnostics after the alert cache debugging session.
-- [ ] **5.3** Add a short troubleshooting section for tab/focus bugs.
+- [x] **5.3** Document compact layout and shortcut matching behavior for tab/focus troubleshooting.
 - [ ] **5.4** Keep a restore note whenever workflow behavior is disabled for debugging.
 
 ## Acceptance Criteria
@@ -115,6 +120,7 @@ If a placeholder or workflow behavior is temporarily disabled for debugging, doc
 - [x] Incidents and Hunting have distinct logical panel names and focus order.
 - [x] Placeholder tabs render stable placeholder content without breaking the live loop.
 - [x] Help and status diagnostics reflect the active tab and logical focus panel.
+- [x] Compact layout hides Action Status and keeps focus away from hidden logical action panels.
 - [ ] Placeholder tabs have documented graduation paths and tests for future workflow promotion.
 - [ ] Manual validation confirms tab switching does not interrupt active background jobs.
 
@@ -122,6 +128,9 @@ If a placeholder or workflow behavior is temporarily disabled for debugging, doc
 
 - [docs/tabs-and-panels.md](../docs/tabs-and-panels.md) — user-facing tab and panel behavior.
 - [src/Public/Start-PwshXdrLiveDashboard.ps1](../src/Public/Start-PwshXdrLiveDashboard.ps1) — live dashboard shell and render loop.
+- [src/Private/New-XdrLiveDashboardLayout.ps1](../src/Private/New-XdrLiveDashboardLayout.ps1) — normal and compact physical layout factory.
+- [src/Private/Set-XdrLiveActionPanelVisibility.ps1](../src/Private/Set-XdrLiveActionPanelVisibility.ps1) — action panel visibility toggle and frame rebuild helper.
+- [src/Private/Test-XdrConsoleShortcut.ps1](../src/Private/Test-XdrConsoleShortcut.ps1) — robust matching for modified console shortcuts.
 - [src/Private/Resolve-XdrLivePanelSlot.ps1](../src/Private/Resolve-XdrLivePanelSlot.ps1) — logical panel to physical slot mapping.
 - [src/Private/Get-XdrLivePanelOrder.ps1](../src/Private/Get-XdrLivePanelOrder.ps1) — tab-specific focus order.
 - [src/Private/Set-XdrLiveActiveTab.ps1](../src/Private/Set-XdrLiveActiveTab.ps1) — tab activation and focus reset.

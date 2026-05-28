@@ -34,6 +34,19 @@ These names are physical screen slots only. They are not workflow semantics.
 
 Logical panel names are mapped onto these slots by `Resolve-XdrLivePanelSlot`. This keeps keyboard routing and help text tied to workflow meaning instead of reusing an `incidents` panel to mean both incident rows and hunting queries.
 
+## Compact Layout
+
+Press `Ctrl+Alt+A` to toggle the Action Status panel. When the panel is hidden, the dashboard rebuilds the outer frame into a compact two-column layout where `left_lists` and `center_details` each receive half of the main work area. Press `Ctrl+Alt+A` again to restore the three-column layout with the `right_actions` slot.
+
+Compact layout is meant for smaller terminals and lower-resolution screens. While compact mode is active:
+
+- Logical action panels such as `incident_actions`, `query_actions`, and placeholder `*_actions` panels are removed from the focus order.
+- The hidden `right_actions` slot is not updated by render code.
+- If an incident workflow starts a modal action wizard, such as resolve, classify, or comment, the dashboard automatically restores the Action Status panel because the wizard needs that surface.
+- The help row remains visible and continues to show heartbeat, status, cache, and input diagnostics.
+
+Shortcut matching uses both the physical key and the key character. This matters for `Ctrl+Alt+A` because some terminals report the key as `A` with a control character or empty `KeyChar` instead of a printable `a`.
+
 ## Incidents Workflow Panels
 
 | Logical panel | Slot | Title in Incidents workflow | What it shows |
@@ -51,6 +64,8 @@ The incident focus order is:
 2. `incident_details`
 3. `alert_list`
 4. `incident_actions`
+
+In compact layout, `incident_actions` is removed from the focus order until the Action Status panel is shown again.
 
 The `alert_details` panel is informational and is not currently part of the focus order.
 
@@ -97,6 +112,8 @@ The hunting focus order is:
 3. `query_activity`
 4. `query_actions`
 
+In compact layout, `query_actions` is removed from the focus order until the Action Status panel is shown again.
+
 The `query_results` panel is informational and is not currently part of the focus order.
 
 Hunting query execution runs in a background job. The live loop folds completed results back into the panel state so keyboard input and rendering stay responsive.
@@ -121,3 +138,4 @@ The Welcome, Query Library, Quarantine, Action Center, Settings, and Help tabs r
 - The Incidents and Hunting tabs are the two full workflow tabs. Other tabs use placeholder content until their workflows are implemented.
 - The help panel is rebuilt on every loop iteration so it reflects the current tab, focus panel, modal state, background jobs, and diagnostics.
 - Modal incident workflows pin focus to `incident_actions` until they complete or are canceled.
+- `New-XdrLiveDashboardLayout` owns the physical layout shape. `Set-XdrLiveActionPanelVisibility` rebuilds the layout and frame when compact mode changes.

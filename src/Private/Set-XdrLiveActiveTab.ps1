@@ -41,7 +41,10 @@ function Set-XdrLiveActiveTab {
         [ref]$SelectedQueryResult,
 
         [Parameter(Mandatory)]
-        [hashtable]$QueryResultsByCacheKey
+        [hashtable]$QueryResultsByCacheKey,
+
+        [Parameter()]
+        [switch]$HideActionPanel
     )
 
     $targetTabIndex = [array]::IndexOf($TabOrder, $TabName)
@@ -53,7 +56,7 @@ function Set-XdrLiveActiveTab {
     $ActiveTab.Value = $TabOrder[$ActiveTabIndex.Value]
     $Context.Selection.Tab = $ActiveTab.Value
     $IsQueryMode.Value = ($ActiveTab.Value -eq 'hunting')
-    $PanelOrder.Value = @(Get-XdrLivePanelOrder -TabName $ActiveTab.Value)
+    $PanelOrder.Value = @(Get-XdrLivePanelOrder -TabName $ActiveTab.Value -HideActionPanel:$HideActionPanel.IsPresent)
 
     if ($PanelOrder.Value.Count -gt 0) {
         $ActivePanelIndex.Value = 0

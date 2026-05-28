@@ -109,23 +109,7 @@ function Start-PwshXdrLiveDashboard {
     }
 
     # Keep the global tab strip compact as the title of one bordered dashboard frame.
-    $layout = New-SpectreLayout -Name 'root' -Rows @(
-        (New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns @(
-            # Left column: two workflow-owned list/activity slots stacked.
-            (New-SpectreLayout -Name 'left_lists' -Ratio 2 -Rows @(
-                (New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty'),
-                (New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')
-            )),
-            # Middle column: two workflow-owned detail/preview slots stacked.
-            (New-SpectreLayout -Name 'center_details' -Ratio 3 -Rows @(
-                (New-SpectreLayout -Name 'center_top' -Ratio 1 -Data 'empty'),
-                (New-SpectreLayout -Name 'center_bottom' -Ratio 1 -Data 'empty')
-            )),
-            # Right column: workflow actions (full height).
-            (New-SpectreLayout -Name 'right_actions' -Ratio 2 -Data 'empty')
-        )),
-        (New-SpectreLayout -Name 'help' -MinimumSize 3 -Ratio 1 -Data 'empty')
-    )
+    $layout = New-XdrLiveDashboardLayout -ActionPanelVisible
 
     $dashboardFrame = Format-SpectrePanel -Data $layout -Header ' ' -Color 'deepskyblue1' -Border 'Rounded' -Expand
     $screenLayout = New-SpectreLayout -Name 'screen' -Rows @(
@@ -143,6 +127,7 @@ function Start-PwshXdrLiveDashboard {
         $activeTabIndex = 1 # default to 'incidents'
         $activeTab = $tabOrder[$activeTabIndex]
         $context.Selection.Tab = $activeTab
+        $actionStatusPanelVisible = $true
 
         # Render global tab header
         Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
@@ -154,7 +139,7 @@ function Start-PwshXdrLiveDashboard {
         $dataLoaded = $false
         $fatalErrorMessage = $null
 
-        $panelOrder = @(Get-XdrLivePanelOrder -TabName $activeTab)
+        $panelOrder = @(Get-XdrLivePanelOrder -TabName $activeTab -HideActionPanel:(-not $actionStatusPanelVisible))
         $selectedIncidentDetailsTab = 'details'  # 'details' or 'entities'
         $activePanelIndex = 0
         $activePanel = $panelOrder[$activePanelIndex]
@@ -315,7 +300,7 @@ function Start-PwshXdrLiveDashboard {
                         Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay closed.' -Level 'info'
                     }
                 }
-                elseif ($earlyAltPressed -and $earlyCtrlPressed -and $earlyKeyChar -eq 'k') {
+                elseif (Test-XdrConsoleShortcut -Key $earlyKey -KeyName 'k' -Alt -Control) {
                     $earlyKeyHandled = $true
                     $context.Diagnostics.InputDebugEnabled = -not $context.Diagnostics.InputDebugEnabled
                     if ($context.Diagnostics.InputDebugEnabled) {
@@ -324,6 +309,13 @@ function Start-PwshXdrLiveDashboard {
                     else {
                         Set-LiveStatusMessage -Context $context -Message 'Input debug disabled (Ctrl+Alt+K).' -Level 'info'
                     }
+                }
+                elseif (Test-XdrConsoleShortcut -Key $earlyKey -KeyName 'a' -Alt -Control) {
+                    $earlyKeyHandled = $true
+                    $actionStatusPanelVisible = -not $actionStatusPanelVisible
+                    Set-XdrLiveActionPanelVisibility -Visible $actionStatusPanelVisible -Layout ([ref]$layout) -DashboardFrame ([ref]$dashboardFrame) -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex -ActiveTab $activeTab -PanelOrder ([ref]$panelOrder) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -Context $context
+                    $layoutModeMessage = if ($actionStatusPanelVisible) { 'Action Status panel shown. Restored three-column layout.' } else { 'Action Status panel hidden. Switched to 50-50 compact layout.' }
+                    Set-LiveStatusMessage -Context $context -Message $layoutModeMessage -Level 'info'
                 }
                 elseif ((-not $earlyAltPressed -and -not $earlyCtrlPressed -and $earlyKeyChar -eq 'q') -or ($earlyCtrlPressed -and -not $earlyAltPressed -and $earlyKeyChar -eq 'q')) {
                     $earlyKeyHandled = $true
@@ -334,7 +326,7 @@ function Start-PwshXdrLiveDashboard {
                     $earlyKeyHandled = $true
                     $tabIndex = [int]::Parse($earlyKeyChar) - 1
                     if ($tabIndex -ge 0 -and $tabIndex -lt $tabOrder.Count) {
-                        Set-XdrLiveActiveTab -TabName $tabOrder[$tabIndex] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                        Set-XdrLiveActiveTab -TabName $tabOrder[$tabIndex] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
                         Set-LiveStatusMessage -Context $context -Message "Switched to tab: $activeTab" -Level 'info'
                     }
                 }
@@ -367,7 +359,7 @@ function Start-PwshXdrLiveDashboard {
                     $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Preparing authentication...' -Expand)) | Out-Null
                     $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
                     $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
-                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null
+                    if ($actionStatusPanelVisible) { $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Preparing authentication...' -Expand)) | Out-Null }
                 }
 
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
@@ -377,7 +369,7 @@ function Start-PwshXdrLiveDashboard {
                 if ($activeTab -eq 'incidents') {
                     $layout['left_top'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
                     $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
-                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null
+                    if ($actionStatusPanelVisible) { $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Authenticating with Microsoft Graph...' -Expand)) | Out-Null }
                 }
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 $LiveContext.Refresh()
@@ -400,7 +392,7 @@ function Start-PwshXdrLiveDashboard {
                 $layout['center_top'].Update((Format-SpectrePanel -Header '[red]Authentication Failed[/]' -Data $fatalErrorMessage -Expand)) | Out-Null
                 $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
                 $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No data available.' -Expand)) | Out-Null
-                $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions available.' -Expand)) | Out-Null
+                if ($actionStatusPanelVisible) { $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No actions available.' -Expand)) | Out-Null }
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 $LiveContext.Refresh()
 
@@ -477,12 +469,12 @@ function Start-PwshXdrLiveDashboard {
                             $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $loadingMessage -Expand)) | Out-Null
                             $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
                             $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Waiting for incident load to finish...' -Expand)) | Out-Null
-                            $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading capabilities...' -Expand)) | Out-Null
+                            if ($actionStatusPanelVisible) { $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'Loading capabilities...' -Expand)) | Out-Null }
                         }
                         $layout['help'].Update($helpPanel) | Out-Null
                     }
                     else {
-                        Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -CurrentHelpPanel $helpPanel -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay
+                        Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -CurrentHelpPanel $helpPanel -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay -ActionPanelVisible $actionStatusPanelVisible
                     }
 
                     $LiveContext.Refresh()
@@ -641,6 +633,12 @@ function Start-PwshXdrLiveDashboard {
             #region wizard focus pinning
             # Wizard-style workflows pin focus to the action panel until they complete or
             # cancel, even if the user was previously navigating another panel.
+            if (($null -ne $pendingIncidentResolution -or $null -ne $pendingIncidentClassification -or $null -ne $pendingIncidentComment) -and -not $actionStatusPanelVisible) {
+                $actionStatusPanelVisible = $true
+                Set-XdrLiveActionPanelVisibility -Visible $actionStatusPanelVisible -Layout ([ref]$layout) -DashboardFrame ([ref]$dashboardFrame) -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex -ActiveTab $activeTab -PanelOrder ([ref]$panelOrder) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -Context $context
+                Set-LiveStatusMessage -Context $context -Message 'Action Status panel shown for the active workflow.' -Level 'info'
+            }
+
             if ($null -ne $pendingIncidentResolution) {
                 $activePanel = 'incident_actions'
                 $activePanelIndex = [array]::IndexOf($panelOrder, 'incident_actions')
@@ -996,7 +994,7 @@ function Start-PwshXdrLiveDashboard {
                             Set-LiveStatusMessage -Context $context -Message 'Keyboard help overlay closed.' -Level 'info'
                         }
                     }
-                    elseif ($isAltPressed -and $isCtrlPressed -and $keyChar -eq 'k') {
+                    elseif (Test-XdrConsoleShortcut -Key $key -KeyName 'k' -Alt -Control) {
                         $keyHandled = $true
                         $context.Diagnostics.InputDebugEnabled = -not $context.Diagnostics.InputDebugEnabled
                         if ($context.Diagnostics.InputDebugEnabled) {
@@ -1005,6 +1003,13 @@ function Start-PwshXdrLiveDashboard {
                         else {
                             Set-LiveStatusMessage -Context $context -Message 'Input debug disabled (Ctrl+Alt+K).' -Level 'info'
                         }
+                    }
+                    elseif (Test-XdrConsoleShortcut -Key $key -KeyName 'a' -Alt -Control) {
+                        $keyHandled = $true
+                        $actionStatusPanelVisible = -not $actionStatusPanelVisible
+                        Set-XdrLiveActionPanelVisibility -Visible $actionStatusPanelVisible -Layout ([ref]$layout) -DashboardFrame ([ref]$dashboardFrame) -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex -ActiveTab $activeTab -PanelOrder ([ref]$panelOrder) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -Context $context
+                        $layoutModeMessage = if ($actionStatusPanelVisible) { 'Action Status panel shown. Restored three-column layout.' } else { 'Action Status panel hidden. Switched to 50-50 compact layout.' }
+                        Set-LiveStatusMessage -Context $context -Message $layoutModeMessage -Level 'info'
                     }
                     elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'q') -or ($isCtrlPressed -and -not $isAltPressed -and $keyChar -eq 'q')) {
                         $keyHandled = $true
@@ -1015,7 +1020,7 @@ function Start-PwshXdrLiveDashboard {
                         $keyHandled = $true
                         $index = [int]::Parse($keyChar) - 1
                         if ($index -ge 0 -and $index -lt $tabOrder.Count) {
-                            Set-XdrLiveActiveTab -TabName $tabOrder[$index] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName $tabOrder[$index] -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
                             Set-LiveStatusMessage -Context $context -Message "Switched to tab: $activeTab" -Level 'info'
                         }
                     }
@@ -1041,11 +1046,11 @@ function Start-PwshXdrLiveDashboard {
                     elseif ($isAltPressed -and $keyChar -eq 'h') {
                         $keyHandled = $true
                         if ($activeTab -eq 'hunting') {
-                            Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
                             Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
                         }
                         else {
-                            Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                            Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
                             Set-LiveStatusMessage -Context $context -Message 'Switched to Hunting tab. Use the query catalog on the left and Alt+X to execute.' -Level 'info'
                         }
                     }
@@ -1198,7 +1203,7 @@ function Start-PwshXdrLiveDashboard {
                     }
                     elseif ($selectedIncidentDetailsTab -eq 'entities' -and $key.Key -eq 'Enter' -and $activePanel -eq 'incident_details' -and $selectedEntity) {
                         $keyHandled = $true
-                        Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                        Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
 
                         $selectedEntityTypeLabel = [string]$selectedEntity.EntityType
                         $selectedEntityLabel = [string]$selectedEntity.DisplayName
@@ -1236,7 +1241,7 @@ function Start-PwshXdrLiveDashboard {
                                     Invoke-XdrLiveSelectedQueryExecution -SelectedQuery $selectedQuery -QueryExecutionJob ([ref]$queryExecutionJob) -ModulePath $modulePath -Context $context -LogPath $dashboardLogPath
                                 }
                                 elseif ($selectedAction.Shortcut -eq 'h') {
-                                    Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+                                    Set-XdrLiveActiveTab -TabName 'incidents' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
                                     Set-LiveStatusMessage -Context $context -Message 'Returned to incident workflow.' -Level 'info'
                                 }
                             }
@@ -1272,11 +1277,11 @@ function Start-PwshXdrLiveDashboard {
                     $layout['center_top'].Update((Format-SpectrePanel -Header $incidentDetailsHeader -Data $emptyIncidentDetailsData -Expand)) | Out-Null
                     $layout['left_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_list' -Title 'Alert List' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
                     $layout['center_bottom'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'alert_details' -Title 'Alert Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No alert selected.' -Expand)) | Out-Null
-                    $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null
+                    if ($actionStatusPanelVisible) { $layout['right_actions'].Update((Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'incident_actions' -Title 'Action Status' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data 'No incident selected.' -Expand)) | Out-Null }
                 }
                 $layout['help'].Update((Format-SpectrePanel -Header "[white]Help | $((Get-ContextAwareHelpLines -ActivePanel $activePanel -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation) -join ' | ')[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter) -Expand)) | Out-Null
                 if ($activeTab -ne 'incidents') {
-                    Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay
+                    Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay -ActionPanelVisible $actionStatusPanelVisible
                 }
                 $LiveContext.Refresh()
                 Start-Sleep -Milliseconds $context.Ui.RefreshIntervalMs
@@ -2097,11 +2102,11 @@ function Start-PwshXdrLiveDashboard {
                 $layout['center_top'].Update($incidentDetails) | Out-Null
                 $layout['left_bottom'].Update($alertsPanel) | Out-Null
                 $layout['center_bottom'].Update($alertDetails) | Out-Null
-                $layout['right_actions'].Update($actionStatusPanel) | Out-Null
+                if ($actionStatusPanelVisible) { $layout['right_actions'].Update($actionStatusPanel) | Out-Null }
                 $layout['help'].Update($helpPanel) | Out-Null
             }
             else {
-                Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -CurrentHelpPanel $helpPanel -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay
+                Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab $activeTab -ActivePanel $activePanel -Context $context -CurrentHelpPanel $helpPanel -DashboardLogPath $dashboardLogPath -TenantId $TenantId -ClientId $ClientId -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode $isQueryMode -ShowKeyboardHelpOverlay $showKeyboardHelpOverlay -ActionPanelVisible $actionStatusPanelVisible
             }
             $LiveContext.Refresh()
 
