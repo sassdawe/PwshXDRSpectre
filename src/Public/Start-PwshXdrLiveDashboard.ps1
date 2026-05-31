@@ -123,7 +123,7 @@ function Start-PwshXdrLiveDashboard {
         # [ref] parameters when they need to update these local selections.
 
         # Global tab bar configuration
-        $tabOrder = @('welcome', 'incidents', 'hunting', 'query_library', 'quarantine', 'action_center', 'settings', 'help')
+        $tabOrder = @('welcome', 'incidents', 'hunting', 'query_library', 'quarantine', 'live_investigation', 'action_center', 'settings', 'help')
         $activeTabIndex = 1 # default to 'incidents'
         $activeTab = $tabOrder[$activeTabIndex]
         $context.Selection.Tab = $activeTab
@@ -322,7 +322,7 @@ function Start-PwshXdrLiveDashboard {
                     $pendingQuitConfirmation = $true
                     Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                 }
-                elseif ($earlyAltPressed -and $earlyKeyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                elseif ($earlyAltPressed -and $earlyKeyChar -in @('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
                     $earlyKeyHandled = $true
                     $tabIndex = [int]::Parse($earlyKeyChar) - 1
                     if ($tabIndex -ge 0 -and $tabIndex -lt $tabOrder.Count) {
@@ -1016,7 +1016,7 @@ function Start-PwshXdrLiveDashboard {
                         $pendingQuitConfirmation = $true
                         Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                     }
-                    elseif ($isAltPressed -and $keyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                    elseif ($isAltPressed -and $keyChar -in @('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
                         $keyHandled = $true
                         $index = [int]::Parse($keyChar) - 1
                         if ($index -ge 0 -and $index -lt $tabOrder.Count) {
