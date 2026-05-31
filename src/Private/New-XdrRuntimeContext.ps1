@@ -47,11 +47,12 @@ function New-XdrRuntimeContext {
             LastRefresh  = $null
         }
         Ui = [pscustomobject][ordered]@{
-            Mode              = $Mode
-            ThemeColor        = $ThemeColor
-            StatusMessage     = $null
-            LastNotification  = $null
-            RefreshIntervalMs = 200
+            Mode                        = $Mode
+            ThemeColor                  = $ThemeColor
+            StatusMessage               = $null
+            LastNotification            = $null
+            RefreshIntervalMs           = 200
+            ExperimentalFeaturesEnabled = $false
         }
         Capabilities = [pscustomobject][ordered]@{
             IncidentActions = @()

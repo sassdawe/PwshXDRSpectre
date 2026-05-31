@@ -196,17 +196,24 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterPanelName = 'settings_files'
             $actionsPanelName = 'settings_actions'
             $leftTitle = 'Settings'
+            $experimentalFeatureStatus = if ($Context.Ui.ExperimentalFeaturesEnabled) { 'On' } else { 'Off' }
+            $experimentalFeatureAction = if ($Context.Ui.ExperimentalFeaturesEnabled) { 'Disable experimental features' } else { 'Enable experimental features' }
             $leftData = @(
+                "Experimental features: $experimentalFeatureStatus",
                 "Input debug (Ctrl+Alt+K): $($Context.Diagnostics.InputDebugEnabled)",
                 "LogPath: $DashboardLogPath",
                 "ThemeColor: $($Context.Ui.ThemeColor)"
             ) -join "`n"
             $centerTitle = 'Debug'
-            $centerData = 'Log files and debug flags.'
+            $centerData = 'Experimental features are off by default. Enable them here before preview tabs such as Live Investigation appear.'
             $lowerLeftTitle = 'Logs'
             $lowerLeftData = 'Log browsing coming soon.'
             $lowerCenterTitle = 'Files'
             $lowerCenterData = 'List of recent log files.'
+            $actionsData = @(
+                "(Alt+E) $experimentalFeatureAction",
+                'Live Investigation stays hidden until experimental features are enabled.'
+            ) -join "`n"
         }
         'help' {
             $leftPanelName = 'help_topics'
