@@ -23,7 +23,7 @@ function Get-PanelHeaderMarkup {
     System.String
 
     .EXAMPLE
-    Get-PanelHeaderMarkup -PanelName 'incidents' -Title 'Incident List' -ActivePanel 'incidents' -Color 'Orange1'
+    Get-PanelHeaderMarkup -PanelName 'incident_list' -Title 'Incident List' -ActivePanel 'incident_list' -Color 'Orange1'
     #>
     [CmdletBinding()]
     param(

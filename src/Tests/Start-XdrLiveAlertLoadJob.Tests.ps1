@@ -55,9 +55,9 @@ Describe 'Start-XdrLiveAlertLoadJob' {
 
         $content.Contains('& (Get-Module PwshXDRSpectre) {') | Should -BeTrue
         $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job started. IncidentId=$InnerJobIncidentId"') | Should -BeTrue
-        $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus"') | Should -BeTrue
+        $content.Contains('Write-XdrLiveDashboardLog -LogPath $InnerJobLogPath -Message "Alert preload job completed. IncidentId=$InnerJobIncidentId Result=$InnerResultStatus AlertCount=$InnerResultAlertCount Message=$InnerResultMessage"') | Should -BeTrue
         $content.Contains('} $jobLogPath $jobIncidentId') | Should -BeTrue
-        $content.Contains('} $jobLogPath $jobIncidentId $resultStatus') | Should -BeTrue
+        $content.Contains('} $jobLogPath $jobIncidentId $resultStatus $resultAlertCount $resultMessage') | Should -BeTrue
         $content | Should -Not -Match '\}\s*\$jobLogPath,\s*\$jobIncidentId'
         $content | Should -Not -Match '\}\s*\$jobLogPath,\s*\$jobIncidentId,\s*\$resultStatus'
     }

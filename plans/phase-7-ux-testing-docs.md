@@ -1,9 +1,9 @@
-# Phase 6 — UX Hardening, Testing, and Docs
+# Phase 7 — UX Hardening, Testing, and Docs
 
-**Status**: 🟡 In Progress  
-**Depends on**: All prior phases  
-**Blocks**: —  
-**Last updated**: 2026-05-25 (layout ratios aligned to current implementation; hunting query execution now runs off the UI loop)
+**Status**: 🟡 In Progress
+**Depends on**: All prior phases, especially Phase 6 outer panel tabs
+**Blocks**: —
+**Last updated**: 2026-05-27 (renumbered after extracting outer panel tab design into Phase 6)
 
 ---
 

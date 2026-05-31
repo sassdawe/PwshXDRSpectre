@@ -35,7 +35,7 @@ function Get-ContextAwareHelpLines {
     System.String[]
 
     .EXAMPLE
-    Get-ContextAwareHelpLines -ActivePanel incidents
+    Get-ContextAwareHelpLines -ActivePanel incident_list
     #>
     [CmdletBinding()]
     param(
@@ -85,24 +85,24 @@ function Get-ContextAwareHelpLines {
 
     if ($IsQueryMode.IsPresent) {
         switch ($ActivePanel) {
-            'incidents' { return @('↑/↓ query catalog | Enter execute selected query | Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-            'incident_details' { return @('Query preview | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | Tab or PgUp/PgDn switch | F1 help | Ctrl+C exit') }
-            'alerts' { return @('Recent query runs | Ctrl+Alt+K toggle input debug | Tab or PgUp/PgDn switch | Alt+H return to incident workflow | F1 help | Ctrl+C exit') }
-            'alert_details' { return @('Query results for selected catalog entry | Alt+X rerun selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Ctrl+C exit') }
-            'action_status' { return @('↑/↓ select query action | Enter execute selected action | Alt+X run selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+            'query_catalog' { return @('↑/↓ query catalog | Enter execute selected query | Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+            'query_preview' { return @('Query preview | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | Tab or PgUp/PgDn switch | F1 help | Ctrl+C exit') }
+            'query_activity' { return @('Recent query runs | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | Tab or PgUp/PgDn switch | Alt+H return to incident workflow | F1 help | Ctrl+C exit') }
+            'query_results' { return @('Query results for selected catalog entry | Alt+X rerun selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | F1 help | Ctrl+C exit') }
+            'query_actions' { return @('↑/↓ select query action | Enter execute selected action | Alt+X run selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit') }
         }
 
-        return @('Hunting mode | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+K toggle input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit')
+        return @('Hunting mode | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit')
     }
 
-    $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+Shift+L force reload alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | F1 help | F5/r refresh | q quit | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'
+    $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+Shift+L force reload alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | Ctrl+Alt+A action panel | F1 help | F5/r refresh | q quit | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'
 
     switch ($ActivePanel) {
-        'incidents' { return @('↑/↓ incidents | Enter or Alt+L loads alerts | Alt+Shift+L force reloads alerts | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'incident_details' { return @('Alt+A/U/O/I/R/K/C selected incident | Alt+E show entities | Alt+D show incident details | Alt+L or Enter loads alerts | Alt+Shift+L force reloads alerts | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'alerts' { return @('↑/↓ alerts | Alt+Shift+L force reloads selected incident alerts | Alt+N/P/M selected alert | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Alt+Shift+L force reloads alerts | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
-        'action_status' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/K/C/L/N/P/M shortcuts | Alt+Shift+L force reloads alerts | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'incident_list' { return @('↑/↓ incidents | Enter or Alt+L loads alerts | Alt+Shift+L force reloads alerts | Ctrl+Alt+A action panel | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'incident_details' { return @('Alt+A/U/O/I/R/K/C selected incident | Alt+E show entities | Alt+D show incident details | Alt+L or Enter loads alerts | Alt+Shift+L force reloads alerts | Ctrl+Alt+A action panel | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'alert_list' { return @('↑/↓ alerts | Alt+Shift+L force reloads selected incident alerts | Alt+N/P/M selected alert | Ctrl+Alt+A action panel | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'alert_details' { return @('Alt+N/P/M selected alert | Load alerts with Alt+L/Enter if needed | Alt+Shift+L force reloads alerts | Ctrl+Alt+A action panel | F1 help | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
+        'incident_actions' { return @('↑/↓ select action | Enter execute selected | Alt+A/U/O/I/R/K/C/L/N/P/M shortcuts | Alt+Shift+L force reloads alerts | Ctrl+Alt+A action panel | F1 help | F5/r refresh incidents | q quit | Tab or PgUp/PgDn switch | Ctrl+C exit') }
     }
 
     return @($baseLine)

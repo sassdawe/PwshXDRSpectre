@@ -5,7 +5,7 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
 
     .DESCRIPTION
     Receives completed background job output, updates the alert cache, and
-    refreshes current selection when the loaded incident is selected.
+    refreshes the visible alert panel when the loaded incident is selected.
 
     .PARAMETER AlertLoadJobsByIncidentId
     Running jobs map keyed by incident id.
@@ -33,6 +33,9 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
 
     .PARAMETER VisibleAlertIncidentId
     Incident id associated with the current visible alert panel.
+
+    .PARAMETER LogPath
+    Optional dashboard log path for cache restore diagnostics.
 
     .OUTPUTS
     None
@@ -67,7 +70,10 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         [ref]$VisibleAlerts,
 
         [Parameter(Mandatory)]
-        [ref]$VisibleAlertIncidentId
+        [ref]$VisibleAlertIncidentId,
+
+        [Parameter()]
+        [string]$LogPath
     )
 
     foreach ($jobEntry in @($AlertLoadJobsByIncidentId.GetEnumerator())) {
@@ -100,13 +106,8 @@ function Invoke-XdrLiveAlertLoadJobProcessing {
         $loadedAlerts = @($payload.Result.Data)
         $AlertsByIncidentId[$incidentId] = $loadedAlerts
 
-        $restoreSelectionOnCompletion = $false
-        if ($payload.PSObject.Properties['RestoreSelectionOnCompletion']) {
-            $restoreSelectionOnCompletion = [bool]$payload.RestoreSelectionOnCompletion
-        }
-
-        if ($restoreSelectionOnCompletion -and $SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
-            Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex | Out-Null
+        if ($SelectedIncident -and [string]$SelectedIncident.IncidentId -eq $incidentId) {
+            Restore-XdrLiveCachedAlertsForIncident -IncidentId $incidentId -AlertsByIncidentId $AlertsByIncidentId -Context $Context -SelectedAlertIdByIncidentId $SelectedAlertIdByIncidentId -SelectedAlert $SelectedAlert -SelectedAlertIndex $SelectedAlertIndex -LogPath $LogPath | Out-Null
             $VisibleAlerts.Value = @($Context.Data.Alerts)
             $VisibleAlertIncidentId.Value = $incidentId
         }

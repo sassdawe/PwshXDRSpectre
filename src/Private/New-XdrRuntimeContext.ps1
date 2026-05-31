@@ -36,6 +36,7 @@ function New-XdrRuntimeContext {
             Entity   = $null
             Action   = $null
             Panel    = 'incidents'
+            Tab      = 'incidents'
         }
         Data = [pscustomobject][ordered]@{
             Incidents    = @()

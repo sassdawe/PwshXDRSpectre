@@ -110,10 +110,10 @@ function Get-XdrLiveHelpPanelContent {
     }
     $heartbeatLine = "[cyan]$(Get-SpectreEscapedText $heartbeatText)[/]"
     $shortcutHintLine = if ($IsQueryMode.IsPresent) {
-        '[grey]Hint: Alt+H Hunting mode off | Alt+X Execute query | Ctrl+Alt+K Input debug | F1 Help | Tab/Shift+Tab Switch | q Quit[/]'
+        '[grey]Hint: Alt+H Hunting mode off | Alt+X Execute query | Ctrl+Alt+A Action panel | Ctrl+Alt+K Input debug | F1 Help | Tab/Shift+Tab Switch | q Quit[/]'
     }
     else {
-        '[grey]Hint: F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
+        '[grey]Hint: Ctrl+Alt+A Action panel | F1 Help | F5/r Refresh | Tab/Shift+Tab Switch | q Quit[/]'
     }
 
     $getLogicalPanelName = {
@@ -122,16 +122,17 @@ function Get-XdrLiveHelpPanelContent {
             [bool]$QueryMode
         )
 
-        if (-not $QueryMode) {
-            return $PanelName
-        }
-
         switch ($PanelName) {
-            'incidents' { return 'queries' }
-            'incident_details' { return 'preview' }
-            'alerts' { return 'activity' }
-            'alert_details' { return 'results' }
-            'action_status' { return 'actions' }
+            'incident_list' { return 'incidents' }
+            'incident_details' { return 'incident details' }
+            'alert_list' { return 'alerts' }
+            'alert_details' { return 'alert details' }
+            'incident_actions' { return 'incident actions' }
+            'query_catalog' { return 'query catalog' }
+            'query_preview' { return 'query preview' }
+            'query_activity' { return 'query activity' }
+            'query_results' { return 'query results' }
+            'query_actions' { return 'query actions' }
             default { return $PanelName }
         }
     }
@@ -218,6 +219,7 @@ function Get-XdrLiveHelpPanelContent {
             '[white]Tab[/] / [white]Shift+Tab[/] or [white]PgUp/PgDn[/] switch active panel',
             '[white]Up/Down[/] move selection in the active list',
             '[white]Enter[/] load alerts, confirm, run selected action, or execute selected hunting query',
+            '[white]Ctrl+Alt+A[/] toggle Action Status panel and compact 50-50 layout',
             '[white]Ctrl+Alt+K[/] toggle input debug overlay details',
             '[white]Alt+Shift+L[/] force reload selected incident alerts',
             '[white]Alt+H[/] toggle hunting mode | [white]Enter[/]/[white]Alt+X[/] execute selected query in hunting mode',

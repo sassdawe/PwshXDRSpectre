@@ -23,7 +23,7 @@ function Get-PanelBorderStyle {
     System.String
 
     .EXAMPLE
-    Get-PanelBorderStyle -PanelName 'alerts' -ActivePanel 'alerts'
+    Get-PanelBorderStyle -PanelName 'alert_list' -ActivePanel 'alert_list'
     #>
     [CmdletBinding()]
     param(

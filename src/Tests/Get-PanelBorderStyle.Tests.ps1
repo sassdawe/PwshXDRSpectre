@@ -11,7 +11,7 @@ Describe 'Get-PanelBorderStyle' {
 
     It 'returns Rounded for inactive panel' {
         InModuleScope PwshXDRSpectre {
-            Get-PanelBorderStyle -PanelName 'help' -ActivePanel 'incidents' | Should -Be 'Rounded'
+            Get-PanelBorderStyle -PanelName 'help' -ActivePanel 'incident_list' | Should -Be 'Rounded'
         }
     }
 }

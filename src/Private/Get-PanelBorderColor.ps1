@@ -23,7 +23,7 @@ function Get-PanelBorderColor {
     System.String
 
     .EXAMPLE
-    Get-PanelBorderColor -PanelName 'alerts' -ActivePanel 'incidents' -AccentColor 'Orange1'
+    Get-PanelBorderColor -PanelName 'alert_list' -ActivePanel 'incident_list' -AccentColor 'Orange1'
     #>
     [CmdletBinding()]
     param(
