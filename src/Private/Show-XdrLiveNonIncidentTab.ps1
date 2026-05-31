@@ -95,7 +95,7 @@ function Show-XdrLiveNonIncidentTab {
             $leftData = @(
                 '[white on #003366]  PwshXDRSpectre  [/]',
                 '',
-                'Use Alt+1..8 to switch tabs. Navigate with Tab, PgUp, and PgDn.'
+                'Use Alt+1..9 to switch tabs. Navigate with Tab, PgUp, and PgDn.'
             ) -join "`n"
             $centerTitle = 'Info'
             $centerData = 'Incident triage remains available on the Incidents tab.'
@@ -119,6 +119,22 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterTitle = 'Result Details'
             $lowerCenterData = 'Details for the selected result.'
             $actionsData = 'Alt+X executes the selected query when hunting mode is active.'
+        }
+        'workflows' {
+            $leftPanelName = 'workflow_list'
+            $centerPanelName = 'workflow_overview'
+            $lowerLeftPanelName = 'workflow_steps'
+            $lowerCenterPanelName = 'workflow_step_details'
+            $actionsPanelName = 'workflow_actions'
+            $leftTitle = 'Workflows'
+            $leftData = 'Matching investigation workflows appear here after an incident, alert, or entity is selected.'
+            $centerTitle = 'Workflow Overview'
+            $centerData = 'Select a workflow to view its trigger reason and investigation guidance.'
+            $lowerLeftTitle = 'Steps'
+            $lowerLeftData = 'Step-by-step workflow guidance appears here.'
+            $lowerCenterTitle = 'Step Details'
+            $lowerCenterData = 'Select a workflow step to view details and expected evidence.'
+            $actionsData = 'Use Enter to complete steps after workflow support is active.'
         }
         'query_library' {
             $leftPanelName = 'query_library_list'

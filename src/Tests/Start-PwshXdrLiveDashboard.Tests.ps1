@@ -82,6 +82,27 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content | Should -Not -Match "Format-SpectrePanel -Header '\[white\]Global navigation"
     }
 
+    It 'wires the workflows tab into global navigation and rendering' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+        $outerTabsContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLiveOuterTabsHeader.ps1') -Raw
+        $panelOrderContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLivePanelOrder.ps1') -Raw
+        $slotContent = Get-Content -Path (Join-Path $script:privateRoot 'Resolve-XdrLivePanelSlot.ps1') -Raw
+        $helpContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-ContextAwareHelpLines.ps1') -Raw
+
+        $content.Contains("`$tabOrder = @('welcome', 'incidents', 'workflows', 'hunting', 'query_library', 'quarantine', 'action_center', 'settings', 'help')") | Should -BeTrue
+        $outerTabsContent.Contains("'workflows' { 'Workflows' }") | Should -BeTrue
+        $panelOrderContent.Contains("'workflows' { @('workflow_list', 'workflow_overview', 'workflow_steps', 'workflow_step_details', 'workflow_actions') }") | Should -BeTrue
+        $slotContent.Contains("'workflow_list'") | Should -BeTrue
+        $slotContent.Contains("'workflow_step_details'") | Should -BeTrue
+        $content.Contains("`$context.Data.WorkflowCatalog = @(Get-XdrWorkflowCatalog)") | Should -BeTrue
+        $content.Contains("`$context.Data.Workflows = @(Get-XdrWorkflowMatches -Catalog `$context.Data.WorkflowCatalog -Context `$context)") | Should -BeTrue
+        $content.Contains("Sync-XdrSelectedWorkflow -Context `$context -SelectedWorkflowIndex ([ref]`$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]`$selectedWorkflowStepIndex)") | Should -BeTrue
+        $content.Contains("if (`$activeTab -eq 'workflows') {") | Should -BeTrue
+        $content.Contains("if (`$activeTab -in @('incidents', 'hunting', 'workflows')) {") | Should -BeTrue
+        $content.Contains("`$isAltPressed -and `$keyChar -match '^[1-9]$'") | Should -BeTrue
+        $helpContent.Contains('[switch]$IsWorkflowMode') | Should -BeTrue
+    }
+
     It 'renders alert list entries with severity badge incident-style columns and status' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
@@ -409,7 +430,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("'(Alt+X) Execute selected query'") | Should -BeTrue
         $content.Contains("'(Alt+H) Return to incident workflow'") | Should -BeTrue
         $content.Contains('Query execution in progress') | Should -BeTrue
-        $content.Contains("elseif (-not `$selectedIncident -and -not `$isQueryMode) {") | Should -BeTrue
+        $content.Contains("elseif (-not `$selectedIncident -and -not `$isQueryMode -and `$activeTab -ne 'workflows') {") | Should -BeTrue
         (Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrQueryContextGuidance.ps1') -Raw).Contains('Manual UserId entry is not implemented yet.') | Should -BeTrue
         $content.Contains('Set-LiveStatusMessage -Context $context -Message "Switched to Hunting tab for ${selectedEntityTypeLabel}: $selectedEntityLabel" -Level ''info''') | Should -BeTrue
         $content.Contains("`$queryCatalogLines += ''") | Should -BeTrue
@@ -419,7 +440,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
         $content.Contains("if (`$activeTab -eq 'hunting') {") | Should -BeTrue
-        $content.Contains("if (`$activeTab -in @('incidents', 'hunting')) {") | Should -BeTrue
+        $content.Contains("if (`$activeTab -in @('incidents', 'hunting', 'workflows')) {") | Should -BeTrue
         $content.Contains("Set-XdrLiveActiveTab -TabName 'hunting'") | Should -BeTrue
     }
 

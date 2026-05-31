@@ -1,0 +1,37 @@
+{
+  "id": "high-severity-incident-review",
+  "name": "High Severity Incident Review",
+  "description": "Guided investigation workflow for high severity incidents.",
+  "match": "any",
+  "requiredContext": ["IncidentId"],
+  "conditions": [
+    {
+      "field": "severity",
+      "operator": "equals",
+      "value": "high"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Confirm incident scope",
+      "guidance": "Review the incident details, impacted assets, and related alerts before taking containment action.",
+      "evidence": ["Incident title", "Severity", "Affected users or devices"]
+    },
+    {
+      "title": "Review related alerts",
+      "guidance": "Load alerts for the incident and identify the earliest signal, service source, and alert category.",
+      "evidence": ["Alert timeline", "Service source", "Alert category"]
+    },
+    {
+      "title": "Identify entities",
+      "guidance": "Open the Entities view and capture users, devices, files, or IPs that need follow-up hunting.",
+      "evidence": ["Entity type", "Display name", "Related alert"]
+    },
+    {
+      "title": "Decide containment path",
+      "guidance": "Use the action panel or related investigation tabs to choose appropriate containment and document the rationale.",
+      "evidence": ["Chosen action", "Approval rationale", "Expected impact"]
+    }
+  ],
+  "tags": ["incident", "high-severity", "triage"]
+}

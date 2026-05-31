@@ -44,6 +44,9 @@ function New-XdrRuntimeContext {
             Entities     = @()
             QueryCatalog = @()
             QueryRuns    = @()
+            WorkflowCatalog = @()
+            Workflows    = @()
+            WorkflowProgress = @{}
             LastRefresh  = $null
         }
         Ui = [pscustomobject][ordered]@{

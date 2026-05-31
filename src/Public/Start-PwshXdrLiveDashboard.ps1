@@ -123,7 +123,7 @@ function Start-PwshXdrLiveDashboard {
         # [ref] parameters when they need to update these local selections.
 
         # Global tab bar configuration
-        $tabOrder = @('welcome', 'incidents', 'hunting', 'query_library', 'quarantine', 'action_center', 'settings', 'help')
+        $tabOrder = @('welcome', 'incidents', 'workflows', 'hunting', 'query_library', 'quarantine', 'action_center', 'settings', 'help')
         $activeTabIndex = 1 # default to 'incidents'
         $activeTab = $tabOrder[$activeTabIndex]
         $context.Selection.Tab = $activeTab
@@ -160,6 +160,8 @@ function Start-PwshXdrLiveDashboard {
         $selectedQueryIndex = 0
         $selectedQuery = $null
         $selectedQueryResult = $null
+        $selectedWorkflowIndex = 0
+        $selectedWorkflowStepIndex = 0
         $visibleAlerts = @()
         $visibleAlertIncidentId = $null
         $actionEntries = @()
@@ -216,6 +218,18 @@ function Start-PwshXdrLiveDashboard {
 
         if (@($context.Data.QueryCatalog).Count -gt 0) {
             $selectedQuery = $context.Data.QueryCatalog[0]
+        }
+
+        try {
+            $context.Data.WorkflowCatalog = @(Get-XdrWorkflowCatalog)
+        }
+        catch {
+            $workflowCatalogErrorMessage = "Workflow catalog load failed: $($_.Exception.Message)"
+            $context.Data.WorkflowCatalog = @()
+            $context.Diagnostics.LastError = $_
+            $context.Diagnostics.Warnings = @($context.Diagnostics.Warnings + $workflowCatalogErrorMessage)
+            Set-LiveStatusMessage -Context $context -Message $workflowCatalogErrorMessage -Level 'error'
+            Write-XdrLiveDashboardLog -LogPath $dashboardLogPath -Message $workflowCatalogErrorMessage
         }
 
         while ($true) {
@@ -322,7 +336,7 @@ function Start-PwshXdrLiveDashboard {
                     $pendingQuitConfirmation = $true
                     Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                 }
-                elseif ($earlyAltPressed -and $earlyKeyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                elseif ($earlyAltPressed -and $earlyKeyChar -match '^[1-9]$') {
                     $earlyKeyHandled = $true
                     $tabIndex = [int]::Parse($earlyKeyChar) - 1
                     if ($tabIndex -ge 0 -and $tabIndex -lt $tabOrder.Count) {
@@ -1016,7 +1030,7 @@ function Start-PwshXdrLiveDashboard {
                         $pendingQuitConfirmation = $true
                         Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                     }
-                    elseif ($isAltPressed -and $keyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                    elseif ($isAltPressed -and $keyChar -match '^[1-9]$') {
                         $keyHandled = $true
                         $index = [int]::Parse($keyChar) - 1
                         if ($index -ge 0 -and $index -lt $tabOrder.Count) {
@@ -1096,8 +1110,70 @@ function Start-PwshXdrLiveDashboard {
                         # normal panel actions later in the same loop iteration.
                     }
 
-                    elseif (-not $selectedIncident -and -not $isQueryMode) {
+                    elseif (-not $selectedIncident -and -not $isQueryMode -and $activeTab -ne 'workflows') {
                         continue
+                    }
+
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'workflow_list' -and $context.Data.Workflows.Count -gt 0) {
+                        $keyHandled = $true
+                        $selectedWorkflowIndex = ($selectedWorkflowIndex + 1) % $context.Data.Workflows.Count
+                        $selectedWorkflowStepIndex = 0
+                        Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'workflow_list' -and $context.Data.Workflows.Count -gt 0) {
+                        $keyHandled = $true
+                        $selectedWorkflowIndex = ($selectedWorkflowIndex - 1 + $context.Data.Workflows.Count) % $context.Data.Workflows.Count
+                        $selectedWorkflowStepIndex = 0
+                        Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'workflow_steps' -and $context.Selection.Workflow) {
+                        $keyHandled = $true
+                        $workflowSteps = @($context.Selection.Workflow.Workflow.steps)
+                        if ($workflowSteps.Count -gt 0) {
+                            $selectedWorkflowStepIndex = ($selectedWorkflowStepIndex + 1) % $workflowSteps.Count
+                            Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+                        }
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'workflow_steps' -and $context.Selection.Workflow) {
+                        $keyHandled = $true
+                        $workflowSteps = @($context.Selection.Workflow.Workflow.steps)
+                        if ($workflowSteps.Count -gt 0) {
+                            $selectedWorkflowStepIndex = ($selectedWorkflowStepIndex - 1 + $workflowSteps.Count) % $workflowSteps.Count
+                            Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+                        }
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'DownArrow' -and $activePanel -eq 'workflow_actions' -and $actionEntries.Count -gt 0) {
+                        $keyHandled = $true
+                        $selectedActionIndex = ($selectedActionIndex + 1) % $actionEntries.Count
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'UpArrow' -and $activePanel -eq 'workflow_actions' -and $actionEntries.Count -gt 0) {
+                        $keyHandled = $true
+                        $selectedActionIndex = ($selectedActionIndex - 1 + $actionEntries.Count) % $actionEntries.Count
+                    }
+                    elseif ($activeTab -eq 'workflows' -and $key.Key -eq 'Enter' -and $activePanel -in @('workflow_steps', 'workflow_actions') -and $context.Selection.Workflow) {
+                        $keyHandled = $true
+                        $selectedWorkflowMatch = $context.Selection.Workflow
+                        $selectedWorkflow = $selectedWorkflowMatch.Workflow
+                        $workflowProgressKey = [string]$selectedWorkflow.id
+                        if (-not $context.Data.WorkflowProgress.ContainsKey($workflowProgressKey)) {
+                            $context.Data.WorkflowProgress[$workflowProgressKey] = @{}
+                        }
+
+                        $workflowActionShortcut = if ($activePanel -eq 'workflow_actions' -and $actionEntries.Count -gt 0) { [string]$actionEntries[$selectedActionIndex].Shortcut } else { 'complete-step' }
+                        if ($workflowActionShortcut -eq 'complete-step') {
+                            $context.Data.WorkflowProgress[$workflowProgressKey][[string]$selectedWorkflowStepIndex] = $true
+                            Set-LiveStatusMessage -Context $context -Message "Completed workflow step: $([string]$context.Selection.WorkflowStep.title)" -Level 'info'
+                        }
+                        elseif ($workflowActionShortcut -eq 'reset-workflow') {
+                            $context.Data.WorkflowProgress[$workflowProgressKey] = @{}
+                            $selectedWorkflowStepIndex = 0
+                            Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+                            Set-LiveStatusMessage -Context $context -Message "Reset workflow: $([string]$selectedWorkflow.name)" -Level 'info'
+                        }
+                        elseif ($workflowActionShortcut -eq 'jump-hunting') {
+                            Set-XdrLiveActiveTab -TabName 'hunting' -TabOrder $tabOrder -PanelOrder ([ref]$panelOrder) -Context $context -ActiveTabIndex ([ref]$activeTabIndex) -ActiveTab ([ref]$activeTab) -IsQueryMode ([ref]$isQueryMode) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -SelectedActionIndex ([ref]$selectedActionIndex) -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey -HideActionPanel:(-not $actionStatusPanelVisible)
+                            Set-LiveStatusMessage -Context $context -Message 'Switched to Hunting tab from workflow guidance.' -Level 'info'
+                        }
                     }
 
                     elseif ($isQueryMode -and $key.Key -eq 'DownArrow' -and $context.Data.QueryCatalog.Count -gt 0 -and $activePanel -ne 'query_actions') {
@@ -1267,7 +1343,7 @@ function Start-PwshXdrLiveDashboard {
             }  # end foreach ($key in @($keysForMainHandler))
 
             # If there are no incidents, ensure selection is cleared and panels show appropriate messaging instead of stale data from previous incidents
-            if (-not $context.Data.Incidents -and $activeTab -ne 'hunting') {
+            if (-not $context.Data.Incidents -and $activeTab -notin @('hunting', 'workflows')) {
                 $selectedEntity = $null
                 $context.Selection.Entity = $null
                 Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
@@ -1289,6 +1365,9 @@ function Start-PwshXdrLiveDashboard {
             }
 
             #region Build renderables from settled state
+            $context.Data.Workflows = @(Get-XdrWorkflowMatches -Catalog $context.Data.WorkflowCatalog -Context $context)
+            Sync-XdrSelectedWorkflow -Context $context -SelectedWorkflowIndex ([ref]$selectedWorkflowIndex) -SelectedWorkflowStepIndex ([ref]$selectedWorkflowStepIndex)
+
             # From here to the final Refresh(), build renderables from the settled state
             # rather than mutating Graph/job data. Spectre layout updates happen only after
             # every panel has been prepared.
@@ -2087,9 +2166,123 @@ function Start-PwshXdrLiveDashboard {
                 $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'query_actions' -Title 'Query Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($queryActionDisplayLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'query_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'query_actions' -ActivePanel $activePanel) -Expand
             }
 
+            if ($activeTab -eq 'workflows') {
+                $workflowMatches = @($context.Data.Workflows)
+                $selectedWorkflowMatch = $context.Selection.Workflow
+                $selectedWorkflow = if ($selectedWorkflowMatch) { $selectedWorkflowMatch.Workflow } else { $null }
+                $workflowProgressKey = if ($selectedWorkflow) { [string]$selectedWorkflow.id } else { '' }
+                $workflowProgress = if ($workflowProgressKey -and $context.Data.WorkflowProgress.ContainsKey($workflowProgressKey)) { $context.Data.WorkflowProgress[$workflowProgressKey] } else { @{} }
+
+                $workflowListLines = @()
+                if ($workflowMatches.Count -eq 0) {
+                    $workflowListLines += '[grey]No workflows match the selected incident, alert, or entity.[/]'
+                    $workflowListLines += '[grey]Select incident context or entity context to reveal applicable workflows.[/]'
+                }
+                else {
+                    for ($workflowCursor = 0; $workflowCursor -lt $workflowMatches.Count; $workflowCursor++) {
+                        $workflowMatch = $workflowMatches[$workflowCursor]
+                        $workflowDefinition = $workflowMatch.Workflow
+                        $isSelectedWorkflow = $workflowCursor -eq $selectedWorkflowIndex
+                        $workflowPrefix = if ($isSelectedWorkflow -and $activePanel -eq 'workflow_list') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $workflowNameMarkup = if ($isSelectedWorkflow) { "[bold $($context.Ui.ThemeColor)]$([string](Get-SpectreEscapedText ([string]$workflowDefinition.name)))[/]" } else { "[white]$([string](Get-SpectreEscapedText ([string]$workflowDefinition.name)))[/]" }
+                        $workflowListLines += "$workflowPrefix $workflowNameMarkup"
+                        $workflowListLines += "  [grey]$([string](Get-SpectreEscapedText ([string]$workflowDefinition.description)))[/]"
+                        $workflowListLines += "  [grey]Trigger: $([string](Get-SpectreEscapedText ([string]$workflowMatch.TriggerReason)))[/]"
+                        $workflowListLines += ''
+                    }
+                }
+
+                $incidentPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'workflow_list' -Title "Workflows ($($workflowMatches.Count))" -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($workflowListLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'workflow_list' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'workflow_list' -ActivePanel $activePanel) -Expand
+
+                $overviewLines = @()
+                if (-not $selectedWorkflow) {
+                    $overviewLines += '[grey]No workflow selected.[/]'
+                }
+                else {
+                    $completedCount = @($workflowProgress.Keys | Where-Object { $workflowProgress[$_] }).Count
+                    $workflowSteps = @($selectedWorkflow.steps)
+                    $overviewLines += "[bold]$([string](Get-SpectreEscapedText ([string]$selectedWorkflow.name)))[/]"
+                    $overviewLines += "[grey]$([string](Get-SpectreEscapedText ([string]$selectedWorkflow.description)))[/]"
+                    $overviewLines += ''
+                    $overviewLines += "Progress: $completedCount / $($workflowSteps.Count) steps complete"
+                    $overviewLines += "Trigger: $([string](Get-SpectreEscapedText ([string]$selectedWorkflowMatch.TriggerReason)))"
+                    if (@($selectedWorkflow.tags).Count -gt 0) {
+                        $overviewLines += "Tags: $([string](Get-SpectreEscapedText ((@($selectedWorkflow.tags) -join ', '))))"
+                    }
+                }
+
+                $incidentDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'workflow_overview' -Title 'Workflow Overview' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($overviewLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'workflow_overview' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'workflow_overview' -ActivePanel $activePanel) -Expand
+
+                $stepLines = @()
+                $selectedWorkflowStep = $context.Selection.WorkflowStep
+                if (-not $selectedWorkflow) {
+                    $stepLines += '[grey]No workflow selected.[/]'
+                }
+                else {
+                    $workflowSteps = @($selectedWorkflow.steps)
+                    for ($stepCursor = 0; $stepCursor -lt $workflowSteps.Count; $stepCursor++) {
+                        $step = $workflowSteps[$stepCursor]
+                        $stepKey = [string]$stepCursor
+                        $isComplete = $workflowProgress.ContainsKey($stepKey) -and $workflowProgress[$stepKey]
+                        $isSelectedStep = $stepCursor -eq $selectedWorkflowStepIndex
+                        $statusGlyph = if ($isComplete) { '✓' } elseif ($isSelectedStep) { '▶' } else { '•' }
+                        $stepPrefix = if ($isSelectedStep -and $activePanel -eq 'workflow_steps') { "[bold $($context.Ui.ThemeColor)]>[/]" } else { ' ' }
+                        $stepTitle = Get-SpectreEscapedText ([string]$step.title)
+                        $stepMarkup = if ($isComplete) { "[green]$statusGlyph $stepTitle[/]" } elseif ($isSelectedStep) { "[bold $($context.Ui.ThemeColor)]$statusGlyph $stepTitle[/]" } else { "[white]$statusGlyph $stepTitle[/]" }
+                        $stepLines += "$stepPrefix $stepMarkup"
+                    }
+                }
+
+                $alertsPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'workflow_steps' -Title 'Workflow Steps' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($stepLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'workflow_steps' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'workflow_steps' -ActivePanel $activePanel) -Expand
+
+                $stepDetailLines = @()
+                if (-not $selectedWorkflowStep) {
+                    $stepDetailLines += '[grey]No workflow step selected.[/]'
+                }
+                else {
+                    $stepDetailLines += "[bold]$([string](Get-SpectreEscapedText ([string]$selectedWorkflowStep.title)))[/]"
+                    $stepDetailLines += ''
+                    $stepDetailLines += "[white]$([string](Get-SpectreEscapedText ([string]$selectedWorkflowStep.guidance)))[/]"
+                    if (@($selectedWorkflowStep.evidence).Count -gt 0) {
+                        $stepDetailLines += ''
+                        $stepDetailLines += '[bold grey]Expected evidence[/]'
+                        foreach ($evidence in @($selectedWorkflowStep.evidence)) {
+                            $stepDetailLines += " - $([string](Get-SpectreEscapedText ([string]$evidence)))"
+                        }
+                    }
+                    if (@($selectedWorkflowStep.links).Count -gt 0) {
+                        $stepDetailLines += ''
+                        $stepDetailLines += '[bold grey]Links[/]'
+                        foreach ($link in @($selectedWorkflowStep.links)) {
+                            $stepDetailLines += " - $([string](Get-SpectreEscapedText ([string]$link)))"
+                        }
+                    }
+                }
+
+                $alertDetails = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'workflow_step_details' -Title 'Step Details' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($stepDetailLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'workflow_step_details' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'workflow_step_details' -ActivePanel $activePanel) -Expand
+
+                $actionEntries = @(
+                    [pscustomobject]@{ Shortcut = 'complete-step'; Label = 'Mark selected step complete'; IsEnabled = ($null -ne $selectedWorkflowStep); Reasons = @() },
+                    [pscustomobject]@{ Shortcut = 'reset-workflow'; Label = 'Reset workflow progress'; IsEnabled = ($null -ne $selectedWorkflow); Reasons = @() },
+                    [pscustomobject]@{ Shortcut = 'jump-hunting'; Label = 'Jump to Hunting'; IsEnabled = $true; Reasons = @() }
+                )
+                $selectedActionIndex = [Math]::Min([Math]::Max($selectedActionIndex, 0), $actionEntries.Count - 1)
+                $workflowActionLines = @('Workflow actions')
+                for ($workflowActionCursor = 0; $workflowActionCursor -lt $actionEntries.Count; $workflowActionCursor++) {
+                    $workflowAction = $actionEntries[$workflowActionCursor]
+                    $workflowActionPrefix = if ($activePanel -eq 'workflow_actions' -and $workflowActionCursor -eq $selectedActionIndex) { "[bold $($context.Ui.ThemeColor)]>[/] " } else { '  ' }
+                    $workflowActionLabel = Get-SpectreEscapedText ([string]$workflowAction.Label)
+                    $workflowActionLines += "$workflowActionPrefix[white]$workflowActionLabel[/]"
+                }
+                $workflowActionLines += ''
+                $workflowActionLines += '[grey]Enter completes the selected step when focused on steps or actions.[/]'
+
+                $actionStatusPanel = Format-SpectrePanel -Header (Get-PanelHeaderMarkup -PanelName 'workflow_actions' -Title 'Workflow Actions' -ActivePanel $activePanel -Color $context.Ui.ThemeColor) -Data ($workflowActionLines -join "`n") -Color (Get-PanelBorderColor -PanelName 'workflow_actions' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'workflow_actions' -ActivePanel $activePanel) -Expand
+            }
+
             # Help is rebuilt last so it can reflect any key handling, job completion, or
             # mode switch that happened earlier in this loop iteration.
-            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -IsQueryMode:$isQueryMode -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
+            $contextHelpLine = (Get-ContextAwareHelpLines -ActivePanel $activePanel -IsQueryMode:$isQueryMode -IsWorkflowMode:($activeTab -eq 'workflows') -SelectedIncident $selectedIncident -SelectedAlert $selectedAlert -PendingConfirmation $pendingConfirmation -PendingTextInput $pendingTextInput -PendingIncidentResolution $pendingIncidentResolution -PendingIncidentClassification $pendingIncidentClassification -PendingIncidentComment $pendingIncidentComment) -join ' | '
             $helpHeaderText = if ($showKeyboardHelpOverlay) { 'Help (F1 close)' } else { "Help | $contextHelpLine" }
             $helpPanel = Format-SpectrePanel -Header "[white]$helpHeaderText[/]" -Data (Get-XdrLiveHelpPanelContent -Context $context -SelectedIncident $selectedIncident -PendingIncidentResolution $pendingIncidentResolution -PendingTextInput $pendingTextInput -PendingConfirmation $pendingConfirmation -AlertsByIncidentId $alertsByIncidentId -AlertLoadJobsByIncidentId $alertLoadJobsByIncidentId -AlertPreloadQueue $alertPreloadQueue -PrefetchCompletedAt ([ref]$prefetchCompletedAt) -LastRefreshAt $lastDataRefreshAt -HeartbeatAt $lastHeartbeat -HeartbeatCounter $heartbeatCounter -IsQueryMode:$isQueryMode -ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay) -Color (Get-PanelBorderColor -PanelName 'help' -ActivePanel $activePanel -AccentColor $context.Ui.ThemeColor) -Border (Get-PanelBorderStyle -PanelName 'help' -ActivePanel $activePanel) -Expand
 
@@ -2097,7 +2290,7 @@ function Start-PwshXdrLiveDashboard {
 
             # Only incidents and hunting own the full dynamic panel set. Other tabs render
             # through a shared placeholder helper while background jobs keep running.
-            if ($activeTab -in @('incidents', 'hunting')) {
+            if ($activeTab -in @('incidents', 'hunting', 'workflows')) {
                 $layout['left_top'].Update($incidentPanel) | Out-Null
                 $layout['center_top'].Update($incidentDetails) | Out-Null
                 $layout['left_bottom'].Update($alertsPanel) | Out-Null

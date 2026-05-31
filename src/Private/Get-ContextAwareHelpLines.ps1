@@ -46,6 +46,9 @@ function Get-ContextAwareHelpLines {
         [switch]$IsQueryMode,
 
         [Parameter()]
+        [switch]$IsWorkflowMode,
+
+        [Parameter()]
         [object]$SelectedIncident,
 
         [Parameter()]
@@ -93,6 +96,16 @@ function Get-ContextAwareHelpLines {
         }
 
         return @('Hunting mode | Enter or Alt+X execute selected query | Alt+H return to incident workflow | Ctrl+Alt+A action panel | Ctrl+Alt+K input debug | F1 help | Tab or PgUp/PgDn switch | Ctrl+C exit')
+    }
+
+    if ($IsWorkflowMode.IsPresent) {
+        switch ($ActivePanel) {
+            'workflow_list' { return @('↑/↓ workflows | Tab or PgUp/PgDn switch panels | Enter complete current step from steps/actions | Ctrl+Alt+A action panel | F1 help | Ctrl+C exit') }
+            'workflow_steps' { return @('↑/↓ workflow steps | Enter mark selected step complete | Tab or PgUp/PgDn switch panels | Ctrl+Alt+A action panel | F1 help | Ctrl+C exit') }
+            'workflow_actions' { return @('↑/↓ select workflow action | Enter execute selected action | Tab or PgUp/PgDn switch panels | Ctrl+Alt+A action panel | F1 help | Ctrl+C exit') }
+        }
+
+        return @('Workflow mode | Select workflow and steps | Enter complete selected step | Tab or PgUp/PgDn switch panels | F1 help | Ctrl+C exit')
     }
 
     $baseLine = 'Alt+A/U/O/I/R/K/C incident | Alt+L load alerts | Alt+Shift+L force reload alerts | Alt+N/P/M alert | Alt+E entities | Alt+D incident details | Ctrl+Alt+A action panel | F1 help | F5/r refresh | q quit | Tab/Shift+Tab or PgUp/PgDn switch | ↑/↓ move | Enter run/load | Ctrl+C exit'

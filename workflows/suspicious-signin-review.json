@@ -1,0 +1,37 @@
+{
+  "id": "suspicious-signin-review",
+  "name": "Suspicious Sign-in Review",
+  "description": "Step-by-step workflow for identity sign-in investigations.",
+  "match": "any",
+  "requiredContext": ["AlertId"],
+  "conditions": [
+    {
+      "field": "category",
+      "operator": "contains",
+      "value": "sign"
+    },
+    {
+      "field": "entityType",
+      "operator": "equals",
+      "value": "user"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Validate identity signal",
+      "guidance": "Review the alert category, user entity, and sign-in context to confirm the activity is suspicious.",
+      "evidence": ["User principal", "Alert category", "Timestamp"]
+    },
+    {
+      "title": "Hunt user activity",
+      "guidance": "Jump to Hunting and run user-focused queries with the selected entity context.",
+      "evidence": ["Recent sign-ins", "Risk indicators", "Source IPs"]
+    },
+    {
+      "title": "Plan user response",
+      "guidance": "Document whether session revocation, password reset, or account disablement is appropriate.",
+      "evidence": ["Recommended response", "Business impact", "Approver"]
+    }
+  ],
+  "tags": ["identity", "signin", "user"]
+}

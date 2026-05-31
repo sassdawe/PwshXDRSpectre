@@ -95,6 +95,16 @@ Current hunting-mode controls:
 - `Alt+X` executes the selected catalog query.
 - Recent query runs are shown in the activity panel while hunting mode is active.
 
+## Investigation Workflows
+
+Repository-backed investigation workflows live in `workflows/` and are loaded into
+the live dashboard at startup. Matching workflows appear on the global
+**Workflows** tab (`Alt+3`) when their conditions match the selected incident,
+alert, or entity context.
+
+To add a workflow, follow the schema and examples in
+[docs/investigation-workflows.md](docs/investigation-workflows.md).
+
 ## Tests
 
 Run baseline Phase 1 tests:

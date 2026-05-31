@@ -10,6 +10,7 @@ function Get-XdrLivePanelOrder {
 
     $panelOrder = switch ($TabName) {
         'hunting' { @('query_catalog', 'query_preview', 'query_activity', 'query_actions') }
+        'workflows' { @('workflow_list', 'workflow_overview', 'workflow_steps', 'workflow_step_details', 'workflow_actions') }
         'welcome' { @('welcome_overview', 'welcome_info', 'welcome_announcements', 'welcome_actions') }
         'query_library' { @('query_library_list', 'query_library_settings', 'query_library_versions', 'query_library_actions') }
         'quarantine' { @('quarantine_items', 'quarantine_status', 'quarantine_info', 'quarantine_actions') }

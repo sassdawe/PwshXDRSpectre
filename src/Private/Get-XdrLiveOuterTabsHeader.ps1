@@ -14,6 +14,7 @@ function Get-XdrLiveOuterTabsHeader {
         $label = switch ($tab) {
             'welcome' { 'Welcome' }
             'incidents' { 'Incidents' }
+            'workflows' { 'Workflows' }
             'hunting' { 'Hunting' }
             'query_library' { 'Query library' }
             'quarantine' { 'Quarantine' }
