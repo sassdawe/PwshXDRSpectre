@@ -21,6 +21,7 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 | [Phase 5](phase-5-workflow-memory.md) | Agent Workflow Memory Store | ⚪ Not Started | Phase 1, Phase 3, Phase 4 |
 | [Phase 6](phase-6-outer-panel-tabs.md) | Outer Panel Tabs and Placeholder Workflows | 🟡 In Progress | Phase 1, Phase 2, Phase 4 |
 | [Phase 7](phase-7-ux-testing-docs.md) | UX Hardening, Testing, and Docs | 🟡 In Progress | All prior phases, Phase 6 |
+| [Phase 8](phase-8-live-investigation.md) | Device Live Investigation | 🟡 In Progress | Phase 1, Phase 3, Phase 6 |
 
 **Status key**: ⚪ Not Started · 🟡 In Progress · 🔴 Blocked · ✅ Completed
 
@@ -94,6 +95,15 @@ Build a modular PowerShell terminal app on PSSpectreConsole that supports full a
 - [x] Dedicated `Tests/<Function>.Tests.ps1` coverage layout for every `Private/` and `Public/` script
 - [ ] End-to-end test tenant validation
 - [ ] Documentation update
+
+### Phase 8 — Device Live Investigation
+
+- [x] Device inventory wrapper
+- [x] Confirmed Live Response command starter
+- [x] Global Live Investigation tab shell
+- [ ] Machine-action status polling
+- [ ] In-dashboard device search and command builders
+- [ ] XDRInternals helper reconciliation when reference content is available
 
 ---
 

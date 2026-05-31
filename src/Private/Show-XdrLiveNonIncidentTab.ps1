@@ -95,7 +95,7 @@ function Show-XdrLiveNonIncidentTab {
             $leftData = @(
                 '[white on #003366]  PwshXDRSpectre  [/]',
                 '',
-                'Use Alt+1..8 to switch tabs. Navigate with Tab, PgUp, and PgDn.'
+                'Use Alt+1..9 to switch tabs. Navigate with Tab, PgUp, and PgDn.'
             ) -join "`n"
             $centerTitle = 'Info'
             $centerData = 'Incident triage remains available on the Incidents tab.'
@@ -151,6 +151,28 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterData = 'Under construction.'
             $actionsData = 'Under construction.'
         }
+        'live_investigation' {
+            $leftPanelName = 'live_investigation_devices'
+            $centerPanelName = 'live_investigation_session'
+            $lowerLeftPanelName = 'live_investigation_activity'
+            $lowerCenterPanelName = 'live_investigation_details'
+            $actionsPanelName = 'live_investigation_actions'
+            $leftTitle = 'Live Investigation - Devices'
+            $leftData = @(
+                'Use Get-XdrLiveInvestigationDevice to find onboarded devices.',
+                'Select a Defender machine ID before starting Live Response.'
+            ) -join "`n"
+            $centerTitle = 'Session'
+            $centerData = 'Start-XdrLiveInvestigation opens a confirmed Live Response command against a device.'
+            $lowerLeftTitle = 'Activity'
+            $lowerLeftData = 'Machine action status tracking will appear here.'
+            $lowerCenterTitle = 'Device Details'
+            $lowerCenterData = 'Device health, risk, exposure, and last-seen metadata appear after device selection.'
+            $actionsData = @(
+                'Get-XdrLiveInvestigationDevice -DeviceName <host>',
+                'Start-XdrLiveInvestigation submits Live Response commands with confirmation.'
+            ) -join "`n"
+        }
         'action_center' {
             $leftPanelName = 'action_center_items'
             $centerPanelName = 'action_center_status'
@@ -174,17 +196,24 @@ function Show-XdrLiveNonIncidentTab {
             $lowerCenterPanelName = 'settings_files'
             $actionsPanelName = 'settings_actions'
             $leftTitle = 'Settings'
+            $experimentalFeatureStatus = if ($Context.Ui.ExperimentalFeaturesEnabled) { 'On' } else { 'Off' }
+            $experimentalFeatureAction = if ($Context.Ui.ExperimentalFeaturesEnabled) { 'Disable experimental features' } else { 'Enable experimental features' }
             $leftData = @(
+                "Experimental features: $experimentalFeatureStatus",
                 "Input debug (Ctrl+Alt+K): $($Context.Diagnostics.InputDebugEnabled)",
                 "LogPath: $DashboardLogPath",
                 "ThemeColor: $($Context.Ui.ThemeColor)"
             ) -join "`n"
             $centerTitle = 'Debug'
-            $centerData = 'Log files and debug flags.'
+            $centerData = 'Experimental features are off by default. Enable them here before preview tabs such as Live Investigation appear.'
             $lowerLeftTitle = 'Logs'
             $lowerLeftData = 'Log browsing coming soon.'
             $lowerCenterTitle = 'Files'
             $lowerCenterData = 'List of recent log files.'
+            $actionsData = @(
+                "(Alt+E) $experimentalFeatureAction",
+                'Live Investigation stays hidden until experimental features are enabled.'
+            ) -join "`n"
         }
         'help' {
             $leftPanelName = 'help_topics'
