@@ -37,6 +37,7 @@ function Restore-XdrLiveCachedAlertsForIncident {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyString()]
         [string]$IncidentId,
 
         [Parameter(Mandatory)]
@@ -57,6 +58,11 @@ function Restore-XdrLiveCachedAlertsForIncident {
         [Parameter()]
         [string]$LogPath
     )
+
+    if ([string]::IsNullOrWhiteSpace($IncidentId)) {
+        Write-XdrLiveDashboardLog -LogPath $LogPath -Message 'Alert cache restore skipped because the incident id was blank.'
+        return $false
+    }
 
     if (-not $AlertsByIncidentId.ContainsKey($IncidentId)) {
         Write-XdrLiveDashboardLog -LogPath $LogPath -Message "Alert cache restore miss. IncidentId=$IncidentId CacheIncidentCount=$($AlertsByIncidentId.Count)"

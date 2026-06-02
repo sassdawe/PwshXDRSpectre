@@ -24,10 +24,10 @@ function Get-XdrLiveOuterTabsHeader {
         }
 
         if ($i -eq $ActiveTabIndex) {
-            $parts += "[bold black on #C0C0C0]| $label |[/]"
+            $parts += "[bold black on orange1]| $label |[/]"
         }
         else {
-            $parts += "[grey70 on #1C1C1C]| $label |[/]"
+            $parts += "[deepskyblue1 on #1C1C1C]| $label |[/]"
         }
     }
 
