@@ -386,11 +386,11 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
 
         $content.Contains("(Alt+A) Assign Inc. to me") | Should -BeTrue
         $content.Contains("(Alt+U) Unassign Inc.") | Should -BeTrue
-        $content.Contains("$shortcut Set Inc. to $statusLabel") | Should -BeTrue
+        $content.Contains('$shortcut Set Inc. to $statusLabel') | Should -BeTrue
         $content.Contains("(Alt+K) Classify Inc.") | Should -BeTrue
         $content.Contains("(Alt+C) Comment on Inc.") | Should -BeTrue
         $content.Contains("(Alt+L) Load alerts") | Should -BeTrue
-        $content.Contains("$shortcut Set Alert to $statusLabel") | Should -BeTrue
+        $content.Contains('$shortcut Set Alert to $statusLabel') | Should -BeTrue
     }
 
     It 'loads query catalog during startup and surfaces catalog errors through the live status message' {
