@@ -1,4 +1,37 @@
 function Invoke-XdrOperation {
+    <#
+    .SYNOPSIS
+    Executes an XDR operation inside a standard result envelope.
+
+    .DESCRIPTION
+    Runs the supplied script block, captures duration, normalizes success or
+    failure output, and updates runtime permission health when Graph errors
+    indicate missing write scopes.
+
+    .PARAMETER Operation
+    Logical operation name used in result and error records.
+
+    .PARAMETER ScriptBlock
+    Operation implementation to execute.
+
+    .PARAMETER Context
+    Optional runtime context updated with permission-health metadata.
+
+    .PARAMETER SuccessMessage
+    Optional success message for the result envelope.
+
+    .PARAMETER FailureMessage
+    Optional failure message for the result envelope.
+
+    .PARAMETER TargetObject
+    Optional target object associated with the operation.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    Invoke-XdrOperation -Operation 'Get-XdrCurrentUser' -Context $context -ScriptBlock { Invoke-MgGraphRequest -Method GET -Uri '/v1.0/me' }
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

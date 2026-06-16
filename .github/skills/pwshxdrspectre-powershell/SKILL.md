@@ -9,7 +9,7 @@ Repo-specific authoring rules for the live dashboard and supporting cmdlets. Gen
 
 ## When to Use This Skill
 
-- Editing `src/Public/Start-PwshXdrLiveDashboard.ps1` or any `src/Private/*.ps1`
+- Editing `src/Public/Start-PwshXdrLiveDashboard.ps1`, `src/Public/*.ps1` or any `src/Private/*.ps1` files.
 - Adding or refactoring functions that take Graph results (`Incidents`, `Alerts`, `Entities`)
 - Wiring or completing background `ThreadJob` work and folding results back into UI state
 - Adjusting Spectre layout, panel widths, color/border markup, or keyboard handling

@@ -152,8 +152,8 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
         $content.Contains('Get-XdrIncidentDetailsTabHeader -CurrentTab $selectedIncidentDetailsTab') | Should -BeTrue
-        $headerContent.Contains("[bold black on #C0C0C0]| Incident details |[/][grey70 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
-        $headerContent.Contains("[grey70 on #1C1C1C]| Incident details |[/][bold black on #C0C0C0]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
+        $headerContent.Contains("[bold black on orange1]| Incident details |[/] [deepskyblue1 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
+        $headerContent.Contains("[deepskyblue1 on #1C1C1C]| Incident details |[/] [bold black on orange1]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
         $content.Contains("Tab to switch to Details") | Should -BeTrue
     }
 

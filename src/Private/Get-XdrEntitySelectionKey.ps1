@@ -1,4 +1,21 @@
 function Get-XdrEntitySelectionKey {
+    <#
+    .SYNOPSIS
+    Builds a stable selection key for an entity.
+
+    .DESCRIPTION
+    Concatenates the identifying properties used to preserve or restore entity
+    selection across refreshes and panel rebinds.
+
+    .PARAMETER Entity
+    Entity object to summarize.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Get-XdrEntitySelectionKey -Entity $selectedEntity
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

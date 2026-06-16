@@ -1,4 +1,24 @@
 function Format-XdrIncidentTable {
+    <#
+    .SYNOPSIS
+    Formats incidents for tabular dashboard display.
+
+    .DESCRIPTION
+    Projects incident properties into table rows and returns either a formatted
+    Spectre table or an empty-state message when no incidents are available.
+
+    .PARAMETER Incidents
+    Incident collection to format.
+
+    .PARAMETER Color
+    Accent color used by the rendered table.
+
+    .OUTPUTS
+    System.Object
+
+    .EXAMPLE
+    Format-XdrIncidentTable -Incidents $context.Data.Incidents -Color 'Orange1'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

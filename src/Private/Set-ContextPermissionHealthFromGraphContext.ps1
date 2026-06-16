@@ -1,4 +1,22 @@
     function Set-ContextPermissionHealthFromGraphContext {
+        <#
+        .SYNOPSIS
+        Updates permission health using the current Graph context.
+
+        .DESCRIPTION
+        Reads the connected Microsoft Graph scopes, records available
+        permissions, and disables write capabilities when the required incident
+        write scope is missing.
+
+        .PARAMETER RuntimeContext
+        Runtime context to update with permission health metadata.
+
+        .OUTPUTS
+        None
+
+        .EXAMPLE
+        Set-ContextPermissionHealthFromGraphContext -RuntimeContext $context
+        #>
         param(
             [Parameter(Mandatory)]
             [object]$RuntimeContext

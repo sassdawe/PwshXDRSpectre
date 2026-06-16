@@ -1,4 +1,51 @@
 function Set-XdrLiveActionPanelVisibility {
+    <#
+    .SYNOPSIS
+    Shows or hides the live dashboard action panel.
+
+    .DESCRIPTION
+    Rebuilds the dashboard layout for the requested action-panel visibility,
+    updates panel ordering, and rebinds active panel state when necessary.
+
+    .PARAMETER Visible
+    Indicates whether the action panel should be visible.
+
+    .PARAMETER Layout
+    Reference to the root dashboard layout.
+
+    .PARAMETER DashboardFrame
+    Reference to the formatted dashboard frame panel.
+
+    .PARAMETER ScreenLayout
+    Parent screen layout that hosts the dashboard frame.
+
+    .PARAMETER TabOrder
+    Ordered list of available top-level tabs.
+
+    .PARAMETER ActiveTabIndex
+    Current active tab index.
+
+    .PARAMETER ActiveTab
+    Current active tab name.
+
+    .PARAMETER PanelOrder
+    Reference to the current panel order.
+
+    .PARAMETER ActivePanel
+    Reference to the active panel name.
+
+    .PARAMETER ActivePanelIndex
+    Reference to the active panel index.
+
+    .PARAMETER Context
+    Runtime context updated with the active panel selection.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Set-XdrLiveActionPanelVisibility -Visible $true -Layout ([ref]$layout) -DashboardFrame ([ref]$dashboardFrame) -ScreenLayout $screenLayout -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex -ActiveTab $activeTab -PanelOrder ([ref]$panelOrder) -ActivePanel ([ref]$activePanel) -ActivePanelIndex ([ref]$activePanelIndex) -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

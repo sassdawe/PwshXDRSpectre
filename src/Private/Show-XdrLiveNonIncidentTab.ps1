@@ -1,4 +1,84 @@
 function Show-XdrLiveNonIncidentTab {
+    <#
+    .SYNOPSIS
+    Renders placeholder and auxiliary non-incident tabs.
+
+    .DESCRIPTION
+    Populates the dashboard layout for top-level tabs other than the primary
+    incident workflow, including welcome, hunting, settings, and help views.
+
+    .PARAMETER Layout
+    Root dashboard layout to update.
+
+    .PARAMETER ActiveTab
+    Active top-level tab name.
+
+    .PARAMETER ActivePanel
+    Active logical panel name.
+
+    .PARAMETER Context
+    Runtime context used for rendering status and theme information.
+
+    .PARAMETER CurrentHelpPanel
+    Optional prebuilt help panel to reattach.
+
+    .PARAMETER DashboardLogPath
+    Optional dashboard log path shown in the settings view.
+
+    .PARAMETER TenantId
+    Tenant id displayed in the welcome view.
+
+    .PARAMETER ClientId
+    Client id displayed in the welcome view.
+
+    .PARAMETER SelectedIncident
+    Selected incident used by the help view.
+
+    .PARAMETER PendingIncidentResolution
+    Active incident resolution workflow payload.
+
+    .PARAMETER PendingTextInput
+    Active text input workflow payload.
+
+    .PARAMETER PendingConfirmation
+    Active confirmation workflow payload.
+
+    .PARAMETER AlertsByIncidentId
+    Alert cache keyed by incident id.
+
+    .PARAMETER AlertLoadJobsByIncidentId
+    Running alert jobs keyed by incident id.
+
+    .PARAMETER AlertPreloadQueue
+    Queue of pending alert preload incidents.
+
+    .PARAMETER PrefetchCompletedAt
+    Reference to the completed-prefetch timestamp.
+
+    .PARAMETER LastRefreshAt
+    Last incident refresh timestamp.
+
+    .PARAMETER HeartbeatAt
+    Timestamp of the last heartbeat update.
+
+    .PARAMETER HeartbeatCounter
+    Heartbeat counter used for spinner state.
+
+    .PARAMETER IsQueryMode
+    Indicates whether hunting mode is active.
+
+    .PARAMETER ShowKeyboardHelpOverlay
+    Indicates whether the keyboard help overlay should render.
+
+    .PARAMETER ActionPanelVisible
+    Indicates whether the action panel should render.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Show-XdrLiveNonIncidentTab -Layout $layout -ActiveTab 'help' -ActivePanel 'help_topics' -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

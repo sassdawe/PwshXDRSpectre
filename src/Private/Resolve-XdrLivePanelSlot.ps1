@@ -1,4 +1,21 @@
 function Resolve-XdrLivePanelSlot {
+    <#
+    .SYNOPSIS
+    Maps a logical panel name to a physical layout slot.
+
+    .DESCRIPTION
+    Returns the Spectre layout slot name that should host the supplied logical
+    panel for the active dashboard layout.
+
+    .PARAMETER PanelName
+    Logical panel name.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Resolve-XdrLivePanelSlot -PanelName 'incident_list'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

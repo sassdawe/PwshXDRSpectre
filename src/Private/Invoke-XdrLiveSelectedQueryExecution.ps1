@@ -1,4 +1,33 @@
 function Invoke-XdrLiveSelectedQueryExecution {
+    <#
+    .SYNOPSIS
+    Starts execution of the currently selected hunting query.
+
+    .DESCRIPTION
+    Validates the current selection and running-job state, then starts the
+    background query job and emits a dashboard status message.
+
+    .PARAMETER SelectedQuery
+    Currently selected query definition.
+
+    .PARAMETER QueryExecutionJob
+    Reference to the active query execution job.
+
+    .PARAMETER ModulePath
+    Module path imported inside the background job.
+
+    .PARAMETER Context
+    Runtime context used for execution and status updates.
+
+    .PARAMETER LogPath
+    Optional log path passed to the query job.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Invoke-XdrLiveSelectedQueryExecution -SelectedQuery $selectedQuery -QueryExecutionJob ([ref]$queryExecutionJob) -ModulePath $modulePath -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

@@ -1,4 +1,24 @@
 function Get-XdrLiveOuterTabsHeader {
+    <#
+    .SYNOPSIS
+    Builds the outer tab header markup.
+
+    .DESCRIPTION
+    Renders the full top-level tab strip markup, highlighting the active tab
+    with the dashboard accent color.
+
+    .PARAMETER TabOrder
+    Ordered list of top-level tabs.
+
+    .PARAMETER ActiveTabIndex
+    Active top-level tab index.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Get-XdrLiveOuterTabsHeader -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

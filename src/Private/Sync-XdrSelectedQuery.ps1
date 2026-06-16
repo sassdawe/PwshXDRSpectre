@@ -1,4 +1,33 @@
 function Sync-XdrSelectedQuery {
+    <#
+    .SYNOPSIS
+    Synchronizes selected query state with the query catalog.
+
+    .DESCRIPTION
+    Clamps the selected query index, updates the selected query reference, and
+    rebinds the visible query result from the cache for the resolved context.
+
+    .PARAMETER Context
+    Runtime context containing the query catalog and selection state.
+
+    .PARAMETER SelectedQueryIndex
+    Reference to the selected query index.
+
+    .PARAMETER SelectedQuery
+    Reference to the selected query object.
+
+    .PARAMETER SelectedQueryResult
+    Reference to the selected query result.
+
+    .PARAMETER QueryResultsByCacheKey
+    Query result cache keyed by query and context snapshot.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Sync-XdrSelectedQuery -Context $context -SelectedQueryIndex ([ref]$selectedQueryIndex) -SelectedQuery ([ref]$selectedQuery) -SelectedQueryResult ([ref]$selectedQueryResult) -QueryResultsByCacheKey $queryResultsByCacheKey
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

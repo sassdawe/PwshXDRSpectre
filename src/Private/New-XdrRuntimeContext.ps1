@@ -1,4 +1,30 @@
 function New-XdrRuntimeContext {
+    <#
+    .SYNOPSIS
+    Creates a fresh runtime context for the dashboard.
+
+    .DESCRIPTION
+    Initializes session, selection, data, UI, diagnostics, and capability state
+    used by menu and live dashboard workflows.
+
+    .PARAMETER TenantId
+    Optional tenant id for the current session.
+
+    .PARAMETER ClientId
+    Optional client id for the current session.
+
+    .PARAMETER Mode
+    Runtime mode to initialize.
+
+    .PARAMETER ThemeColor
+    Accent color used for dashboard rendering.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    New-XdrRuntimeContext -TenantId $tenantId -ClientId $clientId -Mode live
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]

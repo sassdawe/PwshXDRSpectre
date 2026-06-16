@@ -1,4 +1,24 @@
 function Sync-XdrLiveCachedDataToIncidents {
+    <#
+    .SYNOPSIS
+    Removes cached incident data for incidents no longer present.
+
+    .DESCRIPTION
+    Compares active incident ids against one or more cache tables and removes
+    entries whose incident ids are no longer part of the current incident set.
+
+    .PARAMETER Incidents
+    Current incident collection.
+
+    .PARAMETER CacheTables
+    Cache tables keyed by incident id.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Sync-XdrLiveCachedDataToIncidents -Incidents $context.Data.Incidents -CacheTables @($alertsByIncidentId, $entitiesByIncidentId)
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

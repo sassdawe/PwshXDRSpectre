@@ -1,4 +1,31 @@
 function Restore-XdrLiveEntitySelection {
+    <#
+    .SYNOPSIS
+    Restores entity selection from the current entity list.
+
+    .DESCRIPTION
+    Attempts to match a previously stored entity selection key against the
+    current entity collection, updates selection state, and returns whether the
+    original entity was restored.
+
+    .PARAMETER Context
+    Runtime context containing the current entity list.
+
+    .PARAMETER EntitySelectionKey
+    Stable entity selection key to restore.
+
+    .PARAMETER SelectedEntity
+    Reference to the selected entity object.
+
+    .PARAMETER SelectedEntityIndex
+    Reference to the selected entity index.
+
+    .OUTPUTS
+    System.Boolean
+
+    .EXAMPLE
+    Restore-XdrLiveEntitySelection -Context $context -EntitySelectionKey $pendingRefreshEntityKey -SelectedEntity ([ref]$selectedEntity) -SelectedEntityIndex ([ref]$selectedEntityIndex)
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

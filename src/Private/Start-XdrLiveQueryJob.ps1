@@ -1,4 +1,33 @@
 function Start-XdrLiveQueryJob {
+    <#
+    .SYNOPSIS
+    Starts a background hunting query job.
+
+    .DESCRIPTION
+    Clones the relevant runtime context, validates the selected query and any
+    existing job state, and launches a thread job to execute the query.
+
+    .PARAMETER Query
+    Query definition to execute.
+
+    .PARAMETER ModulePath
+    Module path imported inside the thread job.
+
+    .PARAMETER Context
+    Runtime context used to seed the job payload.
+
+    .PARAMETER ExistingJob
+    Existing query job to reuse or reject when still running.
+
+    .PARAMETER LogPath
+    Optional dashboard log path passed to the thread job.
+
+    .OUTPUTS
+    System.Object
+
+    .EXAMPLE
+    Start-XdrLiveQueryJob -Query $selectedQuery -ModulePath $modulePath -Context $context -ExistingJob $queryExecutionJob
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

@@ -1,4 +1,25 @@
 function ConvertTo-XdrIncidentViewModel {
+    <#
+    .SYNOPSIS
+    Converts a Graph incident into the dashboard incident view model.
+
+    .DESCRIPTION
+    Projects the incident fields used by the live dashboard and derives the
+    Defender portal incident URL when both tenant and incident identifiers are
+    available.
+
+    .PARAMETER Incident
+    Source incident object.
+
+    .PARAMETER TenantId
+    Tenant id used to build the incident web URL.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    ConvertTo-XdrIncidentViewModel -Incident $incident -TenantId $context.Session.TenantId
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
