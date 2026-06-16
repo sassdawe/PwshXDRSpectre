@@ -20,8 +20,7 @@
     },
     "peacock.color": "#f9e64f",
     "chat.tools.terminal.autoApprove": {
-        "Invoke-Pester": true,
-        "git commit": true
+        "Invoke-Pester": true
     },
     "sarif-viewer.connectToGithubCodeScanning": "off"
 }
