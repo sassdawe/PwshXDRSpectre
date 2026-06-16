@@ -1,4 +1,24 @@
 function Get-XdrLivePanelOrder {
+    <#
+    .SYNOPSIS
+    Returns the panel navigation order for a top-level tab.
+
+    .DESCRIPTION
+    Maps the active outer tab to the logical panel sequence used for focus and
+    navigation, optionally omitting the action panel.
+
+    .PARAMETER TabName
+    Active top-level tab name.
+
+    .PARAMETER HideActionPanel
+    Removes the action panel from the returned order when set.
+
+    .OUTPUTS
+    System.String[]
+
+    .EXAMPLE
+    Get-XdrLivePanelOrder -TabName 'hunting'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

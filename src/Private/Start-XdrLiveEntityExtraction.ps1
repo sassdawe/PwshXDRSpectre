@@ -1,4 +1,33 @@
 function Start-XdrLiveEntityExtraction {
+    <#
+    .SYNOPSIS
+    Starts background entity extraction for an incident.
+
+    .DESCRIPTION
+    Validates the selected incident and alert cache state, then launches a
+    thread job to extract related entities for that incident.
+
+    .PARAMETER Incident
+    Incident whose entities should be extracted.
+
+    .PARAMETER EntityLoadJobsByIncidentId
+    Running entity jobs keyed by incident id.
+
+    .PARAMETER AlertsByIncidentId
+    Alert cache keyed by incident id.
+
+    .PARAMETER ModulePath
+    Module path imported inside the thread job.
+
+    .PARAMETER DashboardLogPath
+    Optional dashboard log path passed to the thread job.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Start-XdrLiveEntityExtraction -Incident $selectedIncident -EntityLoadJobsByIncidentId $entityLoadJobsByIncidentId -AlertsByIncidentId $alertsByIncidentId -ModulePath $modulePath
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

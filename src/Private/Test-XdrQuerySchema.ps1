@@ -1,4 +1,27 @@
 function Test-XdrQuerySchema {
+    <#
+    .SYNOPSIS
+    Validates a hunting query definition.
+
+    .DESCRIPTION
+    Enforces required fields, context bindings, placeholder mappings, and other
+    schema rules for query catalog entries.
+
+    .PARAMETER Query
+    Query definition to validate.
+
+    .PARAMETER Catalog
+    Optional catalog used to detect duplicate query ids.
+
+    .PARAMETER Source
+    Source label used in validation errors.
+
+    .OUTPUTS
+    System.Boolean
+
+    .EXAMPLE
+    Test-XdrQuerySchema -Query $query -Catalog $catalog -Source 'device-process-tree.json'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

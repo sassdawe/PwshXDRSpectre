@@ -1,4 +1,25 @@
 function Get-XdrTriagePolicy {
+    <#
+    .SYNOPSIS
+    Loads and validates the triage policy configuration.
+
+    .DESCRIPTION
+    Reads the triage policy JSON file, verifies that required sections exist,
+    and enforces known action names and supported safety levels before
+    returning the policy object.
+
+    .PARAMETER Path
+    Optional path to the triage policy JSON file.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    Get-XdrTriagePolicy
+
+    .EXAMPLE
+    Get-XdrTriagePolicy -Path '.\triage-policy.json'
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

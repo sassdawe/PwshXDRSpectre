@@ -42,11 +42,14 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
     It 'renders incident list entries with severity badge and incident id' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
-        $content.Contains("'Sev ID         Title                                    Status'") | Should -BeTrue
+        $content.Contains('$incidentIdWidth = 2') | Should -BeTrue
+        $content.Contains('$incidentStatusWidth = 6') | Should -BeTrue
+        $content.Contains('$incidentTitleWidth = [Math]::Max(8, $incidentListPanelWidth - $incidentSeverityWidth - $incidentIdWidth - $incidentStatusWidth - 3)') | Should -BeTrue
         $content.Contains('$severityColor = switch ($severityKey) {') | Should -BeTrue
         $content.Contains('$statusColor = switch -Regex ($statusKey) {') | Should -BeTrue
-        $content.Contains('$idColumn = ("#{0}" -f $incidentIdText)') | Should -BeTrue
+        $content.Contains('$idColumn = if ([string]::IsNullOrWhiteSpace($incidentIdText)) { ''--'' } else { $incidentIdText }') | Should -BeTrue
         $content.Contains('$titleColumn = $displayNameText') | Should -BeTrue
+        $content.Contains('$titleColumn = $titleColumn.Substring(0, $incidentTitleWidth - 3) + ''...''') | Should -BeTrue
         $layoutContent = Get-Content -Path (Join-Path $script:privateRoot 'New-XdrLiveDashboardLayout.ps1') -Raw
         $layoutContent.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $content | Should -Match 'Ⓗ|Ⓜ|Ⓛ|Ⓤ'
@@ -56,6 +59,7 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content = Get-Content -Path $script:dashboardPath -Raw
         $layoutContent = Get-Content -Path (Join-Path $script:privateRoot 'New-XdrLiveDashboardLayout.ps1') -Raw
         $outerTabsContent = Get-Content -Path (Join-Path $script:privateRoot 'Update-XdrLiveOuterTabs.ps1') -Raw
+        $outerTabsHeaderContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLiveOuterTabsHeader.ps1') -Raw
 
         $content.Contains('$layout = New-XdrLiveDashboardLayout -ActionPanelVisible') | Should -BeTrue
         $layoutContent.Contains("New-SpectreLayout -Name 'main_content' -Ratio 10 -Columns `$mainColumns") | Should -BeTrue
@@ -66,6 +70,8 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('Update-XdrLiveOuterTabs -DashboardFrame $dashboardFrame -ScreenLayout $screenLayout') | Should -BeTrue
         $outerTabsContent.Contains('$DashboardFrame.Header = [Spectre.Console.PanelHeader]::new($outerTabsHeader, [Spectre.Console.Justify]::Left)') | Should -BeTrue
         $outerTabsContent.Contains("`$ScreenLayout['dashboard_frame'].Update(`$DashboardFrame) | Out-Null") | Should -BeTrue
+        $outerTabsHeaderContent | Should -Match '\[bold black on orange1\]\| \$label \|\[/\]'
+        $outerTabsHeaderContent | Should -Match '\[deepskyblue1 on #1C1C1C\]\| \$label \|\[/\]'
         $content.Contains('Invoke-SpectreLive -Data $screenLayout -ScriptBlock') | Should -BeTrue
         $layoutContent.Contains("(New-SpectreLayout -Name 'left_top' -Ratio 1 -Data 'empty')") | Should -BeTrue
         $layoutContent.Contains("(New-SpectreLayout -Name 'left_bottom' -Ratio 1 -Data 'empty')") | Should -BeTrue
@@ -85,10 +91,12 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
     It 'renders alert list entries with severity badge incident-style columns and status' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
-        $content.Contains("'Sev Title                                         Status'") | Should -BeTrue
+        $content.Contains('$alertStatusWidth = 6') | Should -BeTrue
+        $content.Contains('$alertTitleWidth = [Math]::Max(8, $incidentListPanelWidth - $alertSeverityWidth - $alertStatusWidth - 2)') | Should -BeTrue
         $content.Contains('$titleText = [string]$_.Title') | Should -BeTrue
         $content.Contains('$statusText = [string]$_.Status') | Should -BeTrue
         $content.Contains('$severityText = [string]$_.Severity') | Should -BeTrue
+        $content.Contains('$titleColumn = $titleColumn.Substring(0, $alertTitleWidth - 3) + ''...''') | Should -BeTrue
         $content | Should -Not -Match '\$alertIdText\s*='
     }
 
@@ -144,8 +152,8 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains("`$selectedIncidentDetailsTab = 'entities'") | Should -BeTrue
         $content.Contains("`$selectedIncidentDetailsTab = 'details'") | Should -BeTrue
         $content.Contains('Get-XdrIncidentDetailsTabHeader -CurrentTab $selectedIncidentDetailsTab') | Should -BeTrue
-        $headerContent.Contains("[bold black on #C0C0C0]| Incident details |[/][grey70 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
-        $headerContent.Contains("[grey70 on #1C1C1C]| Incident details |[/][bold black on #C0C0C0]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
+        $headerContent.Contains("[bold black on orange1]| Incident details |[/] [deepskyblue1 on #1C1C1C]| Entities |[/] [grey](ALT+E to switch)[/]") | Should -BeTrue
+        $headerContent.Contains("[deepskyblue1 on #1C1C1C]| Incident details |[/] [bold black on orange1]| Entities |[/] [grey](ALT+D to switch)[/]") | Should -BeTrue
         $content.Contains("Tab to switch to Details") | Should -BeTrue
     }
 
@@ -369,8 +377,20 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
         $content.Contains('-SelectedIncident $selectedIncident -PendingIncidentResolution') | Should -BeTrue
-        $content.Contains("(Alt+Shift+L) Force reload alerts for selected incident") | Should -BeTrue
+        $content.Contains("(Alt+Shift+L) Reload alerts") | Should -BeTrue
         $content.Contains("Shortcut = 'reload-alerts'") | Should -BeTrue
+    }
+
+    It 'uses shortened action labels to avoid wrapping in the action panel' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+
+        $content.Contains("(Alt+A) Assign Inc. to me") | Should -BeTrue
+        $content.Contains("(Alt+U) Unassign Inc.") | Should -BeTrue
+        $content.Contains('$shortcut Set Inc. to $statusLabel') | Should -BeTrue
+        $content.Contains("(Alt+K) Classify Inc.") | Should -BeTrue
+        $content.Contains("(Alt+C) Comment on Inc.") | Should -BeTrue
+        $content.Contains("(Alt+L) Load alerts") | Should -BeTrue
+        $content.Contains('$shortcut Set Alert to $statusLabel') | Should -BeTrue
     }
 
     It 'loads query catalog during startup and surfaces catalog errors through the live status message' {

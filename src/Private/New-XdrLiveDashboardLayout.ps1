@@ -1,4 +1,21 @@
 function New-XdrLiveDashboardLayout {
+    <#
+    .SYNOPSIS
+    Builds the root live dashboard layout.
+
+    .DESCRIPTION
+    Creates the Spectre layout tree for the live dashboard, adjusting column
+    ratios and including the action panel when it is visible.
+
+    .PARAMETER ActionPanelVisible
+    Includes the right action column when set.
+
+    .OUTPUTS
+    System.Object
+
+    .EXAMPLE
+    New-XdrLiveDashboardLayout -ActionPanelVisible
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

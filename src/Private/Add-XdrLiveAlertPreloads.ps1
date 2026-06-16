@@ -28,6 +28,7 @@ function Add-XdrLiveAlertPreloads {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
         [object[]]$Incidents,
 
         [Parameter(Mandatory)]

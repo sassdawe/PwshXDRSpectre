@@ -20,4 +20,17 @@ Describe 'Add-XdrLiveAlertPreloads' {
             $queue.Peek().IncidentId | Should -Be 'inc-3'
         }
     }
+
+    It 'accepts an empty incident list and leaves the queue empty' {
+        InModuleScope PwshXDRSpectre {
+            $queue = [System.Collections.Queue]::new()
+            $queue.Enqueue([pscustomobject]@{ IncidentId = 'stale-item' })
+
+            {
+                Add-XdrLiveAlertPreloads -Incidents @() -AlertPreloadQueue $queue -AlertsByIncidentId @{} -AlertLoadJobsByIncidentId @{}
+            } | Should -Not -Throw
+
+            $queue.Count | Should -Be 0
+        }
+    }
 }

@@ -1,4 +1,24 @@
 function Invoke-XdrQueryInterpolation {
+    <#
+    .SYNOPSIS
+    Interpolates resolved parameters into a hunting query.
+
+    .DESCRIPTION
+    Validates each resolved parameter for presence and safe format, then
+    substitutes the parameter values into the query KQL text.
+
+    .PARAMETER Query
+    Query definition containing parameter metadata and KQL.
+
+    .PARAMETER Parameters
+    Resolved parameter values keyed by parameter name.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    Invoke-XdrQueryInterpolation -Query $query -Parameters @{ IncidentId = '1234' }
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

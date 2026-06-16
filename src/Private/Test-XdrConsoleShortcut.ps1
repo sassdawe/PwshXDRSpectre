@@ -1,4 +1,33 @@
 function Test-XdrConsoleShortcut {
+    <#
+    .SYNOPSIS
+    Tests whether a key event matches a shortcut definition.
+
+    .DESCRIPTION
+    Compares the physical key and requested modifier flags against a console
+    key event to determine whether a shortcut was triggered.
+
+    .PARAMETER Key
+    Key event to evaluate.
+
+    .PARAMETER KeyName
+    Expected key name.
+
+    .PARAMETER Alt
+    Requires the Alt modifier when set.
+
+    .PARAMETER Control
+    Requires the Control modifier when set.
+
+    .PARAMETER Shift
+    Requires the Shift modifier when set.
+
+    .OUTPUTS
+    System.Boolean
+
+    .EXAMPLE
+    Test-XdrConsoleShortcut -Key $key -KeyName 'H' -Alt
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

@@ -1,4 +1,37 @@
 function Get-XdrActionDisableReasons {
+    <#
+    .SYNOPSIS
+    Returns the reasons an action should be disabled.
+
+    .DESCRIPTION
+    Evaluates policy restrictions, selection prerequisites, and status
+    transition validity to produce the disable reasons shown in the action
+    panel.
+
+    .PARAMETER ActionName
+    Display name of the action to evaluate.
+
+    .PARAMETER Context
+    Runtime context containing current selections and capabilities.
+
+    .PARAMETER ActionType
+    Entity type that the action targets.
+
+    .PARAMETER CurrentStatus
+    Current status of the selected object.
+
+    .PARAMETER RequestedStatus
+    Status requested by the action.
+
+    .PARAMETER Policy
+    Optional preloaded triage policy object.
+
+    .OUTPUTS
+    System.String[]
+
+    .EXAMPLE
+    Get-XdrActionDisableReasons -ActionName 'Set alert status to Resolved' -Context $context -ActionType Alert -CurrentStatus 'New' -RequestedStatus 'Resolved'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

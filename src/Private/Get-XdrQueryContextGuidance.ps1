@@ -1,4 +1,21 @@
 function Get-XdrQueryContextGuidance {
+    <#
+    .SYNOPSIS
+    Returns guidance for missing hunting-query context.
+
+    .DESCRIPTION
+    Maps a required query context key to the dashboard instruction shown when
+    the user has not selected the incident or entity needed to run a query.
+
+    .PARAMETER ContextKey
+    The required query context key.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Get-XdrQueryContextGuidance -ContextKey 'IncidentId'
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

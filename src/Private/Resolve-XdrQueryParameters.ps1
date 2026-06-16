@@ -1,4 +1,25 @@
 function Resolve-XdrQueryParameters {
+    <#
+    .SYNOPSIS
+    Resolves query parameters from the current dashboard context.
+
+    .DESCRIPTION
+    Maps query parameter bindings to the currently selected incident or entity,
+    applies default values when present, and reports any required context that
+    is still missing.
+
+    .PARAMETER Query
+    Query definition containing parameter metadata.
+
+    .PARAMETER Context
+    Runtime context containing current selections.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    Resolve-XdrQueryParameters -Query $selectedQuery -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

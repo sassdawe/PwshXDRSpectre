@@ -16,6 +16,12 @@ function Write-XdrLiveDashboardLog {
 
     .PARAMETER Level
     Log level tag.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Write-XdrLiveDashboardLog -LogPath $logPath -Message 'Incident load job started.' -Level 'INFO'
     #>
     [CmdletBinding()]
     param(

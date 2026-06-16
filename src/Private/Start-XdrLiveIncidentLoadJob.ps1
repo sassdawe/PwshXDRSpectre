@@ -1,4 +1,33 @@
 function Start-XdrLiveIncidentLoadJob {
+    <#
+    .SYNOPSIS
+    Starts a background incident load job.
+
+    .DESCRIPTION
+    Reuses an active incident load job when one is still running; otherwise,
+    clones runtime context and starts a thread job to fetch incidents.
+
+    .PARAMETER ModulePath
+    Module path imported inside the thread job.
+
+    .PARAMETER Context
+    Runtime context used to seed the job payload.
+
+    .PARAMETER Limit
+    Optional maximum number of incidents to request.
+
+    .PARAMETER ExistingJob
+    Existing incident load job to reuse when still active.
+
+    .PARAMETER LogPath
+    Optional dashboard log path passed to the thread job.
+
+    .OUTPUTS
+    System.Object
+
+    .EXAMPLE
+    Start-XdrLiveIncidentLoadJob -ModulePath $modulePath -Context $context -Limit 50 -ExistingJob $incidentLoadJob
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

@@ -1,4 +1,21 @@
 function Get-XdrQueryCatalog {
+    <#
+    .SYNOPSIS
+    Loads the hunting query catalog from disk.
+
+    .DESCRIPTION
+    Reads query definition JSON files from the catalog folder, validates each
+    definition, and returns the assembled query catalog.
+
+    .PARAMETER Path
+    Folder path containing query definition JSON files.
+
+    .OUTPUTS
+    System.Object[]
+
+    .EXAMPLE
+    Get-XdrQueryCatalog
+    #>
     [CmdletBinding()]
     param(
         [Parameter()]

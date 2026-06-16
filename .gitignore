@@ -1,3 +1,4 @@
 .obsidian/*
 *.ipynb
 testResults.xml
+.copilot-secret-memory.md

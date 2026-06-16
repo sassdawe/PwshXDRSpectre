@@ -1,4 +1,21 @@
 function Get-XdrCurrentUser {
+    <#
+    .SYNOPSIS
+    Retrieves the current Microsoft Graph user profile.
+
+    .DESCRIPTION
+    Calls Microsoft Graph for the authenticated user profile and stores the
+    resolved analyst identity in runtime context when the request succeeds.
+
+    .PARAMETER Context
+    Runtime context to update with analyst identity information.
+
+    .OUTPUTS
+    System.Management.Automation.PSCustomObject
+
+    .EXAMPLE
+    Get-XdrCurrentUser -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

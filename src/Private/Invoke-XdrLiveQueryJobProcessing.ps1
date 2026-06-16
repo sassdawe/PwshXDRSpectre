@@ -1,4 +1,34 @@
 function Invoke-XdrLiveQueryJobProcessing {
+    <#
+    .SYNOPSIS
+    Processes a completed hunting query background job.
+
+    .DESCRIPTION
+    Receives the query-job payload, updates cached query results, refreshes the
+    selected query result when appropriate, and publishes the resulting status
+    message.
+
+    .PARAMETER QueryJob
+    Reference to the active query job.
+
+    .PARAMETER QueryResultsByCacheKey
+    Result cache keyed by query and resolved context.
+
+    .PARAMETER Context
+    Runtime context to update with query history and status.
+
+    .PARAMETER SelectedQuery
+    Currently selected query definition.
+
+    .PARAMETER SelectedQueryResult
+    Reference to the current query result payload.
+
+    .OUTPUTS
+    None
+
+    .EXAMPLE
+    Invoke-XdrLiveQueryJobProcessing -QueryJob ([ref]$queryJob) -QueryResultsByCacheKey $queryResultsByCacheKey -Context $context -SelectedQuery $selectedQuery -SelectedQueryResult ([ref]$selectedQueryResult)
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

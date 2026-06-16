@@ -1292,7 +1292,32 @@ function Start-PwshXdrLiveDashboard {
             # From here to the final Refresh(), build renderables from the settled state
             # rather than mutating Graph/job data. Spectre layout updates happen only after
             # every panel has been prepared.
-            $incidentLines = @('Sev ID         Title                                    Status')
+            $consoleWidth = 120
+            try {
+                $consoleWidth = [Console]::WindowWidth
+            }
+            catch {
+            }
+
+            if ($consoleWidth -le 0) {
+                try {
+                    $consoleWidth = [int]$Host.UI.RawUI.WindowSize.Width
+                }
+                catch {
+                    $consoleWidth = 120
+                }
+            }
+
+            $incidentListRatio = if ($actionStatusPanelVisible) { 2 } else { 1 }
+            $incidentListTotalRatio = if ($actionStatusPanelVisible) { 7 } else { 2 }
+            $incidentListPanelWidth = [Math]::Max(20, [int][Math]::Floor(($consoleWidth * $incidentListRatio) / $incidentListTotalRatio) - 6)
+            $incidentSeverityWidth = 3
+            $incidentIdWidth = 2
+            $incidentStatusWidth = 6
+            $incidentTitleWidth = [Math]::Max(8, $incidentListPanelWidth - $incidentSeverityWidth - $incidentIdWidth - $incidentStatusWidth - 3)
+            $incidentLines = @(
+                ('{0} {1} {2} {3}' -f 'Sev'.PadRight($incidentSeverityWidth), 'ID'.PadRight($incidentIdWidth), 'Title'.PadRight($incidentTitleWidth), 'Status'.PadRight($incidentStatusWidth)).TrimEnd()
+            )
             $incidentLines += @($context.Data.Incidents | ForEach-Object {
                     $incidentIdText = [string]$_.IncidentId
                     $displayNameText = [string]$_.DisplayName
@@ -1324,16 +1349,24 @@ function Start-PwshXdrLiveDashboard {
                         default { 'grey' }
                     }
 
-                    $idColumn = ("#{0}" -f $incidentIdText)
-                    if ($idColumn.Length -gt 10) { $idColumn = $idColumn.Substring(0, 10) }
-                    $idColumn = $idColumn.PadRight(10)
+                    $idColumn = if ([string]::IsNullOrWhiteSpace($incidentIdText)) { '--' } else { $incidentIdText }
+                    if ($idColumn.Length -gt $incidentIdWidth) { $idColumn = $idColumn.Substring(0, $incidentIdWidth) }
+                    $idColumn = $idColumn.PadRight($incidentIdWidth)
 
                     $titleColumn = $displayNameText
-                    if ($titleColumn.Length -gt 40) { $titleColumn = $titleColumn.Substring(0, 37) + '...' }
-                    $titleColumn = $titleColumn.PadRight(40)
+                    if ($titleColumn.Length -gt $incidentTitleWidth) {
+                        if ($incidentTitleWidth -le 3) {
+                            $titleColumn = '.' * $incidentTitleWidth
+                        }
+                        else {
+                            $titleColumn = $titleColumn.Substring(0, $incidentTitleWidth - 3) + '...'
+                        }
+                    }
+                    $titleColumn = $titleColumn.PadRight($incidentTitleWidth)
 
                     $statusColumn = if ([string]::IsNullOrWhiteSpace($statusText)) { 'Unknown' } else { $statusText }
-                    if ($statusColumn.Length -gt 6) { $statusColumn = $statusColumn.Substring(0, 6) }
+                    if ($statusColumn.Length -gt $incidentStatusWidth) { $statusColumn = $statusColumn.Substring(0, $incidentStatusWidth) }
+                    $statusColumn = $statusColumn.PadRight($incidentStatusWidth)
 
                     $rowPrefix = "[bold $severityColor]$severityColumn[/] $idColumn $titleColumn "
                     $rowStatus = "[bold $statusColor]$statusColumn[/]"
@@ -1500,7 +1533,12 @@ function Start-PwshXdrLiveDashboard {
             }
 
             $alertLines = if ($visibleAlerts) {
-                @('Sev Title                                         Status')
+                $alertSeverityWidth = 3
+                $alertStatusWidth = 6
+                $alertTitleWidth = [Math]::Max(8, $incidentListPanelWidth - $alertSeverityWidth - $alertStatusWidth - 2)
+                @(
+                    ('{0} {1} {2}' -f 'Sev'.PadRight($alertSeverityWidth), 'Title'.PadRight($alertTitleWidth), 'Status'.PadRight($alertStatusWidth)).TrimEnd()
+                )
                 @($visibleAlerts | ForEach-Object {
                         $titleText = [string]$_.Title
                         $statusText = [string]$_.Status
@@ -1531,11 +1569,19 @@ function Start-PwshXdrLiveDashboard {
                         }
 
                         $titleColumn = $titleText
-                        if ($titleColumn.Length -gt 46) { $titleColumn = $titleColumn.Substring(0, 43) + '...' }
-                        $titleColumn = $titleColumn.PadRight(46)
+                        if ($titleColumn.Length -gt $alertTitleWidth) {
+                            if ($alertTitleWidth -le 3) {
+                                $titleColumn = '.' * $alertTitleWidth
+                            }
+                            else {
+                                $titleColumn = $titleColumn.Substring(0, $alertTitleWidth - 3) + '...'
+                            }
+                        }
+                        $titleColumn = $titleColumn.PadRight($alertTitleWidth)
 
                         $statusColumn = if ([string]::IsNullOrWhiteSpace($statusText)) { 'Unknown' } else { $statusText }
-                        if ($statusColumn.Length -gt 6) { $statusColumn = $statusColumn.Substring(0, 6) }
+                        if ($statusColumn.Length -gt $alertStatusWidth) { $statusColumn = $statusColumn.Substring(0, $alertStatusWidth) }
+                        $statusColumn = $statusColumn.PadRight($alertStatusWidth)
 
                         if ($selectedAlert -and $_.AlertId -eq $selectedAlert.AlertId) {
                             "[bold $severityColor]$severityColumn[/] [bold $($context.Ui.ThemeColor)]$titleColumn[/] [bold $statusColor]$statusColumn[/]"
@@ -1597,11 +1643,11 @@ function Start-PwshXdrLiveDashboard {
             # so disabled reasons and shortcuts stay in one list.
             $incidentActionLines += 'Incident actions'
             $reasons = @(Get-XdrActionDisableReasons -ActionName 'Assign incident to me' -ActionType Incident -Context $context)
-            $incidentActionLines += (New-ActionStateLine -Label '(Alt+A) Assign incident to me' -Reasons $reasons)
-            $actionEntries += [pscustomobject]@{ Shortcut = 'a'; Label = 'Assign incident to me'; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
+            $incidentActionLines += (New-ActionStateLine -Label '(Alt+A) Assign Inc. to me' -Reasons $reasons)
+            $actionEntries += [pscustomobject]@{ Shortcut = 'a'; Label = 'Assign Inc. to me'; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
             $reasons = @(Get-XdrActionDisableReasons -ActionName 'Clear incident assignment' -ActionType Incident -Context $context)
-            $incidentActionLines += (New-ActionStateLine -Label '(Alt+U) Clear incident assignment' -Reasons $reasons)
-            $actionEntries += [pscustomobject]@{ Shortcut = 'u'; Label = 'Clear incident assignment'; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
+            $incidentActionLines += (New-ActionStateLine -Label '(Alt+U) Unassign Inc.' -Reasons $reasons)
+            $actionEntries += [pscustomobject]@{ Shortcut = 'u'; Label = 'Unassign Inc.'; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
 
             foreach ($statusLabel in @('Active', 'In progress', 'Resolved')) {
                 $requestedStatus = Resolve-XdrGraphEnumValue -MapName 'incidentStatusMap' -DisplayValue $statusLabel
@@ -1616,19 +1662,19 @@ function Start-PwshXdrLiveDashboard {
                     'Resolved' { 'r' }
                 }
                 $reasons = @(Get-XdrActionDisableReasons -ActionName "Set incident status to $statusLabel" -ActionType Incident -Context $context -CurrentStatus $selectedIncident.Status -RequestedStatus $requestedStatus)
-                $incidentActionLines += (New-ActionStateLine -Label "$shortcut Set incident status to $statusLabel" -Reasons $reasons)
-                $actionEntries += [pscustomobject]@{ Shortcut = $shortcutKey; Label = "Set incident status to $statusLabel"; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
+                $incidentActionLines += (New-ActionStateLine -Label "$shortcut Set Inc. to $statusLabel" -Reasons $reasons)
+                $actionEntries += [pscustomobject]@{ Shortcut = $shortcutKey; Label = "Set Inc. to $statusLabel"; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
             }
             $classificationReasons = @(Get-XdrActionDisableReasons -ActionName 'Set incident classification' -ActionType Incident -Context $context)
-            $incidentActionLines += (New-ActionStateLine -Label '(Alt+K) Set incident classification' -Reasons $classificationReasons)
-            $actionEntries += [pscustomobject]@{ Shortcut = 'k'; Label = 'Set incident classification'; IsEnabled = ($classificationReasons.Count -eq 0); Reasons = $classificationReasons }
+            $incidentActionLines += (New-ActionStateLine -Label '(Alt+K) Classify Inc.' -Reasons $classificationReasons)
+            $actionEntries += [pscustomobject]@{ Shortcut = 'k'; Label = 'Classify Inc.'; IsEnabled = ($classificationReasons.Count -eq 0); Reasons = $classificationReasons }
             $incidentCommentReasons = @(Get-XdrActionDisableReasons -ActionName 'Add comment to selected incident' -ActionType Incident -Context $context)
-            $incidentActionLines += (New-ActionStateLine -Label '(Alt+C) Add comment to selected incident' -Reasons $incidentCommentReasons)
-            $actionEntries += [pscustomobject]@{ Shortcut = 'c'; Label = 'Add comment to selected incident'; IsEnabled = ($incidentCommentReasons.Count -eq 0); Reasons = $incidentCommentReasons }
-            $incidentActionLines += '(Alt+L) Load alerts for selected incident'
-            $actionEntries += [pscustomobject]@{ Shortcut = 'l'; Label = 'Load alerts for selected incident'; IsEnabled = $true; Reasons = @() }
-            $incidentActionLines += '(Alt+Shift+L) Force reload alerts for selected incident'
-            $actionEntries += [pscustomobject]@{ Shortcut = 'reload-alerts'; Label = 'Force reload alerts for selected incident'; IsEnabled = $true; Reasons = @() }
+            $incidentActionLines += (New-ActionStateLine -Label '(Alt+C) Comment on Inc.' -Reasons $incidentCommentReasons)
+            $actionEntries += [pscustomobject]@{ Shortcut = 'c'; Label = 'Comment on Inc.'; IsEnabled = ($incidentCommentReasons.Count -eq 0); Reasons = $incidentCommentReasons }
+            $incidentActionLines += '(Alt+L) Load alerts'
+            $actionEntries += [pscustomobject]@{ Shortcut = 'l'; Label = 'Load alerts'; IsEnabled = $true; Reasons = @() }
+            $incidentActionLines += '(Alt+Shift+L) Reload alerts'
+            $actionEntries += [pscustomobject]@{ Shortcut = 'reload-alerts'; Label = 'Reload alerts'; IsEnabled = $true; Reasons = @() }
 
             $actionLines += @($incidentActionLines)
             $actionLines += ''
@@ -1648,8 +1694,8 @@ function Start-PwshXdrLiveDashboard {
                         'Resolved' { 'm' }
                     }
                     $reasons = @(Get-XdrActionDisableReasons -ActionName "Set alert status to $statusLabel" -ActionType Alert -Context $context -CurrentStatus $selectedAlert.Status -RequestedStatus $requestedStatus)
-                    $actionLines += (New-ActionStateLine -Label "$shortcut Set alert status to $statusLabel" -Reasons $reasons)
-                    $actionEntries += [pscustomobject]@{ Shortcut = $shortcutKey; Label = "Set alert status to $statusLabel"; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
+                    $actionLines += (New-ActionStateLine -Label "$shortcut Set Alert to $statusLabel" -Reasons $reasons)
+                    $actionEntries += [pscustomobject]@{ Shortcut = $shortcutKey; Label = "Set Alert to $statusLabel"; IsEnabled = ($reasons.Count -eq 0); Reasons = $reasons }
                 }
             }
             else {
@@ -1665,10 +1711,10 @@ function Start-PwshXdrLiveDashboard {
                         'Resolved' { 'm' }
                     }
                     $reasons = @('Unavailable')
-                    $actionLines += (New-ActionStateLine -Label "$shortcut Set alert status to $statusLabel" -Reasons $reasons)
+                    $actionLines += (New-ActionStateLine -Label "$shortcut Set Alert to $statusLabel" -Reasons $reasons)
                     $actionEntries += [pscustomobject]@{
                         Shortcut  = $shortcutKey
-                        Label     = "Set alert status to $statusLabel"
+                        Label     = "Set Alert to $statusLabel"
                         IsEnabled = $false
                         Reasons   = $reasons
                     }

@@ -7,7 +7,7 @@
     {
       "name": "IncidentId",
       "contextBinding": "IncidentId",
-      "description": "Incident identifier for the selected incident"
+      "description": "Identifier of the selected incident"
     }
   ],
   "kql": "AlertInfo | where IncidentId == '{{IncidentId}}' | project Timestamp, Title, Severity, ServiceSource, Category, AlertId",

@@ -1,4 +1,27 @@
 function Test-XdrCapability {
+    <#
+    .SYNOPSIS
+    Tests whether a capability is available in runtime context.
+
+    .DESCRIPTION
+    Checks the aggregated capability sets in runtime context for the requested
+    capability name and can optionally throw when it is unavailable.
+
+    .PARAMETER CapabilityName
+    Capability name to look up.
+
+    .PARAMETER Context
+    Runtime context containing capability collections.
+
+    .PARAMETER ThrowOnUnknown
+    Throws instead of returning false when the capability is unavailable.
+
+    .OUTPUTS
+    System.Boolean
+
+    .EXAMPLE
+    Test-XdrCapability -CapabilityName 'UpdateIncidentStatus' -Context $context
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

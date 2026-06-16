@@ -1,4 +1,24 @@
 function Get-XdrLiveOuterTabsHeader {
+    <#
+    .SYNOPSIS
+    Builds the outer tab header markup.
+
+    .DESCRIPTION
+    Renders the full top-level tab strip markup, highlighting the active tab
+    with the dashboard accent color.
+
+    .PARAMETER TabOrder
+    Ordered list of top-level tabs.
+
+    .PARAMETER ActiveTabIndex
+    Active top-level tab index.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Get-XdrLiveOuterTabsHeader -TabOrder $tabOrder -ActiveTabIndex $activeTabIndex
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -24,10 +44,10 @@ function Get-XdrLiveOuterTabsHeader {
         }
 
         if ($i -eq $ActiveTabIndex) {
-            $parts += "[bold black on #C0C0C0]| $label |[/]"
+            $parts += "[bold black on orange1]| $label |[/]"
         }
         else {
-            $parts += "[grey70 on #1C1C1C]| $label |[/]"
+            $parts += "[deepskyblue1 on #1C1C1C]| $label |[/]"
         }
     }
 

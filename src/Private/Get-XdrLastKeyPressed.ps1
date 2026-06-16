@@ -1,4 +1,21 @@
 function ConvertTo-XdrConsoleKeyInfo {
+    <#
+    .SYNOPSIS
+    Converts host key info into a console key record.
+
+    .DESCRIPTION
+    Projects a PowerShell host RawUI key event into System.ConsoleKeyInfo so
+    the dashboard can process input consistently across key sources.
+
+    .PARAMETER KeyInfo
+    RawUI key information returned by the host.
+
+    .OUTPUTS
+    System.ConsoleKeyInfo
+
+    .EXAMPLE
+    ConvertTo-XdrConsoleKeyInfo -KeyInfo $hostKey
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -26,6 +43,20 @@ function ConvertTo-XdrConsoleKeyInfo {
 }
 
 function Read-XdrHostKey {
+    <#
+    .SYNOPSIS
+    Reads a pending key from the PowerShell host RawUI.
+
+    .DESCRIPTION
+    Uses the host RawUI key buffer as a fallback input source when direct
+    console reads are unavailable or insufficient.
+
+    .OUTPUTS
+    System.ConsoleKeyInfo
+
+    .EXAMPLE
+    Read-XdrHostKey
+    #>
     [CmdletBinding()]
     param()
 
@@ -45,6 +76,20 @@ function Read-XdrHostKey {
 }
 
 function Get-XdrLastKeyPressed {
+    <#
+    .SYNOPSIS
+    Returns the most recent pending key press.
+
+    .DESCRIPTION
+    Drains both the console and host RawUI key buffers and returns the last key
+    observed so the dashboard handles the freshest input state.
+
+    .OUTPUTS
+    System.ConsoleKeyInfo
+
+    .EXAMPLE
+    Get-XdrLastKeyPressed
+    #>
     [CmdletBinding()]
     param()
 
@@ -68,6 +113,20 @@ function Get-XdrLastKeyPressed {
 }
 
 function Get-XdrAllKeysPressed {
+    <#
+    .SYNOPSIS
+    Returns all pending key presses.
+
+    .DESCRIPTION
+    Drains both the console and host RawUI key buffers and returns every queued
+    key event for bulk input processing or diagnostics.
+
+    .OUTPUTS
+    System.ConsoleKeyInfo[]
+
+    .EXAMPLE
+    Get-XdrAllKeysPressed
+    #>
     [CmdletBinding()]
     param()
 

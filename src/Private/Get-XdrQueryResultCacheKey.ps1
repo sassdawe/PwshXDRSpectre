@@ -1,4 +1,24 @@
 function Get-XdrQueryResultCacheKey {
+    <#
+    .SYNOPSIS
+    Builds a cache key for a query result.
+
+    .DESCRIPTION
+    Combines the query id and sorted context snapshot values into a stable key
+    so results are cached per query and resolved execution context.
+
+    .PARAMETER QueryId
+    Query identifier.
+
+    .PARAMETER ContextSnapshot
+    Resolved parameter snapshot for the query execution.
+
+    .OUTPUTS
+    System.String
+
+    .EXAMPLE
+    Get-XdrQueryResultCacheKey -QueryId 'device-process-tree' -ContextSnapshot @{ IncidentId = '1' }
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

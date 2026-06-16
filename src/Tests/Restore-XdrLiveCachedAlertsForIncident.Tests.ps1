@@ -68,4 +68,25 @@ Describe 'Restore-XdrLiveCachedAlertsForIncident' {
             Get-Content -Path $logPath -Raw | Should -Match 'Alert cache restore miss\. IncidentId=inc-missing CacheIncidentCount=0'
         }
     }
+
+    It 'returns false when the incident id is blank' {
+        InModuleScope PwshXDRSpectre {
+            $context = [pscustomobject]@{
+                Data = [pscustomobject]@{ Alerts = @([pscustomobject]@{ AlertId = 'existing-alert' }) }
+                Selection = [pscustomobject]@{ Alert = 'existing-selection' }
+            }
+            $selectedAlert = 'existing-selection'
+            $selectedAlertIndex = 2
+            $logPath = Join-Path $TestDrive 'restore-blank.log'
+
+            {
+                Restore-XdrLiveCachedAlertsForIncident -IncidentId '' -AlertsByIncidentId @{} -Context $context -SelectedAlertIdByIncidentId @{} -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $logPath
+            } | Should -Not -Throw
+
+            Restore-XdrLiveCachedAlertsForIncident -IncidentId '' -AlertsByIncidentId @{} -Context $context -SelectedAlertIdByIncidentId @{} -SelectedAlert ([ref]$selectedAlert) -SelectedAlertIndex ([ref]$selectedAlertIndex) -LogPath $logPath | Should -BeFalse
+            $selectedAlert | Should -Be 'existing-selection'
+            $selectedAlertIndex | Should -Be 2
+            Get-Content -Path $logPath -Raw | Should -Match 'Alert cache restore skipped because the incident id was blank\.'
+        }
+    }
 }
