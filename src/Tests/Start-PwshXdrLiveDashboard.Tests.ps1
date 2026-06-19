@@ -247,6 +247,30 @@ Describe 'Start-PwshXdrLiveDashboard wiring' {
         $content.Contains('-ShowKeyboardHelpOverlay:$showKeyboardHelpOverlay') | Should -BeTrue
     }
 
+    It 'gates Live Investigation behind the Settings experimental feature toggle' {
+        $content = Get-Content -Path $script:dashboardPath -Raw
+        $tabOrderContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLiveTabOrder.ps1') -Raw
+        $panelOrderContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLivePanelOrder.ps1') -Raw
+        $outerTabsContent = Get-Content -Path (Join-Path $script:privateRoot 'Get-XdrLiveOuterTabsHeader.ps1') -Raw
+        $nonIncidentTabContent = Get-Content -Path (Join-Path $script:privateRoot 'Show-XdrLiveNonIncidentTab.ps1') -Raw
+
+        $content.Contains('$tabOrder = @(Get-XdrLiveTabOrder -ExperimentalFeaturesEnabled:$context.Ui.ExperimentalFeaturesEnabled)') | Should -BeTrue
+        $content.Contains('$activeTab -eq ''settings'' -and $earlyAltPressed -and $earlyKeyChar -eq ''e''') | Should -BeTrue
+        $content.Contains('$activeTab -eq ''settings'' -and $isAltPressed -and $keyChar -eq ''e''') | Should -BeTrue
+        $content.Contains('$context.Ui.ExperimentalFeaturesEnabled = -not [bool]$context.Ui.ExperimentalFeaturesEnabled') | Should -BeTrue
+        $tabOrderContent.Contains('$tabOrder = @(''welcome'', ''incidents'', ''hunting'', ''query_library'', ''quarantine'')') | Should -BeTrue
+        $tabOrderContent.Contains("if (`$ExperimentalFeaturesEnabled.IsPresent)") | Should -BeTrue
+        $tabOrderContent.Contains("`$tabOrder += 'live_investigation'") | Should -BeTrue
+        $outerTabsContent.Contains("'live_investigation' { 'Live Investigation' }") | Should -BeTrue
+        $panelOrderContent.Contains("'live_investigation' { @('live_investigation_devices', 'live_investigation_session', 'live_investigation_activity', 'live_investigation_actions') }") | Should -BeTrue
+        $nonIncidentTabContent.Contains("'live_investigation' {") | Should -BeTrue
+        $nonIncidentTabContent.Contains('Experimental features: $experimentalFeatureStatus') | Should -BeTrue
+        $nonIncidentTabContent.Contains('(Alt+E) $experimentalFeatureAction') | Should -BeTrue
+        $nonIncidentTabContent.Contains('Live Investigation stays hidden until experimental features are enabled.') | Should -BeTrue
+        $nonIncidentTabContent.Contains("'Use Get-XdrLiveInvestigationDevice to find onboarded devices.'") | Should -BeTrue
+        $nonIncidentTabContent.Contains("'Start-XdrLiveInvestigation submits Live Response commands with confirmation.'") | Should -BeTrue
+    }
+
     It 'captures last input diagnostics for live troubleshooting' {
         $content = Get-Content -Path $script:dashboardPath -Raw
 
