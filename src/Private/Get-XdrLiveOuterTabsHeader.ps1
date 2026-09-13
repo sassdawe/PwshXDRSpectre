@@ -37,6 +37,7 @@ function Get-XdrLiveOuterTabsHeader {
             'hunting' { 'Hunting' }
             'query_library' { 'Query library' }
             'quarantine' { 'Quarantine' }
+            'live_investigation' { 'Live Investigation' }
             'action_center' { 'Action Center' }
             'settings' { 'Settings' }
             'help' { 'Help' }
