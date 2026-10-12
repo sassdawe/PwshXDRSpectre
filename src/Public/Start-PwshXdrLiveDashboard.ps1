@@ -123,8 +123,8 @@ function Start-PwshXdrLiveDashboard {
         # [ref] parameters when they need to update these local selections.
 
         # Global tab bar configuration
-        $tabOrder = @('welcome', 'incidents', 'hunting', 'query_library', 'quarantine', 'action_center', 'settings', 'help')
-        $activeTabIndex = 1 # default to 'incidents'
+        $tabOrder = @(Get-XdrLiveTabOrder -ExperimentalFeaturesEnabled:$context.Ui.ExperimentalFeaturesEnabled)
+        $activeTabIndex = [array]::IndexOf($tabOrder, 'incidents')
         $activeTab = $tabOrder[$activeTabIndex]
         $context.Selection.Tab = $activeTab
         $actionStatusPanelVisible = $true
@@ -317,12 +317,20 @@ function Start-PwshXdrLiveDashboard {
                     $layoutModeMessage = if ($actionStatusPanelVisible) { 'Action Status panel shown. Restored three-column layout.' } else { 'Action Status panel hidden. Switched to 50-50 compact layout.' }
                     Set-LiveStatusMessage -Context $context -Message $layoutModeMessage -Level 'info'
                 }
+                elseif ($activeTab -eq 'settings' -and $earlyAltPressed -and $earlyKeyChar -eq 'e') {
+                    $earlyKeyHandled = $true
+                    $context.Ui.ExperimentalFeaturesEnabled = -not [bool]$context.Ui.ExperimentalFeaturesEnabled
+                    $tabOrder = @(Get-XdrLiveTabOrder -ExperimentalFeaturesEnabled:$context.Ui.ExperimentalFeaturesEnabled)
+                    $activeTabIndex = [array]::IndexOf($tabOrder, $activeTab)
+                    $experimentalStatus = if ($context.Ui.ExperimentalFeaturesEnabled) { 'enabled' } else { 'disabled' }
+                    Set-LiveStatusMessage -Context $context -Message "Experimental features $experimentalStatus. Live Investigation tab visibility updated." -Level 'info'
+                }
                 elseif ((-not $earlyAltPressed -and -not $earlyCtrlPressed -and $earlyKeyChar -eq 'q') -or ($earlyCtrlPressed -and -not $earlyAltPressed -and $earlyKeyChar -eq 'q')) {
                     $earlyKeyHandled = $true
                     $pendingQuitConfirmation = $true
                     Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                 }
-                elseif ($earlyAltPressed -and $earlyKeyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                elseif ($earlyAltPressed -and $earlyKeyChar -in @('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
                     $earlyKeyHandled = $true
                     $tabIndex = [int]::Parse($earlyKeyChar) - 1
                     if ($tabIndex -ge 0 -and $tabIndex -lt $tabOrder.Count) {
@@ -1011,12 +1019,20 @@ function Start-PwshXdrLiveDashboard {
                         $layoutModeMessage = if ($actionStatusPanelVisible) { 'Action Status panel shown. Restored three-column layout.' } else { 'Action Status panel hidden. Switched to 50-50 compact layout.' }
                         Set-LiveStatusMessage -Context $context -Message $layoutModeMessage -Level 'info'
                     }
+                    elseif ($activeTab -eq 'settings' -and $isAltPressed -and $keyChar -eq 'e') {
+                        $keyHandled = $true
+                        $context.Ui.ExperimentalFeaturesEnabled = -not [bool]$context.Ui.ExperimentalFeaturesEnabled
+                        $tabOrder = @(Get-XdrLiveTabOrder -ExperimentalFeaturesEnabled:$context.Ui.ExperimentalFeaturesEnabled)
+                        $activeTabIndex = [array]::IndexOf($tabOrder, $activeTab)
+                        $experimentalStatus = if ($context.Ui.ExperimentalFeaturesEnabled) { 'enabled' } else { 'disabled' }
+                        Set-LiveStatusMessage -Context $context -Message "Experimental features $experimentalStatus. Live Investigation tab visibility updated." -Level 'info'
+                    }
                     elseif ((-not $isAltPressed -and -not $isCtrlPressed -and $keyChar -eq 'q') -or ($isCtrlPressed -and -not $isAltPressed -and $keyChar -eq 'q')) {
                         $keyHandled = $true
                         $pendingQuitConfirmation = $true
                         Set-LiveStatusMessage -Context $context -Message 'Quit dashboard? Press Y to confirm, N or Esc to continue.' -Level 'warning'
                     }
-                    elseif ($isAltPressed -and $keyChar -in @('1', '2', '3', '4', '5', '6', '7', '8')) {
+                    elseif ($isAltPressed -and $keyChar -in @('1', '2', '3', '4', '5', '6', '7', '8', '9')) {
                         $keyHandled = $true
                         $index = [int]::Parse($keyChar) - 1
                         if ($index -ge 0 -and $index -lt $tabOrder.Count) {

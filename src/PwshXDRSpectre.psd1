@@ -20,12 +20,14 @@
         'Connect-XdrSession',
         'Get-XdrAlerts',
         'Get-XdrIncidents',
+        'Get-XdrLiveInvestigationDevice',
         'Get-XdrLogPaths',
         'Get-XdrTriageOptions',
         'Set-XdrAlertStatus',
         'Set-XdrIncidentAssignment',
         'Set-XdrIncidentTriage',
         'Start-PwshXdrLiveDashboard',
+        'Start-XdrLiveInvestigation',
         'Test-XdrPermissions'
     )
     CmdletsToExport   = @()

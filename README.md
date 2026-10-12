@@ -64,6 +64,18 @@ Start-PwshXdrLiveDashboard -TenantId '<tenant-guid>' -ClientId '<app-client-id>'
 When `-WithLogs` is used without `-LogPath`, the dashboard creates a timestamped
 `.log` file under `%LOCALAPPDATA%\PwshXDRSpectre`.
 
+The global **Live Investigation** tab surfaces device Live Response workflows.
+The terminal core can be used directly:
+
+```powershell
+$ctx = $Global:XDRContext
+$ctx.Session.TenantId = '<tenant-guid>'
+$ctx.Session.ClientId = '<app-client-id>'
+Connect-XdrSession -Context $ctx
+Get-XdrLiveInvestigationDevice -Context $ctx -DeviceName '<device-fqdn>'
+Start-XdrLiveInvestigation -Context $ctx -MachineId '<machine-id>' -CommandType RunScript -Parameters @{ ScriptName = '<library-script.ps1>' }
+```
+
 Tracked log registry entries are stored in:
 
 ```text

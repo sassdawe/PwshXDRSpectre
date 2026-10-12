@@ -84,6 +84,7 @@ function Connect-XdrSession {
             'UpdateIncidentDetermination'
         )
         $Context.Capabilities.AlertActions = @('GetAlerts', 'UpdateAlertStatus')
+        $Context.Capabilities.DeviceActions = @('GetLiveInvestigationDevices', 'StartLiveInvestigation')
         Set-ContextPermissionHealthFromGraphContext -RuntimeContext $Context
 
     }
@@ -113,6 +114,7 @@ function Connect-XdrSession {
             'UpdateIncidentDetermination'
         )
         $Context.Capabilities.AlertActions = @('GetAlerts', 'UpdateAlertStatus')
+        $Context.Capabilities.DeviceActions = @('GetLiveInvestigationDevices', 'StartLiveInvestigation')
         Set-ContextPermissionHealthFromGraphContext -RuntimeContext $Context
     }
     
