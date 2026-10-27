@@ -172,7 +172,7 @@ jobs:
           gh release upload "$RELEASE_TAG" ./artifacts/*.nupkg --clobber
 
       - name: Upload CI artifact copy
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: github-release-nupkg
           path: artifacts/*.nupkg
